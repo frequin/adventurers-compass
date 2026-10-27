@@ -7,8 +7,24 @@ ehthumbs.db
 /build
 *.launch
 
-# ForgeGradle
+# Fabric Loom
 /run
+/remappedSrc
+
+# IntelliJ IDEA
+/.idea
+*.iml
+*.ipr
+*.iws
+/out
+/classes
+
+# VS Code
+/.vscode
+
+# Claude Code
+/.claude
+CLAUDE.local.md
 
 # Eclipse
 /.settings
