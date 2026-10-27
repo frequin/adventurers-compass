@@ -1,33 +1,37 @@
 {
   "schemaVersion": 1,
-  "id": "explorerscompass",
+  "id": "adventurerscompass",
   "version": "${version}",
 
-  "name": "Explorer's Compass",
-  "description": "Search for and locate structures anywhere in the world.",
+  "name": "Adventurer's Compass",
+  "description": "Search for and locate structures anywhere in the world. Based on Explorer's Compass by ChaosTheDude.",
   "authors": [
-    "ChaosTheDude"
+    "Florent Requin"
+  ],
+  "contributors": [
+    "ChaosTheDude (original Explorer's Compass)"
   ],
   "contact": {
-    "homepage": "https://www.curseforge.com/minecraft/mc-mods/explorers-compass",
-    "sources": "https://github.com/MattCzyr/ExplorersCompass"
+    "homepage": "https://github.com/frequin/adventurers-compass",
+    "sources": "https://github.com/frequin/adventurers-compass",
+    "issues": "https://github.com/frequin/adventurers-compass/issues"
   },
 
   "license": "CC BY-NC-SA 4.0",
-  "icon": "assets/explorerscompass/icon.png",
+  "icon": "assets/adventurerscompass/icon.png",
 
-  "accessWidener": "explorerscompass.accesswidener",
+  "accessWidener": "adventurerscompass.accesswidener",
   "environment": "*",
   "entrypoints": {
     "main": [
-      "com.chaosthedude.explorerscompass.ExplorersCompass"
+      "io.github.frequin.adventurerscompass.AdventurersCompass"
     ],
     "client": [
-      "com.chaosthedude.explorerscompass.ExplorersCompassClient"
+      "io.github.frequin.adventurerscompass.AdventurersCompassClient"
     ]
   },
   "mixins": [
-    "explorerscompass.mixins.json"
+    "adventurerscompass.mixins.json"
   ],
   "depends": {
     "fabricloader": ">=${loader_version}",

@@ -1,0 +1,17 @@
+{
+  "type": "crafting_shaped",
+  "group": "tools",
+  "pattern": [
+    "WSW",
+    "SCS",
+    "WSW"
+  ],
+  "key": {
+    "W": "minecraft:cobweb",
+    "S": "minecraft:cracked_stone_bricks",
+    "C": "minecraft:compass"
+  },
+  "result": {
+    "id": "adventurerscompass:adventurerscompass"
+  }
+}

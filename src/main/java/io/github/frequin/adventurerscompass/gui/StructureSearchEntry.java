@@ -1,0 +1,98 @@
+package io.github.frequin.adventurerscompass.gui;
+
+import io.github.frequin.adventurerscompass.AdventurersCompass;
+import io.github.frequin.adventurerscompass.util.StructureUtils;
+
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.components.ObjectSelectionList;
+import net.minecraft.client.input.MouseButtonEvent;
+import net.minecraft.client.renderer.RenderPipelines;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.entity.player.Player;
+
+public class StructureSearchEntry extends ObjectSelectionList.Entry<StructureSearchEntry> {
+
+	private static final Identifier[] ENABLED_LEVEL_SPRITES = new Identifier[] {
+        Identifier.withDefaultNamespace("container/enchanting_table/level_1"),
+        Identifier.withDefaultNamespace("container/enchanting_table/level_2"),
+        Identifier.withDefaultNamespace("container/enchanting_table/level_3")
+    };
+
+    private static final Identifier[] DISABLED_LEVEL_SPRITES = new Identifier[] {
+        Identifier.withDefaultNamespace("container/enchanting_table/level_1_disabled"),
+        Identifier.withDefaultNamespace("container/enchanting_table/level_2_disabled"),
+        Identifier.withDefaultNamespace("container/enchanting_table/level_3_disabled")
+    };
+
+	private final Minecraft mc;
+	private final AdventurersCompassScreen parentScreen;
+	private final Player player;
+	private final Identifier structureId;
+	private final StructureSearchList structuresList;
+	private int xpLevels;
+
+	public StructureSearchEntry(StructureSearchList structuresList, Identifier structureId, Player player) {
+		this.structuresList = structuresList;
+		this.structureId = structureId;
+		this.player = player;
+		parentScreen = structuresList.getParentScreen();
+		mc = Minecraft.getInstance();
+
+		// Get XP levels to consume
+		this.xpLevels = 0;
+		if (AdventurersCompass.xpLevelsForAllowedStructures.containsKey(structureId)) {
+			int levels = AdventurersCompass.xpLevelsForAllowedStructures.get(structureId);
+			if (levels > 3) {
+				levels = 3;
+			}
+			this.xpLevels = levels;
+		}
+	}
+
+	@Override
+	public void extractContent(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, boolean isHovering, float partialTick) {
+		if (xpLevels > 0) {
+			int spriteSize = (int) (getHeight() * 0.4F);
+			int spriteBorder = (getHeight() - spriteSize) / 2;
+			int spriteIndex = xpLevels - 1;
+			Identifier spriteId = isEnabled() ? ENABLED_LEVEL_SPRITES[spriteIndex] : DISABLED_LEVEL_SPRITES[spriteIndex];
+			guiGraphics.blitSprite(RenderPipelines.GUI_TEXTURED, spriteId, getX() + getWidth() - spriteSize - spriteBorder, getY() + spriteBorder, spriteSize, spriteSize);
+		}
+
+		int nameColor = isEnabled() ? 0xffffffff : 0xff808080;
+		int infoColor = isEnabled() ? 0xff808080 : 0xff555555;
+		guiGraphics.text(mc.font, Component.literal(StructureUtils.getStructureName(structureId)), getX() + 5, getY() + (getHeight() / 2) - ((mc.font.lineHeight + 2) * 2), nameColor);
+		guiGraphics.text(mc.font, Component.translatable(("string.adventurerscompass.source")).append(Component.literal(": " + StructureUtils.getStructureSource(structureId))), getX() + 5, getY() + (getHeight() / 2) - ((mc.font.lineHeight + 2) * 1), infoColor);
+		guiGraphics.text(mc.font, Component.translatable(("string.adventurerscompass.group")).append(Component.literal(": ")).append(Component.translatable(StructureUtils.getStructureName(AdventurersCompass.structureIdsToGroupIds.get(structureId)))), getX() + 5, getY() + (getHeight() / 2) + ((mc.font.lineHeight + 2) * 0), infoColor);
+		guiGraphics.text(mc.font, Component.translatable(("string.adventurerscompass.dimension")).append(Component.literal(": " + StructureUtils.structureDimensionsToString(AdventurersCompass.dimensionsForAllowedStructures.get(structureId)))), getX() + 5, getY() + (getHeight() / 2) + ((mc.font.lineHeight + 2) * 1), infoColor);
+	}
+
+	@Override
+	public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+		boolean selected = structuresList.selectStructure(this);
+		if (doubleClick && selected) {
+			parentScreen.searchForStructure(structureId);
+		}
+		return true;
+	}
+
+	@Override
+	public Component getNarration() {
+		return Component.literal(StructureUtils.getStructureName(structureId));
+	}
+
+	public boolean isEnabled() {
+		return AdventurersCompass.infiniteXp || player.experienceLevel >= xpLevels;
+	}
+
+	public Identifier getStructureId() {
+		return structureId;
+	}
+	
+	public Identifier getGroupId() {
+		return AdventurersCompass.structureIdsToGroupIds.get(structureId);
+	}
+
+}

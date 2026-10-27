@@ -1,6 +1,7 @@
 plugins {
 	id 'net.fabricmc.fabric-loom' version "${loom_version}"
 	id 'maven-publish'
+	id 'com.modrinth.minotaur' version '2.+'
 }
 
 version = project.mod_version
@@ -58,7 +59,7 @@ java {
 jar {
 	inputs.property "archivesName", project.base.archivesName
 
-	from("LICENSE") {
+	from("LICENSE.md") {
 		rename { "${it}_${inputs.properties.archivesName}"}
 	}
 }
@@ -81,6 +82,24 @@ publishing {
 	}
 }
 
+// Publishing to Modrinth: create the project "adventurers-compass" on modrinth.com,
+// then run `MODRINTH_TOKEN=... ./gradlew modrinth`.
+modrinth {
+	token = System.getenv("MODRINTH_TOKEN")
+	projectId = "adventurers-compass"
+	versionNumber = project.mod_version
+	versionType = "release"
+	uploadFile = tasks.jar
+	gameVersions = [project.minecraft_version]
+	loaders = ["fabric"]
+	changelog = rootProject.file("CHANGELOG.md").text.split(/(?m)^## /)[1].with { "## " + it.trim() }
+	syncBodyFrom = rootProject.file("README.md").text
+	dependencies {
+		required.project "fabric-api"
+	}
+}
+tasks.modrinth.dependsOn(tasks.modrinthSyncBody)
+
 loom {
-    accessWidenerPath = file("src/main/resources/explorerscompass.accesswidener")
+    accessWidenerPath = file("src/main/resources/adventurerscompass.accesswidener")
 }
