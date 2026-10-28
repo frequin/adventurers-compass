@@ -1,0 +1,391 @@
+<!doctype html>
+<!--
+  PROTOTYPE JETABLE — ne pas fusionner dans fabric-26.3.
+  Question : à quoi ressemble l'écran de la boussole pour composer une Selection et gérer les Visited ?
+  Combien de clics de « je veux le prochain village ou avant-poste » à une boussole qui pointe ?
+  Trois variantes, ?variant=A|B|C, barre flottante en bas (← → au clavier). Tout est en mémoire.
+-->
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>PROTOTYPE — écran de la boussole</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 14px/1.35 Menlo, Consolas, monospace; background: #111; color: #eee; }
+  #banner { background: #b8860b; color: #000; padding: 4px 10px; font-weight: bold; }
+  #layout { display: flex; height: calc(100vh - 26px); }
+  #world { flex: 1; position: relative; overflow: hidden;
+    background: linear-gradient(#6b9bd1 0 45%, #5d8a3a 45% 60%, #6b4a2b 60%); }
+  #hud { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); text-align: center;
+    text-shadow: 2px 2px #222; z-index: 1; }
+  #hud .main { font-size: 16px; background: rgba(0,0,0,.35); padding: 3px 10px; }
+  #hud .last { font-size: 12px; color: #ccc; margin-top: 4px; }
+  #hud .warn { color: #ff8; }
+  #closed { position: absolute; bottom: 70px; width: 100%; text-align: center; color: #fff; text-shadow: 2px 2px #222; }
+  #screen { position: absolute; inset: 0; background: rgba(16,16,16,.78); z-index: 2; padding: 16px 20px 64px; overflow: auto; }
+  #screen:empty { display: none; }
+  .mc, .mc * { text-shadow: 1px 1px #3f3f3f; }
+  .title { text-align: center; margin-bottom: 8px; }
+  .btn { display: inline-block; background: #6f6f6f; border: 2px solid #000; box-shadow: inset 2px 2px #a8a8a8, inset -2px -2px #4a4a4a;
+    color: #fff; padding: 4px 10px; cursor: pointer; user-select: none; text-align: center; }
+  .btn:hover { background: #7f8fbf; }
+  .btn.big { display: block; padding: 8px; font-size: 16px; margin: 8px 0; }
+  .btn.off { background: #444; color: #888; pointer-events: none; }
+  .btn.small { padding: 0 6px; font-size: 12px; }
+  input.q { width: 100%; background: #000; border: 1px solid #a0a0a0; color: #fff; padding: 5px; font: inherit; }
+  .muted { color: #8a8a8a; }
+  .tiny { font-size: 12px; }
+  .chip { display: inline-block; background: #2d4a2d; border: 1px solid #5a8a5a; padding: 1px 6px; margin: 2px; }
+  .chip.g { background: #2d3d5a; border-color: #5a72a8; }
+  .chip b { cursor: pointer; color: #f88; margin-left: 4px; }
+  .row { padding: 3px 6px; cursor: pointer; display: flex; gap: 8px; align-items: baseline; }
+  .row:hover { background: rgba(255,255,255,.08); }
+  .row.hl { outline: 1px dashed #ff8; }
+  .cb { width: 2.6em; color: #9f9; flex: none; }
+  .cb.imp { color: #6a6; }
+  .vb { color: #fc6; font-size: 12px; cursor: pointer; }
+  .vlist { margin: 2px 0 6px 3.4em; font-size: 12px; }
+  .vlist div { display: flex; gap: 8px; }
+  .x { color: #f88; cursor: pointer; }
+  .panel { background: rgba(0,0,0,.35); border: 1px solid #555; padding: 8px; margin-bottom: 8px; }
+  /* A */
+  .va { display: flex; gap: 16px; height: 100%; }
+  .va .left { flex: 3; display: flex; flex-direction: column; min-height: 0; }
+  .va .tree { flex: 1; overflow: auto; margin-top: 6px; }
+  .va .right { flex: 2; overflow: auto; }
+  .va .sub { margin-left: 2.2em; }
+  /* B */
+  .vb-wrap { max-width: 640px; margin: 0 auto; display: flex; flex-direction: column; height: 100%; }
+  .vb-wrap .list { flex: 1; overflow: auto; margin: 6px 0; border: 1px solid #333; }
+  .vb-wrap .grp { color: #9bd; }
+  /* C */
+  .vc { max-width: 720px; margin: 0 auto; }
+  .tabs { display: flex; gap: 4px; margin-bottom: 8px; }
+  .tabs .btn.on { background: #3a5f3a; }
+  .tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 6px; margin-top: 6px; }
+  .tile { border: 2px solid #555; padding: 8px 6px; min-height: 62px; cursor: pointer; background: rgba(0,0,0,.3); position: relative; }
+  .tile.on { border-color: #7c7; background: rgba(60,120,60,.35); }
+  .tile.part { border-color: #cc7; }
+  .tile .more { position: absolute; right: 4px; bottom: 2px; font-size: 12px; color: #9bd; }
+  .target { font-size: 16px; }
+  /* sim */
+  #sim { width: 340px; background: #1c1c1c; border-left: 1px solid #333; padding: 10px; overflow: auto; font-size: 12px; }
+  #sim h3 { margin: 10px 0 4px; font-size: 13px; color: #b8860b; }
+  #sim .btn { margin: 2px 0; }
+  #sim pre { white-space: pre-wrap; font-size: 11px; color: #aaa; }
+  #sim .count { font-size: 18px; color: #ff8; }
+  #switcher { position: fixed; bottom: 14px; left: calc(50% - 170px); transform: translateX(-50%); z-index: 10;
+    background: #fff; color: #000; border-radius: 999px; padding: 6px 12px; display: flex; gap: 12px; align-items: center;
+    box-shadow: 0 4px 16px rgba(0,0,0,.6); font-family: system-ui, sans-serif; font-weight: 600; }
+  #switcher button { border: 0; background: #eee; border-radius: 999px; width: 28px; height: 28px; cursor: pointer; font-size: 16px; }
+</style>
+</head>
+<body>
+<div id="banner">PROTOTYPE jetable · ticket « Écran de la boussole : composer et lire une Selection » · simulation en mémoire</div>
+<div id="layout">
+  <div id="world"><div id="hud"></div><div id="closed"></div><div id="screen" class="mc"></div></div>
+  <aside id="sim"></aside>
+</div>
+<div id="switcher"><button data-sw="-1">←</button><span id="swlabel"></span><button data-sw="1">→</button></div>
+
+<script>
+// ---------- Données : registre simulé (vanilla + un mod) ----------
+const STRUCTS = {}; // id -> {name, source, dim, group}
+const GROUPS = [];  // {id, name, members:[]}
+function G(id, name, members) {
+  GROUPS.push({ id, name, members: members.map(m => m[0]) });
+  for (const [sid, sname, dim = 'overworld', source = 'minecraft'] of members)
+    STRUCTS[sid] = { name: sname, source, dim, group: id };
+}
+G('villages', 'Villages', [['village_plains','Village (plaines)'],['village_desert','Village (désert)'],['village_savanna','Village (savane)'],['village_snowy','Village (neige)'],['village_taiga','Village (taïga)']]);
+G('pillager_outposts', 'Avant-postes pillards', [['pillager_outpost','Avant-poste pillard']]);
+G('desert_pyramids', 'Temples du désert', [['desert_pyramid','Temple du désert']]);
+G('jungle_temples', 'Temples de la jungle', [['jungle_pyramid','Temple de la jungle']]);
+G('swamp_huts', 'Cabanes de sorcière', [['swamp_hut','Cabane de sorcière']]);
+G('igloos', 'Igloos', [['igloo','Igloo']]);
+G('woodland_mansions', 'Manoirs', [['mansion','Manoir']]);
+G('ocean_monuments', 'Monuments océaniques', [['monument','Monument océanique']]);
+G('shipwrecks', 'Épaves', [['shipwreck','Épave'],['shipwreck_beached','Épave échouée']]);
+G('ocean_ruins', 'Ruines océaniques', [['ocean_ruin_cold','Ruines océaniques (froides)'],['ocean_ruin_warm','Ruines océaniques (chaudes)']]);
+G('ruined_portals', 'Portails en ruine', [['ruined_portal','Portail en ruine'],['ruined_portal_desert','Portail en ruine (désert)'],['ruined_portal_mountain','Portail en ruine (montagne)'],['ruined_portal_nether','Portail en ruine (Nether)','the_nether']]);
+G('mineshafts', 'Mines abandonnées', [['mineshaft','Mine abandonnée'],['mineshaft_mesa','Mine abandonnée (badlands)']]);
+G('buried_treasures', 'Trésors enfouis', [['buried_treasure','Trésor enfoui']]);
+G('strongholds', 'Forts', [['stronghold','Fort']]);
+G('ancient_cities', 'Cités antiques', [['ancient_city','Cité antique']]);
+G('trail_ruins', 'Ruines de piste', [['trail_ruins','Ruines de piste']]);
+G('trial_chambers', 'Chambres des épreuves', [['trial_chambers','Chambres des épreuves']]);
+G('towers:towers', 'Tours (mod)', [['towers:mage_tower','Tour du mage','overworld','towers'],['towers:ruined_tower','Tour en ruine','overworld','towers']]);
+G('nether_complexes', 'Complexes du Nether', [['fortress','Forteresse du Nether','the_nether'],['bastion_remnant','Vestiges de bastion','the_nether']]);
+G('nether_fossils', 'Fossiles du Nether', [['nether_fossil','Fossile du Nether','the_nether']]);
+
+// Instances : pseudo-aléatoires mais stables
+let seed = 42; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+const RARITY = { village_plains: 6, village_desert: 3, village_savanna: 3, village_snowy: 2, village_taiga: 3, pillager_outpost: 4, mineshaft: 10, ruined_portal: 6, shipwreck: 4, stronghold: 1, mansion: 1, ancient_city: 2 };
+const INSTANCES = [];
+for (const sid in STRUCTS) for (let i = 0; i < (RARITY[sid] ?? 2); i++)
+  INSTANCES.push({ key: `${sid}@${Math.round(rnd()*5000-2500)},${Math.round(rnd()*5000-2500)}`, s: sid,
+    x: 0, z: 0, dim: STRUCTS[sid].dim });
+for (const inst of INSTANCES) { const [x, z] = inst.key.split('@')[1].split(',').map(Number); inst.x = x; inst.z = z; }
+
+const MAX_RADIUS = 1000;
+const VARIANTS = { A: 'Arbre des Groups + panneau Selection', B: 'Liste plate, clavier d\'abord', C: 'Boussole d\'abord, onglets' };
+
+// ---------- État ----------
+let S;
+function reset() {
+  S = { dim: 'overworld', pos: { x: 0, z: 0 },
+    sel: { groups: new Set(), structs: new Set() },   // la Selection, stockée sur l'item
+    visited: [], target: null, hudMsg: null, open: true, clicks: 0, enters: 0, log: [], tick: 0,
+    ui: { q: '', expanded: new Set(), vOpen: new Set(), tab: 'target', showVisited: false } };
+  // deux villages déjà Visited, pour voir le saut
+  INSTANCES.filter(i => i.s === 'village_plains').sort((a, b) => dist(a) - dist(b)).slice(0, 2)
+    .forEach(i => S.visited.push({ key: i.key, s: i.s, x: i.x, z: i.z, at: --S.tick }));
+}
+const dist = i => Math.round(Math.hypot(i.x - S.pos.x, i.z - S.pos.z));
+function cap(i) {
+  const a = (Math.atan2(i.x - S.pos.x, -(i.z - S.pos.z)) * 180 / Math.PI + 360) % 360;
+  return ['N','NE','E','SE','S','SO','O','NO'][Math.round(a / 45) % 8];
+}
+const isVisited = key => S.visited.some(v => v.key === key);
+const visitedOf = sid => S.visited.filter(v => v.s === sid);
+const inDim = sid => STRUCTS[sid].dim === S.dim;
+const groupsInDim = () => GROUPS.map(g => ({ ...g, members: g.members.filter(inDim) })).filter(g => g.members.length);
+const hiddenCount = () => Object.keys(STRUCTS).filter(s => !inDim(s)).length;
+const gOn = gid => S.sel.groups.has(gid);
+const sExplicit = sid => S.sel.structs.has(sid);
+const sImplied = sid => gOn(STRUCTS[sid].group);
+const sOn = sid => sExplicit(sid) || sImplied(sid);
+function gState(g) { // 'on' | 'part' | 'off'
+  if (gOn(g.id)) return 'on';
+  return g.members.some(sExplicit) ? 'part' : 'off';
+}
+const selEmpty = () => !S.sel.groups.size && !S.sel.structs.size;
+const expanded = () => Object.keys(STRUCTS).filter(s => inDim(s) && sOn(s));
+function match(q, ...texts) {
+  q = q.trim().toLowerCase(); if (!q) return true;
+  if (q.startsWith('@')) return texts.some(t => t.startsWith('@') && t.includes(q.slice(1)));
+  return texts.some(t => t.toLowerCase().includes(q));
+}
+const sMatch = (sid, q = S.ui.q) => match(q, STRUCTS[sid].name, sid, '@' + STRUCTS[sid].source);
+const gMatch = (g, q = S.ui.q) => match(q, g.name, g.id, ...g.members.map(m => '@' + STRUCTS[m].source));
+
+// ---------- Actions ----------
+function toggleGroup(gid) {
+  if (gOn(gid)) S.sel.groups.delete(gid);
+  else { S.sel.groups.add(gid); GROUPS.find(g => g.id === gid).members.forEach(m => S.sel.structs.delete(m)); }
+}
+function toggleStruct(sid) {
+  if (sImplied(sid)) { // décocher une Structure d'un Group coché : le Group éclate en Structures
+    const g = GROUPS.find(g => g.id === STRUCTS[sid].group);
+    S.sel.groups.delete(g.id); g.members.filter(m => m !== sid).forEach(m => S.sel.structs.add(m));
+  } else if (sExplicit(sid)) S.sel.structs.delete(sid);
+  else S.sel.structs.add(sid);
+}
+function search() {
+  const want = new Set(expanded());
+  const cands = INSTANCES.filter(i => i.dim === S.dim && want.has(i.s) && !isVisited(i.key) && dist(i) <= MAX_RADIUS)
+    .sort((a, b) => dist(a) - dist(b));
+  log(`Recherche après ${S.clicks} clic(s)${S.enters ? ` + ${S.enters} Entrée` : ''} sur [${chips().map(c => c.label).join(', ')}]`);
+  if (!cands.length) { S.target = null; S.hudMsg = `Rien de non Visited à moins de ${MAX_RADIUS} blocs pour cette Selection`; log('→ ' + S.hudMsg); }
+  else { S.target = cands[0]; S.hudMsg = null; log(`→ Target : ${STRUCTS[S.target.s].name} à ${dist(S.target)} m`); }
+  S.open = false;
+}
+function markTargetVisited() { if (S.target && !isVisited(S.target.key)) { S.visited.push({ key: S.target.key, s: S.target.s, x: S.target.x, z: S.target.z, at: ++S.tick }); log(`Marquée Visited à la main : ${STRUCTS[S.target.s].name}`); } }
+function unmark(key) { const v = S.visited.find(v => v.key === key); S.visited = S.visited.filter(v => v.key !== key); log(`Démarquée : ${STRUCTS[v.s].name} (${v.x}, ${v.z})`); }
+function goToTarget() {
+  if (!S.target) return;
+  S.pos = { x: S.target.x, z: S.target.z };
+  if (!isVisited(S.target.key)) { S.visited.push({ key: S.target.key, s: S.target.s, x: S.target.x, z: S.target.z, at: ++S.tick }); log(`Entrée dans ${STRUCTS[S.target.s].name} → Visited auto (pas de relance)`); }
+}
+function log(m) { S.log.unshift(m); S.log = S.log.slice(0, 12); }
+
+// ---------- Morceaux d'UI partagés ----------
+function chips() {
+  return [...[...S.sel.groups].map(id => ({ t: 'g', id, label: GROUPS.find(g => g.id === id).name })),
+          ...[...S.sel.structs].map(id => ({ t: 's', id, label: STRUCTS[id].name }))];
+}
+const chipsHtml = () => selEmpty() ? '<span class="muted">Selection vide</span>'
+  : chips().map(c => `<span class="chip ${c.t}">${c.label}<b data-a="rm${c.t}" data-id="${c.id}">✕</b></span>`).join('');
+const cbHtml = st => st === 'on' ? '[✓]' : st === 'part' ? '[–]' : '[ ]';
+const sCb = sid => sExplicit(sid) ? '<span class="cb">[✓]</span>' : sImplied(sid) ? '<span class="cb imp">(✓)</span>' : '<span class="cb">[ ]</span>';
+const vBadge = sid => { const n = visitedOf(sid).length; return n ? `<span class="vb" data-a="vopen" data-id="${sid}">✓${n} Visited</span>` : ''; };
+const vList = sid => S.ui.vOpen.has(sid) ? `<div class="vlist">${visitedOf(sid).map(v =>
+  `<div><span>(${v.x}, ${v.z}) · ${dist(v)} m</span><span class="x" data-a="unmark" data-id="${v.key}">✕ démarquer</span></div>`).join('')}</div>` : '';
+const searchBtn = (label = 'Chercher la plus proche') => `<div class="btn big ${selEmpty() ? 'off' : ''}" data-a="search">${label}</div>`;
+function targetHtml() {
+  if (!S.target) return '<span class="muted">Pas de Target</span>';
+  const v = isVisited(S.target.key);
+  return `<div class="target">◎ ${STRUCTS[S.target.s].name}${v ? ' <span class="vb">(Visited)</span>' : ''}</div>
+    <div class="muted tiny">${dist(S.target)} m · ${cap(S.target)} · (${S.target.x}, ${S.target.z})</div>
+    ${v ? '' : '<div class="btn small" data-a="markv">Marquer Visited</div>'}`;
+}
+const hiddenNote = () => `<div class="muted tiny">${hiddenCount()} structure(s) d'autres dimensions masquées</div>`;
+
+// ---------- Variante A : arbre des Groups + panneau Selection ----------
+function renderA() {
+  const q = S.ui.q.trim();
+  const tree = groupsInDim().filter(g => gMatch(g) || g.members.some(s => sMatch(s))).map(g => {
+    const open = S.ui.expanded.has(g.id) || q;
+    const nv = g.members.reduce((n, s) => n + visitedOf(s).length, 0);
+    const members = open ? g.members.filter(s => !q || sMatch(s) || gMatch(g)).map(s =>
+      `<div class="row sub" data-a="ts" data-id="${s}">${sCb(s)}<span>${STRUCTS[s].name}</span><span class="muted tiny">${STRUCTS[s].source}</span>${vBadge(s)}</div>${vList(s)}`).join('') : '';
+    return `<div class="row"><span data-a="exp" data-id="${g.id}">${open ? '▾' : '▸'}</span>
+      <span class="cb" data-a="tg" data-id="${g.id}">${cbHtml(gState(g))}</span>
+      <span data-a="tg" data-id="${g.id}">${g.name}</span>
+      <span class="muted tiny">${g.members.length} struct.${nv ? ` · ${nv} Visited` : ''}</span></div>${members}`;
+  }).join('');
+  const allV = [...S.visited].sort((a, b) => b.at - a.at);
+  return `<div class="va">
+    <div class="left">
+      <div class="title">Composer la Selection</div>
+      <input id="q" class="q" placeholder="Rechercher… (@mod pour filtrer par source)" value="${S.ui.q}">
+      <div class="tree">${tree}</div>${hiddenNote()}
+    </div>
+    <div class="right">
+      <div class="panel"><div class="tiny muted">Selection (sur la boussole)</div>${chipsHtml()}
+        ${searchBtn()}<div class="btn small ${selEmpty() ? 'off' : ''}" data-a="clear">Vider la Selection</div></div>
+      <div class="panel"><div class="tiny muted">Target</div>${targetHtml()}</div>
+      <div class="panel"><div class="btn small" data-a="showv">${S.ui.showVisited ? '▾' : '▸'} Visited (${S.visited.length})</div>
+        ${S.ui.showVisited ? allV.map(v => `<div class="row tiny"><span>${STRUCTS[v.s].name}</span><span class="muted">${dist(v)} m</span><span class="x" data-a="unmark" data-id="${v.key}">✕</span></div>`).join('') : ''}</div>
+      <div class="btn" data-a="close">Annuler</div>
+    </div></div>`;
+}
+
+// ---------- Variante B : liste plate, clavier d'abord ----------
+function bRows() {
+  const rows = [];
+  for (const g of groupsInDim()) {
+    if (g.members.length > 1 && gMatch(g)) rows.push({ t: 'g', g });
+    for (const s of g.members) if (sMatch(s)) rows.push({ t: 's', s });
+  }
+  return rows;
+}
+function renderB() {
+  const rows = bRows();
+  const q = S.ui.q.trim();
+  const list = rows.map((r, i) => {
+    const hl = q && i === 0 ? 'hl' : '';
+    if (r.t === 'g') return `<div class="row grp ${hl}" data-a="tg" data-id="${r.g.id}"><span class="cb">${cbHtml(gState(r.g))}</span>
+      <span>▣ Tous : ${r.g.name}</span><span class="muted tiny">${r.g.members.length} structures</span></div>`;
+    const st = STRUCTS[r.s];
+    return `<div class="row ${hl}" data-a="ts" data-id="${r.s}">${sCb(r.s)}<span>${st.name}</span>
+      <span class="muted tiny">${GROUPS.find(g => g.id === st.group).name}${st.source !== 'minecraft' ? ' · ' + st.source : ''}</span>${vBadge(r.s)}</div>${vList(r.s)}`;
+  }).join('');
+  return `<div class="vb-wrap">
+    <div class="title">Boussole de l'aventurier</div>
+    <input id="q" class="q" placeholder="Tapez puis Entrée : ajoute/retire la 1re ligne · Entrée à vide : chercher" value="${S.ui.q}">
+    <div style="margin-top:4px">${chipsHtml()}</div>
+    <div class="list">${list || '<div class="muted row">Aucun résultat</div>'}</div>${hiddenNote()}
+    <div class="panel" style="margin-top:6px">${targetHtml()}</div>
+    <div style="display:flex; gap:8px"><div style="flex:1">${searchBtn('Chercher (Entrée)')}</div><div class="btn big" data-a="close">Annuler</div></div>
+  </div>`;
+}
+
+// ---------- Variante C : boussole d'abord, onglets ----------
+function renderC() {
+  const tab = S.ui.tab;
+  const tabs = `<div class="tabs">${[['target', 'Cible'], ['sel', 'Selection'], ['vis', `Visited (${S.visited.length})`]]
+    .map(([k, l]) => `<div class="btn ${tab === k ? 'on' : ''}" data-a="tab" data-id="${k}">${l}</div>`).join('')}</div>`;
+  let body = '';
+  if (tab === 'target') {
+    const last = [...S.visited].sort((a, b) => b.at - a.at).slice(0, 4);
+    body = `<div class="panel"><div class="tiny muted">Selection</div>${selEmpty() ? '<span class="muted">vide · composez-la dans l\'onglet Selection</span>' : chips().map(c => c.label).join(' · ')}
+        <span class="btn small" data-a="tab" data-id="sel">modifier</span></div>
+      ${searchBtn('Chercher la suivante')}
+      <div class="panel"><div class="tiny muted">Target</div>${targetHtml()}</div>
+      <div class="panel"><div class="tiny muted">Dernières Visited</div>${last.map(v => `<div class="row tiny"><span>${STRUCTS[v.s].name}</span><span class="muted">${dist(v)} m ${cap(v)}</span><span class="x" data-a="unmark" data-id="${v.key}">✕</span></div>`).join('') || '<span class="muted">aucune</span>'}</div>`;
+  } else if (tab === 'sel') {
+    const open = [...S.ui.expanded][0];
+    const tiles = groupsInDim().filter(g => gMatch(g) || g.members.some(s => sMatch(s))).map(g => {
+      const st = gState(g);
+      return `<div class="tile ${st}" data-a="tg" data-id="${g.id}">${g.name}<div class="muted tiny">${g.members.length > 1 ? g.members.length + ' structures' : ''}</div>
+        ${g.members.length > 1 ? `<span class="more" data-a="exp1" data-id="${g.id}">détail ▸</span>` : ''}</div>`;
+    }).join('');
+    const og = open && GROUPS.find(g => g.id === open);
+    const drawer = og ? `<div class="panel" style="margin-top:6px"><div class="tiny muted">${og.name} : détail</div>${og.members.filter(inDim).map(s =>
+      `<div class="row" data-a="ts" data-id="${s}">${sCb(s)}<span>${STRUCTS[s].name}</span>${vBadge(s)}</div>${vList(s)}`).join('')}</div>` : '';
+    body = `<input id="q" class="q" placeholder="Rechercher un Group ou une Structure…" value="${S.ui.q}">
+      <div style="margin-top:4px">${chipsHtml()}</div><div class="tiles">${tiles}</div>${drawer}${hiddenNote()}${searchBtn('Chercher la plus proche')}`;
+  } else {
+    const vs = [...S.visited].sort((a, b) => b.at - a.at).filter(v => sMatch(v.s));
+    body = `<input id="q" class="q" placeholder="Filtrer les Visited…" value="${S.ui.q}">
+      <div class="panel" style="margin-top:6px">${vs.map(v => `<div class="row"><span>${STRUCTS[v.s].name}</span><span class="muted tiny">(${v.x}, ${v.z}) · ${dist(v)} m ${cap(v)}</span>
+        <span class="x" data-a="unmark" data-id="${v.key}">✕ démarquer</span></div>`).join('') || '<span class="muted">aucune</span>'}</div>`;
+  }
+  return `<div class="vc"><div class="title">Boussole de l'aventurier</div>${tabs}${body}<div class="btn" data-a="close">Fermer</div></div>`;
+}
+
+// ---------- Rendu, HUD, simulateur ----------
+const params = new URLSearchParams(location.search);
+let variant = VARIANTS[params.get('variant')] ? params.get('variant') : 'A';
+function render() {
+  const focused = document.activeElement && document.activeElement.id === 'q';
+  document.getElementById('screen').innerHTML = S.open ? { A: renderA, B: renderB, C: renderC }[variant]() : '';
+  if (focused && S.open) { const q = document.getElementById('q'); if (q) { q.focus(); q.setSelectionRange(q.value.length, q.value.length); } }
+  // HUD
+  const last = [...S.visited].sort((a, b) => b.at - a.at).slice(0, 3);
+  let main = S.hudMsg ? `<span class="warn">${S.hudMsg}</span>`
+    : S.target ? `◎ ${STRUCTS[S.target.s].name} · ${dist(S.target)} m · ${cap(S.target)}${isVisited(S.target.key) ? ' <span class="warn">(Visited — rouvrez la boussole pour la suivante)</span>' : ''}`
+    : '<span class="muted">Boussole sans Target</span>';
+  document.getElementById('hud').innerHTML = `<div class="main">${main}</div>
+    <div class="last">${last.map(v => `↳ ${STRUCTS[v.s].name} · ${dist(v)} m ${cap(v)}`).join('<br>')}</div>`;
+  document.getElementById('closed').innerHTML = S.open ? '' : 'Écran fermé · « Ouvrir la boussole » dans le panneau de droite (= clic droit)';
+  // simulateur
+  document.getElementById('sim').innerHTML = `
+    <h3>Tâche à chronométrer</h3><div>« Je veux le prochain village ou avant-poste. » Ouvrez, composez, cherchez.</div>
+    <h3>Coût depuis l'ouverture</h3><div class="count">${S.clicks} clic(s) · ${S.enters} Entrée</div>
+    <h3>Monde</h3>
+    <div>Dimension : <select id="dim"><option value="overworld" ${S.dim === 'overworld' ? 'selected' : ''}>Overworld</option><option value="the_nether" ${S.dim === 'the_nether' ? 'selected' : ''}>Nether</option></select></div>
+    <div>Joueur : (${S.pos.x}, ${S.pos.z}) · rayon max ${MAX_RADIUS}</div>
+    <div class="btn" data-sim="open">Ouvrir la boussole (clic droit)</div>
+    <div class="btn ${S.target ? '' : 'off'}" data-sim="go">Marcher jusqu'à la Target</div>
+    <div class="btn" data-sim="reset">Réinitialiser</div>
+    <h3>Journal</h3>${S.log.map(l => `<div>${l}</div>`).join('') || '<div class="muted">—</div>'}
+    <h3>État</h3><pre>${JSON.stringify({ selection: { groups: [...S.sel.groups], structures: [...S.sel.structs] },
+      selectionDéployée: expanded(), target: S.target && S.target.key, visited: S.visited.map(v => v.key) }, null, 1)}</pre>`;
+  document.getElementById('swlabel').textContent = `${variant} (${VARIANTS[variant]})`;
+}
+
+const ACTIONS = {
+  tg: id => toggleGroup(id), ts: id => toggleStruct(id), rmg: id => S.sel.groups.delete(id), rms: id => S.sel.structs.delete(id),
+  exp: id => S.ui.expanded.has(id) ? S.ui.expanded.delete(id) : S.ui.expanded.add(id),
+  exp1: id => { const was = S.ui.expanded.has(id); S.ui.expanded.clear(); if (!was) S.ui.expanded.add(id); },
+  vopen: id => S.ui.vOpen.has(id) ? S.ui.vOpen.delete(id) : S.ui.vOpen.add(id),
+  unmark, search, markv: markTargetVisited, clear: () => { S.sel.groups.clear(); S.sel.structs.clear(); },
+  showv: () => S.ui.showVisited = !S.ui.showVisited, tab: id => { S.ui.tab = id; S.ui.q = ''; }, close: () => S.open = false,
+};
+document.getElementById('screen').addEventListener('click', e => {
+  const el = e.target.closest('[data-a]'); if (!el) return;
+  e.stopPropagation(); S.clicks++; ACTIONS[el.dataset.a](el.dataset.id); render();
+});
+document.getElementById('screen').addEventListener('input', e => { if (e.target.id === 'q') { S.ui.q = e.target.value; render(); } });
+document.getElementById('screen').addEventListener('keydown', e => {
+  if (e.target.id !== 'q' || e.key !== 'Enter') return;
+  S.enters++;
+  if (variant === 'B') {
+    if (S.ui.q.trim()) { const r = bRows()[0]; if (r) r.t === 'g' ? toggleGroup(r.g.id) : toggleStruct(r.s); S.ui.q = ''; }
+    else if (!selEmpty()) search();
+  } else if (!S.ui.q.trim() && !selEmpty()) search();
+  render();
+});
+document.getElementById('sim').addEventListener('click', e => {
+  const a = e.target.closest('[data-sim]')?.dataset.sim; if (!a) return;
+  if (a === 'open') { S.open = true; S.clicks = 0; S.enters = 0; S.ui.q = ''; S.ui.tab = 'target'; }
+  if (a === 'go') goToTarget();
+  if (a === 'reset') reset();
+  render();
+});
+document.getElementById('sim').addEventListener('change', e => { if (e.target.id === 'dim') { S.dim = e.target.value; S.target = null; S.hudMsg = null; render(); } });
+function cycle(d) {
+  const keys = Object.keys(VARIANTS); variant = keys[(keys.indexOf(variant) + d + keys.length) % keys.length];
+  history.replaceState(null, '', '?variant=' + variant); render();
+}
+document.getElementById('switcher').addEventListener('click', e => { const d = e.target.dataset.sw; if (d) cycle(+d); });
+document.addEventListener('keydown', e => {
+  if (e.target.matches('input, textarea, select, [contenteditable]')) return;
+  if (e.key === 'ArrowLeft') cycle(-1); if (e.key === 'ArrowRight') cycle(1);
+});
+reset(); render();
+</script>
+</body>
+</html>
