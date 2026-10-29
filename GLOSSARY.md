@@ -28,5 +28,9 @@ _Avoid_: Destination, result
 The state of an Instance a player has been to, which searches skip; held per player and per world, and reversible.
 _Avoid_: Explored, discovered, done
 
+**Skipped**:
+The state of an Instance a player chose to pass over without visiting it; held by one compass and cleared when a fresh search starts or the Selection changes.
+_Avoid_: Ignored, excluded, Visited (when the player has not been there)
+
 **Current dimension**:
 The dimension the player stands in; by default the only one searched and listed.
