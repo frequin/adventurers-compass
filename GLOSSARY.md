@@ -25,7 +25,7 @@ The Instance the compass currently points at.
 _Avoid_: Destination, result
 
 **Visited**:
-The state of an Instance a player has been to, which searches skip; held per player and per world, and reversible.
+The state of an Instance a player has stood inside, or has marked by hand as their Target, which searches skip; held per player and per world, shared by all their compasses, and reversible.
 _Avoid_: Explored, discovered, done
 
 **Skipped**:
