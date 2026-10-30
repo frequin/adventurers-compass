@@ -5,6 +5,10 @@
     "_comment": "ITEMS",
     "item.adventurerscompass.adventurerscompass": "Adventurer's Compass",
 
+    "_comment": "WEAR",
+    "string.adventurerscompass.searchesLeft": "Searches left: %s/%s",
+    "string.adventurerscompass.broken": "The compass is worn out: repair it with a compass",
+
     "_comment": "STRINGS - BUTTONS",
     "string.adventurerscompass.visited": "Visited: %s",
     "string.adventurerscompass.back": "Back",

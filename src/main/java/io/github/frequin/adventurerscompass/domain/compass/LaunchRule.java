@@ -17,6 +17,9 @@ public interface LaunchRule {
 	/** Refuses when the Selection has nothing searchable in the Current dimension. */
 	LaunchRule SOMETHING_SEARCHABLE = (state, context) -> context.searchable().isEmpty() ? Optional.of(Refusal.NOTHING_SEARCHABLE) : Optional.empty();
 
+	/** Refuses when the compass is broken; it keeps its Target. */
+	LaunchRule NOT_BROKEN = (state, context) -> state.isBroken(context.durability()) ? Optional.of(Refusal.BROKEN) : Optional.empty();
+
 	/** Refuses in a Current dimension where the compass does not work ({@code disabledDimensions}). */
 	static LaunchRule notIn(Predicate<String> disabledDimension) {
 		return (state, context) -> disabledDimension.test(context.dimension()) ? Optional.of(Refusal.DISABLED_DIMENSION) : Optional.empty();

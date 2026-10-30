@@ -9,6 +9,9 @@ public enum Refusal {
 	/** "Pass" without a Target. */
 	NO_TARGET,
 
+	/** The compass is worn out: it must be repaired before it searches again. */
+	BROKEN,
+
 	/** The Current dimension is listed in {@code disabledDimensions}. */
 	DISABLED_DIMENSION,
 

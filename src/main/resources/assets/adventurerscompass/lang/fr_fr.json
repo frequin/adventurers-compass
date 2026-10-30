@@ -5,6 +5,10 @@
     "_comment": "ITEMS",
     "item.adventurerscompass.adventurerscompass": "Boussole de l'aventurier",
 
+    "_comment": "WEAR",
+    "string.adventurerscompass.searchesLeft": "Recherches restantes : %s/%s",
+    "string.adventurerscompass.broken": "La boussole est usée : réparez-la avec une boussole",
+
     "_comment": "STRINGS - BUTTONS",
     "string.adventurerscompass.visited": "Visitée : %s",
     "string.adventurerscompass.back": "Retour",

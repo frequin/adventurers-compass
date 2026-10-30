@@ -7,6 +7,7 @@ import io.github.frequin.adventurerscompass.AdventurersCompass;
 import io.github.frequin.adventurerscompass.compass.CompassStacks;
 import io.github.frequin.adventurerscompass.domain.compass.CompassState;
 import io.github.frequin.adventurerscompass.domain.compass.Target;
+import io.github.frequin.adventurerscompass.item.AdventurersCompassItem;
 import io.github.frequin.adventurerscompass.network.CancelPacket;
 import io.github.frequin.adventurerscompass.network.MarkVisitedPacket;
 import io.github.frequin.adventurerscompass.network.PassPacket;
@@ -106,6 +107,11 @@ final class SearchPanel {
 			return;
 		}
 		CompassState state = state();
+		if (state.isBroken(AdventurersCompassItem.durability(compass.get()))) {
+			// A broken compass refuses "Search" and "Pass" whatever the Selection; it keeps its Target
+			searchAllowed = false;
+			searchRefusal = Component.translatable("string.adventurerscompass.broken");
+		}
 		boolean searching = state.isSearching();
 		searchButton.setMessage(Component.translatable(searching ? "string.adventurerscompass.cancelSearch" : "string.adventurerscompass.searchSelection"));
 		searchButton.active = searching || searchAllowed;

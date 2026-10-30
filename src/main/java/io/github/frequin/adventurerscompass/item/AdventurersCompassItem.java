@@ -2,8 +2,10 @@ package io.github.frequin.adventurerscompass.item;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.function.Consumer;
 
 import io.github.frequin.adventurerscompass.AdventurersCompass;
+import io.github.frequin.adventurerscompass.compass.CompassStacks;
 import io.github.frequin.adventurerscompass.compass.ServerCompass;
 import io.github.frequin.adventurerscompass.config.AdventurersCompassConfig;
 import io.github.frequin.adventurerscompass.gui.GuiWrapper;
@@ -15,7 +17,9 @@ import io.github.frequin.adventurerscompass.domain.selection.Catalogue;
 import io.github.frequin.adventurerscompass.domain.selection.CatalogueEntry;
 
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
+import net.minecraft.ChatFormatting;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
@@ -28,6 +32,8 @@ import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.TooltipFlag;
+import net.minecraft.world.item.component.TooltipDisplay;
 import net.minecraft.world.level.Level;
 
 public class AdventurersCompassItem extends Item {
@@ -43,10 +49,7 @@ public class AdventurersCompassItem extends Item {
 	@Override
 	public InteractionResult use(Level level, Player player, InteractionHand hand) {
 		if (!player.isCrouching()) {
-            if (isBroken(player.getItemInHand(hand))) {
-                return InteractionResult.PASS;
-            }
-            
+			// A broken compass still opens: it shows its Target and refuses "Search" and "Pass"
 			if (level.isClientSide()) {
 				final ItemStack stack = ItemUtils.getHeldItem(player, AdventurersCompass.ADVENTURERS_COMPASS_ITEM);
 				GuiWrapper.openGUI(level, player, stack);
@@ -73,33 +76,34 @@ public class AdventurersCompassItem extends Item {
 		return InteractionResult.CONSUME;
 	}
 
-    @Override
-    public boolean isBarVisible(ItemStack stack) {
-        int max = AdventurersCompassConfig.compassDurability;
-        if (max > 0) {
-            int damage = stack.getOrDefault(AdventurersCompass.DAMAGE, 0);
-            return damage > 0;
-        }
-        return false;
-    }
+	@Override
+	public boolean isBarVisible(ItemStack stack) {
+		return durability(stack) > 0 && CompassStacks.read(stack).wear() > 0;
+	}
 
-    @Override
-    public int getBarWidth(ItemStack stack) {
-        int max = AdventurersCompassConfig.compassDurability;
-        if (max > 0) {
-            int damage = stack.getOrDefault(AdventurersCompass.DAMAGE, 0);
-            return Math.clamp(Math.round(13.0f * (1.0f - (float) damage / max)), 0, 13);
-        }
-        return 13;
-    }
+	@Override
+	public int getBarWidth(ItemStack stack) {
+		int durability = durability(stack);
+		if (durability <= 0) {
+			return MAX_BAR_WIDTH;
+		}
+		return Math.clamp(Math.round(MAX_BAR_WIDTH * (float) CompassStacks.read(stack).searchesLeft(durability) / durability), 0, MAX_BAR_WIDTH);
+	}
 
-    @Override
-    public int getBarColor(ItemStack stack) {
-        int max = AdventurersCompassConfig.compassDurability;
-        int damage = stack.getOrDefault(AdventurersCompass.DAMAGE, 0);
-        float f = max > 0 ? (float) damage / max : 0.0f;
-        return Mth.hsvToRgb(Math.max(0.0F, (1.0F - f) / 3.0F), 1.0F, 1.0F);
-    }
+	@Override
+	public int getBarColor(ItemStack stack) {
+		int durability = durability(stack);
+		float left = durability > 0 ? (float) CompassStacks.read(stack).searchesLeft(durability) / durability : 1.0f;
+		return Mth.hsvToRgb(Math.max(0.0F, left / 3.0F), 1.0F, 1.0F);
+	}
+
+	@Override
+	public void appendHoverText(ItemStack stack, TooltipContext context, TooltipDisplay display, Consumer<Component> tooltip, TooltipFlag flag) {
+		int durability = durability(stack);
+		if (durability > 0) {
+			tooltip.accept(Component.translatable("string.adventurerscompass.searchesLeft", CompassStacks.read(stack).searchesLeft(durability), durability).withStyle(ChatFormatting.GRAY));
+		}
+	}
 
 	@Override
 	public boolean allowComponentsUpdateAnimation(Player player, InteractionHand hand, ItemStack oldStack, ItemStack newStack) {
@@ -110,26 +114,15 @@ public class AdventurersCompassItem extends Item {
 	@Override
 	public void inventoryTick(ItemStack stack, ServerLevel level, Entity owner, EquipmentSlot slot) {
 		ServerCompass.interruptIfOrphaned(stack);
-	}
-
-	public int getDamage(ItemStack stack) {
-		return stack.getOrDefault(AdventurersCompass.DAMAGE, 0);
-	}
-
-    /** One more found Target (Pass included): wears the compass, except in creative. */
-    public void wear(Player player, ItemStack stack) {
-        int max = AdventurersCompassConfig.compassDurability;
-        if (!player.hasInfiniteMaterials() && max > 0) {
-            int damage = getDamage(stack) + 1;
-            stack.set(AdventurersCompass.DAMAGE, damage);
-        }
-    }
-
-	public boolean isBroken(ItemStack stack) {
-		int max = AdventurersCompassConfig.compassDurability;
-		if (max > 0) {
-			return getDamage(stack) >= max;
+		// The client reads the server's durability from the compass, for the wear bar, the tooltip and the screen
+		if (durability(stack) != AdventurersCompassConfig.compassDurability) {
+			stack.set(AdventurersCompass.DURABILITY, AdventurersCompassConfig.compassDurability);
 		}
-		return false;
 	}
+
+	/** The server's {@code compassDurability} as last copied on this compass; 0 means it never wears. */
+	public static int durability(ItemStack stack) {
+		return stack.getOrDefault(AdventurersCompass.DURABILITY, 0);
+	}
+
 }

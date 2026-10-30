@@ -14,12 +14,18 @@ import io.github.frequin.adventurerscompass.domain.InstanceKey;
  * @param searchable the Selection resolved for the Current dimension
  * @param maxRadius  the configured search radius
  * @param visited    the player's Visited Instances
+ * @param durability the configured {@code compassDurability}; 0 or less means the compass never breaks
  */
-public record SearchContext(String dimension, BlockXZ origin, Set<String> searchable, int maxRadius, Set<InstanceKey> visited) {
+public record SearchContext(String dimension, BlockXZ origin, Set<String> searchable, int maxRadius, Set<InstanceKey> visited, int durability) {
 
 	public SearchContext {
 		searchable = Set.copyOf(searchable);
 		visited = Set.copyOf(visited);
+	}
+
+	/** A context where the compass never breaks. */
+	public SearchContext(String dimension, BlockXZ origin, Set<String> searchable, int maxRadius, Set<InstanceKey> visited) {
+		this(dimension, origin, searchable, maxRadius, visited, 0);
 	}
 
 }
