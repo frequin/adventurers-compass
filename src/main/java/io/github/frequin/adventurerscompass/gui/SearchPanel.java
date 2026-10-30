@@ -7,6 +7,7 @@ import io.github.frequin.adventurerscompass.AdventurersCompass;
 import io.github.frequin.adventurerscompass.compass.CompassStacks;
 import io.github.frequin.adventurerscompass.domain.compass.CompassState;
 import io.github.frequin.adventurerscompass.domain.compass.Target;
+import io.github.frequin.adventurerscompass.domain.xp.XpThreshold;
 import io.github.frequin.adventurerscompass.network.CancelPacket;
 import io.github.frequin.adventurerscompass.network.PassPacket;
 import io.github.frequin.adventurerscompass.network.SearchPacket;
@@ -53,6 +54,7 @@ final class SearchPanel {
 	private Button teleportButton;
 	private boolean searchAllowed;
 	private Component searchRefusal;
+	private XpThreshold cost = XpThreshold.FREE;
 
 	SearchPanel(Minecraft minecraft, Player player, Supplier<ItemStack> compass) {
 		this.minecraft = minecraft;
@@ -99,12 +101,25 @@ final class SearchPanel {
 		}
 		CompassState state = state();
 		boolean searching = state.isSearching();
-		searchButton.setMessage(Component.translatable(searching ? "string.adventurerscompass.cancelSearch" : "string.adventurerscompass.searchSelection"));
+		searchButton.setMessage(searching ? Component.translatable("string.adventurerscompass.cancelSearch") : searchLabel());
 		searchButton.active = searching || searchAllowed;
 		searchButton.setTooltip(!searching && searchRefusal != null ? Tooltip.create(searchRefusal) : null);
 		passButton.active = searchAllowed && state.target() != null;
 		teleportButton.visible = AdventurersCompass.canTeleport;
 		teleportButton.active = state.target() != null && state.target().dimension().equals(CompassTexts.currentDimension(player));
+	}
+
+	/** The XP the Search button announces: the threshold, "≤" when costs vary, nothing when free or in creative. */
+	void setCost(XpThreshold cost) {
+		this.cost = cost;
+	}
+
+	private Component searchLabel() {
+		Component search = Component.translatable("string.adventurerscompass.searchSelection");
+		if (cost.levels() <= 0) {
+			return search;
+		}
+		return Component.translatable(cost.varies() ? "string.adventurerscompass.searchCostUpTo" : "string.adventurerscompass.searchCost", search, cost.levels());
 	}
 
 	/** Draws the Target panel text. */

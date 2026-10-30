@@ -17,9 +17,11 @@ import io.github.frequin.adventurerscompass.search.CompassSearches;
 import io.github.frequin.adventurerscompass.util.ItemUtils;
 import io.github.frequin.adventurerscompass.util.StructureUtils;
 import io.github.frequin.adventurerscompass.visited.PlayerVisited;
+import io.github.frequin.adventurerscompass.visited.VisitedDetection;
 
 import net.fabricmc.fabric.api.entity.event.v1.ServerEntityLevelChangeEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -105,7 +107,7 @@ public final class ServerCompass {
 		Selection selection = stack.getOrDefault(AdventurersCompass.SELECTION, Selection.EMPTY);
 		Set<String> searchable = selection.resolve(StructureUtils.buildCatalogue(level), dimension);
 		BlockXZ origin = new BlockXZ(player.blockPosition().getX(), player.blockPosition().getZ());
-		return new SearchContext(dimension, origin, searchable, AdventurersCompassConfig.maxRadius, PlayerVisited.get(player).asSet());
+		return new SearchContext(dimension, origin, searchable, AdventurersCompassConfig.maxRadius, PlayerVisited.get(player).asSet(), ServerXp.costs(), ServerXp.of(player));
 	}
 
 	private static void apply(ServerPlayer player, ItemStack stack, Outcome outcome) {
@@ -133,11 +135,22 @@ public final class ServerCompass {
 		}
 		CompassStacks.write(stack, COMPASS.searchEnded(CompassStacks.read(stack), searchId, result));
 		if (result instanceof SearchResult.Found found) {
-			// Interim until the XP (#24) and wear (#25) rules move into the domain
+			// Interim until the wear rule (#25) moves into the domain
 			stack.set(AdventurersCompass.DISPLAY_COORDS, AdventurersCompassConfig.displayCoordinates);
 			AdventurersCompass.ADVENTURERS_COMPASS_ITEM.wear(player, stack);
-			chargeXp(player, Identifier.parse(found.instance().structureId()));
+			pay(player, found);
 		}
+	}
+
+	/** A found Target costs its Structure's real cost, capped at the levels left; the player is told the price. */
+	private static void pay(ServerPlayer player, SearchResult.Found found) {
+		String structureId = found.instance().structureId();
+		int paid = ServerXp.of(player).payment(ServerXp.costs().cost(structureId, found.instance().dimension()));
+		if (paid > 0) {
+			player.giveExperienceLevels(-paid);
+		}
+		Component name = VisitedDetection.structureName(Identifier.parse(structureId));
+		player.sendOverlayMessage(paid > 0 ? Component.translatable("string.adventurerscompass.targetFoundPaid", name, paid) : Component.translatable("string.adventurerscompass.targetFound", name));
 	}
 
 	private static ItemStack findBySearch(ServerPlayer player, UUID searchId) {
@@ -152,13 +165,6 @@ public final class ServerCompass {
 			return carried;
 		}
 		return ItemStack.EMPTY;
-	}
-
-	private static void chargeXp(ServerPlayer player, Identifier structureId) {
-		int xpLevels = Math.min(StructureUtils.getXpLevelsForStructure(player.level(), structureId), player.experienceLevel);
-		if (!player.hasInfiniteMaterials() && xpLevels > 0) {
-			player.giveExperienceLevels(-xpLevels);
-		}
 	}
 
 	private static boolean isBroken(ItemStack stack) {

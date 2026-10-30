@@ -6,6 +6,8 @@ import io.github.frequin.adventurerscompass.AdventurersCompass;
 import io.github.frequin.adventurerscompass.domain.selection.Catalogue;
 import io.github.frequin.adventurerscompass.domain.selection.Selection;
 import io.github.frequin.adventurerscompass.domain.selection.TreeFilter;
+import io.github.frequin.adventurerscompass.domain.xp.PlayerXp;
+import io.github.frequin.adventurerscompass.domain.xp.XpThreshold;
 import io.github.frequin.adventurerscompass.item.AdventurersCompassItem;
 import io.github.frequin.adventurerscompass.network.UpdateSelectionPacket;
 import io.github.frequin.adventurerscompass.util.ItemUtils;
@@ -134,19 +136,19 @@ public class AdventurersCompassScreen extends Screen {
 	private void updateButtons() {
 		Set<String> searchable = selection.resolve(catalogue, dimension);
 		boolean canSearch = selection.canSearchIn(catalogue, dimension);
-		boolean affordable = AdventurersCompass.infiniteXp || player.experienceLevel >= maxXpLevels(searchable);
-		// Greyed chips only: say why nothing can be searched here
-		Component refusal = !canSearch && !selection.equals(Selection.EMPTY) ? Component.translatable("string.adventurerscompass.nothingSearchableHere") : null;
+		// The server sent each Structure's real cost in the Current dimension
+		XpThreshold threshold = AdventurersCompass.infiniteXp ? XpThreshold.FREE : XpThreshold.of(searchable.stream().map(id -> AdventurersCompass.xpLevels.getOrDefault(id, 0)).toList());
+		boolean affordable = new PlayerXp(player.experienceLevel, AdventurersCompass.infiniteXp).canLaunch(threshold);
+		Component refusal = null;
+		if (!canSearch && !selection.equals(Selection.EMPTY)) {
+			// Greyed chips only: say why nothing can be searched here
+			refusal = Component.translatable("string.adventurerscompass.nothingSearchableHere");
+		} else if (canSearch && !affordable) {
+			refusal = Component.translatable("string.adventurerscompass.notEnoughXp", threshold.levels());
+		}
+		searchPanel.setCost(threshold);
 		searchPanel.update(canSearch && affordable, refusal);
 		clearButton.active = !selection.equals(Selection.EMPTY);
-	}
-
-	private static int maxXpLevels(Set<String> structureIds) {
-		int max = 0;
-		for (String structureId : structureIds) {
-			max = Math.max(max, AdventurersCompass.xpLevels.getOrDefault(structureId, 0));
-		}
-		return max;
 	}
 
 }
