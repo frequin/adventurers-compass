@@ -42,7 +42,7 @@ public class AdventurersCompassAngleState extends NeedleDirectionHelper {
 		GlobalPos pos = level.getRespawnData().globalPos();
 		if (stack.getItem() == AdventurersCompass.ADVENTURERS_COMPASS_ITEM) {
 			CompassState state = CompassStacks.read(stack);
-			String dimension = level.dimension().identifier().toString();
+			String dimension = LevelUtils.dimensionId(level);
 			boolean targetHere = state.target() != null && state.target().dimension().equals(dimension);
 			if (state.isSearching() || state.target() != null && !targetHere) {
 				return getRandomlySpinningRotation(seed, gameTime);

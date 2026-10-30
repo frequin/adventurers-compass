@@ -13,6 +13,7 @@ import io.github.frequin.adventurerscompass.network.SyncPacket;
 import io.github.frequin.adventurerscompass.util.ItemUtils;
 import io.github.frequin.adventurerscompass.util.StructureUtils;
 import io.github.frequin.adventurerscompass.domain.selection.Catalogue;
+import io.github.frequin.adventurerscompass.util.LevelUtils;
 
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.ChatFormatting;
@@ -55,7 +56,7 @@ public class AdventurersCompassItem extends Item {
 			final ServerPlayer serverPlayer = (ServerPlayer) player;
 			final boolean canTeleport = ServerCompass.teleportContext(serverPlayer).allowed();
 			final boolean hasInfiniteXp = player.hasInfiniteMaterials();
-			final String dimension = serverLevel.dimension().identifier().toString();
+			final String dimension = LevelUtils.dimensionId(serverLevel);
 			final boolean dimensionDisabled = AdventurersCompassConfig.isDisabledDimension(dimension);
 			// The compass lists nothing in a disabled dimension
 			final Catalogue catalogue = dimensionDisabled ? Catalogue.EMPTY : StructureUtils.buildCatalogue(serverLevel);

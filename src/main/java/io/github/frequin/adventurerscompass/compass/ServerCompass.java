@@ -26,6 +26,7 @@ import io.github.frequin.adventurerscompass.util.PlayerUtils;
 import io.github.frequin.adventurerscompass.util.StructureUtils;
 import io.github.frequin.adventurerscompass.visited.PlayerVisited;
 import io.github.frequin.adventurerscompass.visited.VisitedDetection;
+import io.github.frequin.adventurerscompass.util.LevelUtils;
 
 import net.fabricmc.fabric.api.entity.event.v1.ServerEntityLevelChangeEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
@@ -84,7 +85,7 @@ public final class ServerCompass {
 
 	/** Who asks for "Teleport", and where: the one source of the teleport rule's inputs, for the command and the screen's button. */
 	public static TeleportContext teleportContext(ServerPlayer player) {
-		return new TeleportContext(player.level().dimension().identifier().toString(), AdventurersCompassConfig.allowTeleport, PlayerUtils.isOperator(player.level().getServer(), player), player.isCreative());
+		return new TeleportContext(LevelUtils.dimensionId(player.level()),AdventurersCompassConfig.allowTeleport, PlayerUtils.isOperator(player.level().getServer(), player), player.isCreative());
 	}
 
 	/** Stores a new Selection on the compass; a real change cancels the search and clears the Target and Skipped. */
@@ -139,7 +140,7 @@ public final class ServerCompass {
 
 	private static SearchContext context(ServerPlayer player, ItemStack stack) {
 		ServerLevel level = player.level();
-		String dimension = level.dimension().identifier().toString();
+		String dimension = LevelUtils.dimensionId(level);
 		Selection selection = stack.getOrDefault(AdventurersCompass.SELECTION, Selection.EMPTY);
 		Set<String> searchable = selection.resolve(StructureUtils.buildCatalogue(level), dimension);
 		BlockXZ origin = new BlockXZ(player.blockPosition().getX(), player.blockPosition().getZ());

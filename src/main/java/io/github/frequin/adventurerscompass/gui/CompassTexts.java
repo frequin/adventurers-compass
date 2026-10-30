@@ -12,6 +12,7 @@ import io.github.frequin.adventurerscompass.domain.search.SearchResult;
 import io.github.frequin.adventurerscompass.domain.visited.VisitedSet;
 import io.github.frequin.adventurerscompass.util.StructureUtils;
 import io.github.frequin.adventurerscompass.visited.PlayerVisited;
+import io.github.frequin.adventurerscompass.util.LevelUtils;
 
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
@@ -75,7 +76,7 @@ public final class CompassTexts {
 	}
 
 	public static String currentDimension(Player player) {
-		return player.level().dimension().identifier().toString();
+		return LevelUtils.dimensionId(player.level());
 	}
 
 	private static String titleCase(String path) {
