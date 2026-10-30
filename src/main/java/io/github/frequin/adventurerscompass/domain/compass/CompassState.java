@@ -14,13 +14,19 @@ import io.github.frequin.adventurerscompass.domain.search.SearchResult;
  * @param target       the Target, or {@code null}
  * @param skipped      Instances passed over with "Pass"
  * @param nothingFound the last search's "nothing found", or {@code null}; cleared by the next search
+ * @param wear         Targets found since the last repair (Pass included)
  */
-public record CompassState(UUID search, Target target, Set<InstanceKey> skipped, SearchResult.NothingFound nothingFound) {
+public record CompassState(UUID search, Target target, Set<InstanceKey> skipped, SearchResult.NothingFound nothingFound, int wear) {
 
-	public static final CompassState EMPTY = new CompassState(null, null, Set.of(), null);
+	public static final CompassState EMPTY = new CompassState(null, null, Set.of(), null, 0);
 
 	public CompassState {
 		skipped = Set.copyOf(skipped);
+	}
+
+	/** A compass without wear. */
+	public CompassState(UUID search, Target target, Set<InstanceKey> skipped, SearchResult.NothingFound nothingFound) {
+		this(search, target, skipped, nothingFound, 0);
 	}
 
 	public boolean isSearching() {
@@ -38,20 +44,34 @@ public record CompassState(UUID search, Target target, Set<InstanceKey> skipped,
 		return nothingFound != null ? Status.NOTHING_FOUND : Status.IDLE;
 	}
 
+	/** Searches left before the compass breaks; {@code durability} 0 or less means it never wears. */
+	public int searchesLeft(int durability) {
+		return Math.max(0, durability - wear);
+	}
+
+	/** A broken compass keeps its Target but refuses "Search" and "Pass". */
+	public boolean isBroken(int durability) {
+		return durability > 0 && wear >= durability;
+	}
+
 	public CompassState withSearch(UUID search) {
-		return new CompassState(search, target, skipped, nothingFound);
+		return new CompassState(search, target, skipped, nothingFound, wear);
 	}
 
 	public CompassState withTarget(Target target) {
-		return new CompassState(search, target, skipped, nothingFound);
+		return new CompassState(search, target, skipped, nothingFound, wear);
 	}
 
 	public CompassState withSkipped(Set<InstanceKey> skipped) {
-		return new CompassState(search, target, skipped, nothingFound);
+		return new CompassState(search, target, skipped, nothingFound, wear);
 	}
 
 	public CompassState withNothingFound(SearchResult.NothingFound nothingFound) {
-		return new CompassState(search, target, skipped, nothingFound);
+		return new CompassState(search, target, skipped, nothingFound, wear);
+	}
+
+	public CompassState withWear(int wear) {
+		return new CompassState(search, target, skipped, nothingFound, wear);
 	}
 
 }

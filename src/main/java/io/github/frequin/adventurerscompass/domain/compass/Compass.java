@@ -15,7 +15,7 @@ import io.github.frequin.adventurerscompass.domain.search.SearchResult;
 public final class Compass {
 
 	/** The rules every compass applies before a search starts. */
-	public static final List<LaunchRule> DEFAULT_RULES = List.of(LaunchRule.SOMETHING_SEARCHABLE);
+	public static final List<LaunchRule> DEFAULT_RULES = List.of(LaunchRule.SOMETHING_SEARCHABLE, LaunchRule.NOT_BROKEN);
 
 	private final List<LaunchRule> rules;
 
@@ -86,17 +86,31 @@ public final class Compass {
 		return state.isSearching() ? List.of(new Effect.CancelSearch(state.search())) : List.of();
 	}
 
-	/** The search {@code id} ended with {@code result}. */
+	/** The search {@code id} ended with {@code result}, without wearing the compass. */
 	public CompassState searchEnded(CompassState state, UUID id, SearchResult result) {
+		return searchEnded(state, id, result, WearContext.NONE);
+	}
+
+	/** The search {@code id} ended with {@code result}; a found Target wears the compass by one, per {@code wear}. */
+	public CompassState searchEnded(CompassState state, UUID id, SearchResult result, WearContext wear) {
 		if (!id.equals(state.search())) {
 			// A search this compass no longer waits for
 			return state;
 		}
 		return switch (result) {
-			case SearchResult.Found found -> new CompassState(null, new Target(found.instance(), found.pos()), state.skipped(), null);
-			case SearchResult.NothingFound nothing -> new CompassState(null, null, state.skipped(), nothing);
+			case SearchResult.Found found -> state.withSearch(null).withTarget(new Target(found.instance(), found.pos())).withNothingFound(null).withWear(worn(state.wear(), wear));
+			case SearchResult.NothingFound nothing -> state.withSearch(null).withTarget(null).withNothingFound(nothing);
 			case SearchResult.Cancelled cancelled -> state.withSearch(null);
 		};
+	}
+
+	/** Repair (crafting with a compass): resets wear and keeps the Target, Skipped and any running search. */
+	public CompassState repair(CompassState state) {
+		return state.withWear(0);
+	}
+
+	private static int worn(int current, WearContext wear) {
+		return wear.wears() ? Math.min(current + 1, wear.durability()) : current;
 	}
 
 }

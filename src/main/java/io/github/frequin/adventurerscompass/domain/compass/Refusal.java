@@ -7,6 +7,9 @@ public enum Refusal {
 	NOTHING_SEARCHABLE,
 
 	/** "Pass" without a Target. */
-	NO_TARGET
+	NO_TARGET,
+
+	/** The compass is worn out: it must be repaired before it searches again. */
+	BROKEN
 
 }
