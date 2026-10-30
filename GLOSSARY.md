@@ -12,6 +12,10 @@ _Avoid_: Structure type
 A named set of Structures that share a placement in world generation, as listed in the compass screen.
 _Avoid_: Category, structure set
 
+**Hidden**:
+The state of a Structure the compass never lists or searches for, set by whoever installs or runs the game rather than by the player.
+_Avoid_: Blacklisted, disabled, excluded
+
 **Instance**:
 One concrete occurrence of a Structure in a world, identified by its position.
 _Avoid_: Location, structure (when one occurrence is meant)
