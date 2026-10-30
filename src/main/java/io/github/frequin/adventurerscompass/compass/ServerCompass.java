@@ -147,8 +147,11 @@ public final class ServerCompass {
 	}
 
 	private static void apply(ServerPlayer player, ItemStack stack, Outcome outcome) {
-		if (outcome instanceof Outcome.Refused(Refusal reason) && reason == Refusal.DISABLED_DIMENSION) {
-			player.sendOverlayMessage(Component.translatable("string.adventurerscompass.disabledDimension"));
+		if (outcome instanceof Outcome.Refused(Refusal reason)) {
+			Component message = refusalMessage(player, stack, reason);
+			if (message != null) {
+				player.sendOverlayMessage(message);
+			}
 		}
 		if (!(outcome instanceof Outcome.Accepted accepted)) {
 			return;
@@ -163,6 +166,21 @@ public final class ServerCompass {
 				case Effect.TeleportTo teleport -> TeleportPacket.teleport(player, teleport.pos().x(), teleport.pos().z());
 			}
 		}
+	}
+
+	/**
+	 * What the action bar says when "Search" or "Pass" is refused; the screen
+	 * greys the buttons for the same reasons, but its state can be stale.
+	 * {@code null} for refusals the screen never lets through (no Target, teleport).
+	 */
+	private static Component refusalMessage(ServerPlayer player, ItemStack stack, Refusal reason) {
+		return switch (reason) {
+			case DISABLED_DIMENSION -> Component.translatable("string.adventurerscompass.disabledDimension");
+			case NOTHING_SEARCHABLE -> Component.translatable("string.adventurerscompass.nothingSearchableHere");
+			case BROKEN -> Component.translatable("string.adventurerscompass.broken");
+			case NOT_ENOUGH_XP -> Component.translatable("string.adventurerscompass.searchNeedsXp", context(player, stack).xpThreshold().levels());
+			case NO_TARGET, TELEPORT_NOT_ALLOWED, TARGET_IN_OTHER_DIMENSION -> null;
+		};
 	}
 
 	private static void searchEnded(ServerPlayer launcher, UUID searchId, SearchResult result) {

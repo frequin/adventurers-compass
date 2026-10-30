@@ -31,6 +31,7 @@
     "string.adventurerscompass.searchCost": "%s (%s levels)",
     "string.adventurerscompass.searchCostUpTo": "%s (≤ %s levels)",
     "string.adventurerscompass.notEnoughXp": "Needs %s levels",
+    "string.adventurerscompass.searchNeedsXp": "This search needs %s levels",
     "string.adventurerscompass.targetFound": "Target: %s",
     "string.adventurerscompass.targetFoundPaid": "Target: %s (%s levels paid)",
     "string.adventurerscompass.cancelSearch": "Cancel the search",
