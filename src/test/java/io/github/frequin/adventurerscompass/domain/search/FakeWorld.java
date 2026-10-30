@@ -15,10 +15,10 @@ import io.github.frequin.adventurerscompass.domain.ChunkCoord;
  * Instances on a grid of cells, at most one per cell, like a vanilla random
  * spread placement. Presence tests advance a fake clock by a fixed cost.
  */
-final class FakeWorld implements WorldPort<FakeWorld.Placement> {
+public final class FakeWorld implements WorldPort<FakeWorld.Placement> {
 
 	/** How a placement spreads its candidates. */
-	enum Kind {
+	public enum Kind {
 		/** One candidate per square cell of {@code spacing} chunks. */
 		RANDOM_SPREAD,
 		/** A fixed list of candidates: the chunks of its Instances plus decoys. */
@@ -27,9 +27,9 @@ final class FakeWorld implements WorldPort<FakeWorld.Placement> {
 		EVERY_CHUNK
 	}
 
-	record Placement(String name, Kind kind, int spacing) {
+	public record Placement(String name, Kind kind, int spacing) {
 
-		Placement(String name, int spacing) {
+		public Placement(String name, int spacing) {
 			this(name, Kind.RANDOM_SPREAD, spacing);
 		}
 
@@ -58,7 +58,7 @@ final class FakeWorld implements WorldPort<FakeWorld.Placement> {
 		this.presenceTestCostNanos = presenceTestCostNanos;
 	}
 
-	FakeWorld() {
+	public FakeWorld() {
 		this(new FakeClock(), 0);
 	}
 
@@ -69,7 +69,7 @@ final class FakeWorld implements WorldPort<FakeWorld.Placement> {
 	}
 
 	/** Puts an Instance of a Structure at a chunk; the chunk is its start chunk. */
-	FakeWorld instance(String structureId, Placement placement, int chunkX, int chunkZ) {
+	public FakeWorld instance(String structureId, Placement placement, int chunkX, int chunkZ) {
 		placement(structureId, placement);
 		ChunkCoord chunk = new ChunkCoord(chunkX, chunkZ);
 		for (Located other : placement.kind() == Kind.RANDOM_SPREAD ? instances.get(placement) : Set.<Located>of()) {

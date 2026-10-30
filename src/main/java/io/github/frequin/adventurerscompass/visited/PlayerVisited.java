@@ -1,11 +1,10 @@
 package io.github.frequin.adventurerscompass.visited;
 
 import io.github.frequin.adventurerscompass.AdventurersCompass;
-import io.github.frequin.adventurerscompass.domain.ChunkCoord;
+import io.github.frequin.adventurerscompass.codec.CompassCodecs;
 import io.github.frequin.adventurerscompass.domain.InstanceKey;
 import io.github.frequin.adventurerscompass.domain.visited.VisitedSet;
 import com.mojang.serialization.Codec;
-import com.mojang.serialization.codecs.RecordCodecBuilder;
 
 import net.fabricmc.fabric.api.attachment.v1.AttachmentRegistry;
 import net.fabricmc.fabric.api.attachment.v1.AttachmentType;
@@ -19,14 +18,7 @@ import net.minecraft.server.level.ServerPlayer;
  */
 public final class PlayerVisited {
 
-	static final Codec<InstanceKey> INSTANCE_KEY_CODEC = RecordCodecBuilder.create(instance -> instance.group(
-			Codec.STRING.fieldOf("dimension").forGetter(InstanceKey::dimension),
-			Codec.STRING.fieldOf("structure").forGetter(InstanceKey::structureId),
-			Codec.INT.fieldOf("chunk_x").forGetter(key -> key.startChunk().x()),
-			Codec.INT.fieldOf("chunk_z").forGetter(key -> key.startChunk().z()))
-			.apply(instance, (dimension, structure, chunkX, chunkZ) -> new InstanceKey(dimension, structure, new ChunkCoord(chunkX, chunkZ))));
-
-	static final Codec<VisitedSet> CODEC = INSTANCE_KEY_CODEC.listOf().xmap(VisitedSet::of, VisitedSet::list);
+	static final Codec<VisitedSet> CODEC = CompassCodecs.INSTANCE_KEY.listOf().xmap(VisitedSet::of, VisitedSet::list);
 
 	public static final AttachmentType<VisitedSet> VISITED = AttachmentRegistry.create(
 			Identifier.fromNamespaceAndPath(AdventurersCompass.MODID, "visited"),

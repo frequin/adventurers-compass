@@ -1,19 +1,25 @@
 package io.github.frequin.adventurerscompass;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 
 import net.fabricmc.fabric.api.creativetab.v1.CreativeModeTabEvents;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import io.github.frequin.adventurerscompass.codec.CompassCodecs;
 import io.github.frequin.adventurerscompass.codec.SelectionCodecs;
+import io.github.frequin.adventurerscompass.compass.ServerCompass;
+import io.github.frequin.adventurerscompass.domain.InstanceKey;
+import io.github.frequin.adventurerscompass.domain.compass.Target;
+import io.github.frequin.adventurerscompass.domain.search.SearchResult;
 import io.github.frequin.adventurerscompass.config.AdventurersCompassConfig;
 import io.github.frequin.adventurerscompass.domain.selection.Catalogue;
 import io.github.frequin.adventurerscompass.domain.selection.Selection;
 import io.github.frequin.adventurerscompass.item.AdventurersCompassItem;
-import io.github.frequin.adventurerscompass.network.SearchForNextPacket;
+import io.github.frequin.adventurerscompass.network.CancelPacket;
+import io.github.frequin.adventurerscompass.network.PassPacket;
 import io.github.frequin.adventurerscompass.network.SearchPacket;
 import io.github.frequin.adventurerscompass.network.SyncPacket;
 import io.github.frequin.adventurerscompass.network.TeleportPacket;
@@ -26,8 +32,8 @@ import com.mojang.serialization.Codec;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
-import net.minecraft.core.BlockPos;
 import net.minecraft.core.Registry;
+import net.minecraft.core.UUIDUtil;
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.codec.ByteBufCodecs;
@@ -44,22 +50,20 @@ public class AdventurersCompass implements ModInitializer {
 	
 	/** The Selection of this compass; absent means empty. */
 	public static final DataComponentType<Selection> SELECTION = DataComponentType.<Selection>builder().persistent(SelectionCodecs.SELECTION).networkSynchronized(SelectionCodecs.SELECTION_STREAM).build();
-	public static final DataComponentType<String> STRUCTURE_ID = DataComponentType.<String>builder().persistent(Codec.STRING).networkSynchronized(ByteBufCodecs.STRING_UTF8).build();
-	public static final DataComponentType<Integer> COMPASS_STATE = DataComponentType.<Integer>builder().persistent(Codec.INT).networkSynchronized(ByteBufCodecs.VAR_INT).build();
-	/** Dimension of the Target, e.g. {@code minecraft:overworld}. */
-	public static final DataComponentType<String> TARGET_DIMENSION = DataComponentType.<String>builder().persistent(Codec.STRING).networkSynchronized(ByteBufCodecs.STRING_UTF8).build();
-	public static final DataComponentType<Integer> FOUND_X = DataComponentType.<Integer>builder().persistent(Codec.INT).networkSynchronized(ByteBufCodecs.VAR_INT).build();
-	public static final DataComponentType<Integer> FOUND_Z = DataComponentType.<Integer>builder().persistent(Codec.INT).networkSynchronized(ByteBufCodecs.VAR_INT).build();
-	public static final DataComponentType<Integer> SEARCH_RADIUS = DataComponentType.<Integer>builder().persistent(Codec.INT).networkSynchronized(ByteBufCodecs.VAR_INT).build();
-	public static final DataComponentType<Integer> SAMPLES = DataComponentType.<Integer>builder().persistent(Codec.INT).networkSynchronized(ByteBufCodecs.VAR_INT).build();
+	/** The compass state ({@link io.github.frequin.adventurerscompass.compass.CompassStacks}): the running search, absent when none runs. */
+	public static final DataComponentType<UUID> SEARCH = DataComponentType.<UUID>builder().persistent(UUIDUtil.CODEC).networkSynchronized(UUIDUtil.STREAM_CODEC).build();
+	/** The Target: dimension, Structure, start chunk and the X/Z the needle points at. */
+	public static final DataComponentType<Target> TARGET = DataComponentType.<Target>builder().persistent(CompassCodecs.TARGET).networkSynchronized(CompassCodecs.TARGET_STREAM).build();
+	/** Instances passed over with "Pass"; absent means none. */
+	public static final DataComponentType<Set<InstanceKey>> SKIPPED = DataComponentType.<Set<InstanceKey>>builder().persistent(CompassCodecs.SKIPPED).networkSynchronized(CompassCodecs.SKIPPED_STREAM).build();
+	/** The last search's "nothing found", shown by the HUD. */
+	public static final DataComponentType<SearchResult.NothingFound> NOTHING_FOUND = DataComponentType.<SearchResult.NothingFound>builder().persistent(CompassCodecs.NOTHING_FOUND).networkSynchronized(CompassCodecs.NOTHING_FOUND_STREAM).build();
+	/** The server's {@code displayCoordinates}, copied on the compass when a Target is found, for the HUD. */
 	public static final DataComponentType<Boolean> DISPLAY_COORDS = DataComponentType.<Boolean>builder().persistent(Codec.BOOL).networkSynchronized(ByteBufCodecs.BOOL).build();
-	public static final DataComponentType<Boolean> IS_GROUP = DataComponentType.<Boolean>builder().persistent(Codec.BOOL).networkSynchronized(ByteBufCodecs.BOOL).build();
-	public static final DataComponentType<List<BlockPos>> PREV_POS = DataComponentType.<List<BlockPos>>builder().persistent(BlockPos.CODEC.listOf().xmap(ArrayList::new, list -> list)).networkSynchronized(ByteBufCodecs.collection(ArrayList::new, BlockPos.STREAM_CODEC)).build();
 	public static final DataComponentType<Integer> DAMAGE = DataComponentType.<Integer>builder().persistent(Codec.INT).networkSynchronized(ByteBufCodecs.VAR_INT).build();
 	
 	public static boolean synced;
 	public static boolean canTeleport;
-	public static int maxNextSearches;
 	public static boolean infiniteXp;
 	/** Client side: the Current dimension and the catalogue last sent by the server. */
 	public static String currentDimension = "";
@@ -73,32 +77,30 @@ public class AdventurersCompass implements ModInitializer {
 		Registry.register(BuiltInRegistries.ITEM, AdventurersCompassItem.KEY, ADVENTURERS_COMPASS_ITEM);
 		
 		Registry.register(BuiltInRegistries.DATA_COMPONENT_TYPE, Identifier.fromNamespaceAndPath(MODID, "selection"), SELECTION);
-		Registry.register(BuiltInRegistries.DATA_COMPONENT_TYPE, Identifier.fromNamespaceAndPath(MODID, "structure_id"), STRUCTURE_ID);
-		Registry.register(BuiltInRegistries.DATA_COMPONENT_TYPE, Identifier.fromNamespaceAndPath(MODID, "compass_state"), COMPASS_STATE);
-		Registry.register(BuiltInRegistries.DATA_COMPONENT_TYPE, Identifier.fromNamespaceAndPath(MODID, "target_dimension"), TARGET_DIMENSION);
-		Registry.register(BuiltInRegistries.DATA_COMPONENT_TYPE, Identifier.fromNamespaceAndPath(MODID, "found_x"), FOUND_X);
-		Registry.register(BuiltInRegistries.DATA_COMPONENT_TYPE, Identifier.fromNamespaceAndPath(MODID, "found_z"), FOUND_Z);
-		Registry.register(BuiltInRegistries.DATA_COMPONENT_TYPE, Identifier.fromNamespaceAndPath(MODID, "search_radius"), SEARCH_RADIUS);
-		Registry.register(BuiltInRegistries.DATA_COMPONENT_TYPE, Identifier.fromNamespaceAndPath(MODID, "samples"), SAMPLES);
+		Registry.register(BuiltInRegistries.DATA_COMPONENT_TYPE, Identifier.fromNamespaceAndPath(MODID, "search"), SEARCH);
+		Registry.register(BuiltInRegistries.DATA_COMPONENT_TYPE, Identifier.fromNamespaceAndPath(MODID, "target"), TARGET);
+		Registry.register(BuiltInRegistries.DATA_COMPONENT_TYPE, Identifier.fromNamespaceAndPath(MODID, "skipped"), SKIPPED);
+		Registry.register(BuiltInRegistries.DATA_COMPONENT_TYPE, Identifier.fromNamespaceAndPath(MODID, "nothing_found"), NOTHING_FOUND);
 		Registry.register(BuiltInRegistries.DATA_COMPONENT_TYPE, Identifier.fromNamespaceAndPath(MODID, "display_coords"), DISPLAY_COORDS);
-		Registry.register(BuiltInRegistries.DATA_COMPONENT_TYPE, Identifier.fromNamespaceAndPath(MODID, "is_group"), IS_GROUP);
-		Registry.register(BuiltInRegistries.DATA_COMPONENT_TYPE, Identifier.fromNamespaceAndPath(MODID, "prev_pos"), PREV_POS);
 		Registry.register(BuiltInRegistries.DATA_COMPONENT_TYPE, Identifier.fromNamespaceAndPath(MODID, "damage"), DAMAGE);
 
 		CreativeModeTabEvents.modifyOutputEvent(CreativeModeTabs.TOOLS_AND_UTILITIES).register(entries -> entries.accept(ADVENTURERS_COMPASS_ITEM));
 
 		PayloadTypeRegistry.serverboundPlay().register(SearchPacket.TYPE, SearchPacket.CODEC);
-		PayloadTypeRegistry.serverboundPlay().register(SearchForNextPacket.TYPE, SearchForNextPacket.CODEC);
+		PayloadTypeRegistry.serverboundPlay().register(PassPacket.TYPE, PassPacket.CODEC);
+		PayloadTypeRegistry.serverboundPlay().register(CancelPacket.TYPE, CancelPacket.CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(TeleportPacket.TYPE, TeleportPacket.CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(UpdateSelectionPacket.TYPE, UpdateSelectionPacket.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(SyncPacket.TYPE, SyncPacket.CODEC);
 
 		ServerPlayNetworking.registerGlobalReceiver(SearchPacket.TYPE, SearchPacket::handle);
-		ServerPlayNetworking.registerGlobalReceiver(SearchForNextPacket.TYPE, SearchForNextPacket::handle);
+		ServerPlayNetworking.registerGlobalReceiver(PassPacket.TYPE, PassPacket::handle);
+		ServerPlayNetworking.registerGlobalReceiver(CancelPacket.TYPE, CancelPacket::handle);
 		ServerPlayNetworking.registerGlobalReceiver(TeleportPacket.TYPE, TeleportPacket::handle);
 		ServerPlayNetworking.registerGlobalReceiver(UpdateSelectionPacket.TYPE, UpdateSelectionPacket::handle);
 
 		CompassSearches.register();
+		ServerCompass.register();
 		PlayerVisited.register();
 		VisitedDetection.register();
 	}

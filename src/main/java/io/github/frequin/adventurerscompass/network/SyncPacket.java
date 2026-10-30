@@ -21,7 +21,7 @@ import net.minecraft.resources.Identifier;
  *
  * @param xpLevels XP levels charged per Structure id of the catalogue
  */
-public record SyncPacket(boolean canTeleport, int maxNextSearches, boolean infiniteXp, String dimension, Catalogue catalogue, Map<String, Integer> xpLevels) implements CustomPacketPayload {
+public record SyncPacket(boolean canTeleport, boolean infiniteXp, String dimension, Catalogue catalogue, Map<String, Integer> xpLevels) implements CustomPacketPayload {
 
 	public static final Type<SyncPacket> TYPE = new Type<SyncPacket>(Identifier.fromNamespaceAndPath(AdventurersCompass.MODID, "sync"));
 
@@ -31,17 +31,15 @@ public record SyncPacket(boolean canTeleport, int maxNextSearches, boolean infin
 
 	public static SyncPacket read(FriendlyByteBuf buf) {
 		final boolean canTeleport = buf.readBoolean();
-		final int maxNextSearches = buf.readInt();
 		final boolean infiniteXp = buf.readBoolean();
 		final String dimension = buf.readUtf();
 		final Catalogue catalogue = SelectionCodecs.CATALOGUE_STREAM.decode(buf);
 		final Map<String, Integer> xpLevels = XP_LEVELS.decode(buf);
-		return new SyncPacket(canTeleport, maxNextSearches, infiniteXp, dimension, catalogue, xpLevels);
+		return new SyncPacket(canTeleport, infiniteXp, dimension, catalogue, xpLevels);
 	}
 
 	public void write(FriendlyByteBuf buf) {
 		buf.writeBoolean(canTeleport);
-		buf.writeInt(maxNextSearches);
 		buf.writeBoolean(infiniteXp);
 		buf.writeUtf(dimension);
 		SelectionCodecs.CATALOGUE_STREAM.encode(buf, catalogue);
@@ -52,7 +50,6 @@ public record SyncPacket(boolean canTeleport, int maxNextSearches, boolean infin
 		context.client().execute(() -> {
 			AdventurersCompass.synced = true;
 			AdventurersCompass.canTeleport = packet.canTeleport;
-			AdventurersCompass.maxNextSearches = packet.maxNextSearches;
 			AdventurersCompass.infiniteXp = packet.infiniteXp;
 			AdventurersCompass.currentDimension = packet.dimension;
 			AdventurersCompass.catalogue = packet.catalogue;

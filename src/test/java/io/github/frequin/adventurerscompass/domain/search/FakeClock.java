@@ -3,7 +3,7 @@ package io.github.frequin.adventurerscompass.domain.search;
 import io.github.frequin.adventurerscompass.domain.Clock;
 
 /** A clock that only moves when told to. */
-final class FakeClock implements Clock {
+public final class FakeClock implements Clock {
 
 	private long now;
 
@@ -12,7 +12,7 @@ final class FakeClock implements Clock {
 		return now;
 	}
 
-	void advance(long nanos) {
+	public void advance(long nanos) {
 		now += nanos;
 	}
 

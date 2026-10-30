@@ -3,7 +3,8 @@ package io.github.frequin.adventurerscompass.util;
 import org.jetbrains.annotations.Nullable;
 
 import io.github.frequin.adventurerscompass.AdventurersCompass;
-import io.github.frequin.adventurerscompass.item.AdventurersCompassItem;
+import io.github.frequin.adventurerscompass.compass.CompassStacks;
+import io.github.frequin.adventurerscompass.domain.compass.CompassState;
 
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
@@ -11,10 +12,6 @@ import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.item.properties.numeric.NeedleDirectionHelper;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.GlobalPos;
-import net.minecraft.core.registries.Registries;
-import net.minecraft.resources.Identifier;
-import net.minecraft.resources.ResourceKey;
-import net.minecraft.world.level.Level;
 import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.Entity;
@@ -34,23 +31,27 @@ public class AdventurersCompassAngleState extends NeedleDirectionHelper {
 		wobbler = newWobbler(0.8F);
 	}
 	
+	/**
+	 * Points at the Target in the Current dimension. Spins while searching and
+	 * when the Target is in another dimension; points at the world spawn when
+	 * the compass has no Target.
+	 */
 	@Override
 	protected float calculate(ItemStack stack, ClientLevel level, int seed, ItemOwner owner) {
+		long gameTime = level.getGameTime();
 		GlobalPos pos = level.getRespawnData().globalPos();
 		if (stack.getItem() == AdventurersCompass.ADVENTURERS_COMPASS_ITEM) {
-			AdventurersCompassItem compassItem = (AdventurersCompassItem) stack.getItem();
-			if (compassItem.getCompassState(stack) == CompassState.FOUND) {
-				pos = new GlobalPos(targetDimension(stack, level), new BlockPos(stack.getOrDefault(AdventurersCompass.FOUND_X, 0), 0, stack.getOrDefault(AdventurersCompass.FOUND_Z, 0)));
+			CompassState state = CompassStacks.read(stack);
+			switch (state.status(level.dimension().identifier().toString())) {
+				case SEARCHING, OTHER_DIMENSION -> {
+					return getRandomlySpinningRotation(seed, gameTime);
+				}
+				case TARGET -> pos = new GlobalPos(level.dimension(), new BlockPos(state.target().pos().x(), 0, state.target().pos().z()));
+				default -> {
+				}
 			}
 		}
-		long gameTime = level.getGameTime();
 		return owner.asLivingEntity() == null || !isValidCompassTargetPos(owner.asLivingEntity(), pos) ? getRandomlySpinningRotation(seed, gameTime) : getRotationTowardsCompassTarget(owner.asLivingEntity(), gameTime, pos.pos());
-	}
-	
-	/** The Target's dimension; compasses found before it was stored assume the current one. */
-	private static ResourceKey<Level> targetDimension(ItemStack stack, ClientLevel level) {
-		Identifier id = Identifier.tryParse(stack.getOrDefault(AdventurersCompass.TARGET_DIMENSION, ""));
-		return id == null || stack.get(AdventurersCompass.TARGET_DIMENSION) == null ? level.dimension() : ResourceKey.create(Registries.DIMENSION, id);
 	}
 
 	private float getRandomlySpinningRotation(int seed, long gameTime) {

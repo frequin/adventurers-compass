@@ -23,16 +23,15 @@ public class AdventurersCompassConfig {
 	private static Gson gson = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
 	
 	public static boolean allowTeleport = true;
-	public static int maxNextSearches = 100;
 	public static boolean displayCoordinates = true;
 	public static int maxRadius = 1000;
-	public static int maxSamples = 100000;
 	public static int compassDurability = 0;
 	public static int defaultXpLevel = 0;
 	public static Map<String, Integer> perStructureXpLevels = new HashMap<String, Integer>();
 	public static List<String> structureBlacklist = new ArrayList<String>();
 	public static boolean visitedMessage = true;
 	
+	public static boolean hudEnabled = true;
 	public static boolean displayWithChatOpen = true;
 	public static boolean translateStructureNames = true;
 	public static int overlayLineOffset = 1;
@@ -47,16 +46,15 @@ public class AdventurersCompassConfig {
 				Data data = gson.fromJson(reader, Data.class);
 				
 				allowTeleport = data.common.allowTeleport;
-				maxNextSearches = data.common.maxNextSearches;
 				displayCoordinates = data.common.displayCoordinates;
 				maxRadius = data.common.maxRadius;
-				maxSamples = data.common.maxSamples;
 				compassDurability = data.common.compassDurability;
 				defaultXpLevel = data.common.defaultXpLevel;
 				perStructureXpLevels = data.common.perStructureXpLevels;
 				structureBlacklist = data.common.structureBlacklist;
 				visitedMessage = data.common.visitedMessage;
 				
+				hudEnabled = data.client.hudEnabled;
 				displayWithChatOpen = data.client.displayWithChatOpen;
 				translateStructureNames = data.client.translateStructureNames;
 				overlayLineOffset = data.client.overlayLineOffset;
@@ -73,7 +71,7 @@ public class AdventurersCompassConfig {
 	public static void save() {
 		try {
 			Writer writer = Files.newBufferedWriter(getFilePath());
-			Data data = new Data(new Data.Common(allowTeleport, maxNextSearches, displayCoordinates, maxRadius, maxSamples, compassDurability, defaultXpLevel, perStructureXpLevels, structureBlacklist, visitedMessage), new Data.Client(displayWithChatOpen, translateStructureNames, overlayLineOffset, overlaySide));
+			Data data = new Data(new Data.Common(allowTeleport, displayCoordinates, maxRadius, compassDurability, defaultXpLevel, perStructureXpLevels, structureBlacklist, visitedMessage), new Data.Client(hudEnabled, displayWithChatOpen, translateStructureNames, overlayLineOffset, overlaySide));
 			gson.toJson(data, writer);
 			writer.close();
 		} catch (IOException e) {
@@ -102,18 +100,12 @@ public class AdventurersCompassConfig {
 			private final String allowTeleportComment = "Allows a player to teleport to a located structure when in creative mode, opped, or in cheat mode.";
 			private final boolean allowTeleport;
 
-			private final String maxNextSearchesComment = "The maximum number of times a player can search for the next instance of a located structure, excluding already-found locations. Set to 0 to disable searching for additional structure instances and make the compass always locate the nearest instance.";
-			private final int maxNextSearches;
-
-			private final String displayCoordinatesComment = "Allows players to view the precise coordinates and distance of a located structure on the HUD, rather than relying on the direction the compass is pointing.";
+			private final String displayCoordinatesComment = "Shows the Target's X and Z on a second HUD line. The distance is always shown.";
 			private final boolean displayCoordinates;
 			
 			private final String maxRadiusComment = "The maximum horizontal distance, in blocks, from where the search started to a structure the compass can find. Raising it makes searches that find nothing more expensive.";
 			private final int maxRadius;
 			
-			private final String maxSamplesComment = "No longer used: searches are bounded by maxRadius and spread over server ticks.";
-			private final int maxSamples;
-
 			private final String compassDurabilityComment = "The number of successful structure searches before the compass breaks and must be repaired. Set to 0 to disable durability.";
 			private final int compassDurability;
 
@@ -131,10 +123,8 @@ public class AdventurersCompassConfig {
 			
 			private Common() {
 				allowTeleport = true;
-				maxNextSearches = 100;
 				displayCoordinates = true;
 				maxRadius = 1000;
-				maxSamples = 100000;
 				compassDurability = 0;
 				defaultXpLevel = 0;
 				perStructureXpLevels = new HashMap<String, Integer>();
@@ -142,12 +132,10 @@ public class AdventurersCompassConfig {
 				visitedMessage = true;
 			}
 
-			private Common(boolean allowTeleport, int maxNextSearches, boolean displayCoordinates, int maxRadius, int maxSamples, int compassDurability, int defaultXpLevel, Map<String, Integer> perStructureXpLevels, List<String> structureBlacklist, boolean visitedMessage) {
+			private Common(boolean allowTeleport, boolean displayCoordinates, int maxRadius, int compassDurability, int defaultXpLevel, Map<String, Integer> perStructureXpLevels, List<String> structureBlacklist, boolean visitedMessage) {
 				this.allowTeleport = allowTeleport;
-				this.maxNextSearches = maxNextSearches;
 				this.displayCoordinates = displayCoordinates;
 				this.maxRadius = maxRadius;
-				this.maxSamples = maxSamples;
 				this.compassDurability = compassDurability;
 				this.defaultXpLevel = defaultXpLevel;
 				this.perStructureXpLevels = perStructureXpLevels;
@@ -157,6 +145,9 @@ public class AdventurersCompassConfig {
 		}
 		
 		private static class Client {
+			private final String hudEnabledComment = "Shows the Target (or the search state) on the HUD while the compass is held in either hand.";
+			private final boolean hudEnabled;
+
 			private final String displayWithChatOpenComment = "Displays compass information even while chat is open.";
 			private final boolean displayWithChatOpen;
 			
@@ -170,13 +161,15 @@ public class AdventurersCompassConfig {
 			private final OverlaySide overlaySide;
 			
 			private Client() {
+				hudEnabled = true;
 				displayWithChatOpen = true;
 				translateStructureNames = true;
 				overlayLineOffset = 1;
 				overlaySide = OverlaySide.LEFT;
 			}
 			
-			private Client(boolean displayWithChatOpen, boolean translateStructureNames, int overlayLineOffset, OverlaySide overlaySide) {
+			private Client(boolean hudEnabled, boolean displayWithChatOpen, boolean translateStructureNames, int overlayLineOffset, OverlaySide overlaySide) {
+				this.hudEnabled = hudEnabled;
 				this.displayWithChatOpen = displayWithChatOpen;
 				this.translateStructureNames = translateStructureNames;
 				this.overlayLineOffset = overlayLineOffset;

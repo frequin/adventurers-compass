@@ -7,16 +7,13 @@ import io.github.frequin.adventurerscompass.domain.selection.Catalogue;
 import io.github.frequin.adventurerscompass.domain.selection.Selection;
 import io.github.frequin.adventurerscompass.domain.selection.TreeFilter;
 import io.github.frequin.adventurerscompass.item.AdventurersCompassItem;
-import io.github.frequin.adventurerscompass.network.SearchForNextPacket;
-import io.github.frequin.adventurerscompass.network.SearchPacket;
-import io.github.frequin.adventurerscompass.network.TeleportPacket;
 import io.github.frequin.adventurerscompass.network.UpdateSelectionPacket;
-import io.github.frequin.adventurerscompass.util.CompassState;
+import io.github.frequin.adventurerscompass.util.ItemUtils;
 
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
-import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Player;
@@ -35,26 +32,23 @@ public class AdventurersCompassScreen extends Screen {
 	private static final int TREE_TOP = 30;
 	private static final int FILTER_HEIGHT = 16;
 	private static final int FOOTER_HEIGHT = 12;
-	/** Top of the Selection panel (caption, chips, Clear) in the right column, below the search actions. */
-	private static final int SELECTION_PANEL_TOP = TREE_TOP + 80;
+	/** Top of the Selection panel (caption, chips, Clear) in the right column, below the search actions and the Target. */
+	private static final int SELECTION_PANEL_TOP = TREE_TOP + SearchPanel.HEIGHT + 8;
 
 	private final Player player;
-	private final boolean hasTarget;
+	private final SearchPanel searchPanel;
 	private Selection selection;
 	private Catalogue catalogue;
 	private String dimension;
 	private TransparentEditBox filterBox;
 	private SelectionTree tree;
 	private Button clearButton;
-	private Button searchButton;
-	private Button searchForNextButton;
-	private Button teleportButton;
 
 	public AdventurersCompassScreen(Player player, ItemStack stack, AdventurersCompassItem adventurersCompass) {
 		super(Component.translatable("string.adventurerscompass.composeSelection"));
 		this.player = player;
 		this.selection = stack.getOrDefault(AdventurersCompass.SELECTION, Selection.EMPTY);
-		this.hasTarget = adventurersCompass.getCompassState(stack) == CompassState.FOUND;
+		this.searchPanel = new SearchPanel(Minecraft.getInstance(), player, () -> ItemUtils.getHeldItem(player, AdventurersCompass.ADVENTURERS_COMPASS_ITEM));
 		// Last known catalogue until the SyncPacket sent on opening arrives
 		this.catalogue = AdventurersCompass.catalogue;
 		this.dimension = AdventurersCompass.currentDimension;
@@ -103,19 +97,8 @@ public class AdventurersCompassScreen extends Screen {
 			updateSelection(selection.clear());
 		}));
 
-		searchButton = addRenderableWidget(new TransparentButton(rightX, TREE_TOP, rightWidth, 20, Component.translatable("string.adventurerscompass.searchSelection"), (onPress) -> {
-			ClientPlayNetworking.send(new SearchPacket());
-			minecraft.gui.setScreen(null);
-		}));
-		searchForNextButton = addRenderableWidget(new TransparentButton(rightX, TREE_TOP + 25, rightWidth, 20, Component.translatable("string.adventurerscompass.searchForNext"), (onPress) -> {
-			ClientPlayNetworking.send(new SearchForNextPacket());
-			minecraft.gui.setScreen(null);
-		}));
-		teleportButton = addRenderableWidget(new TransparentButton(rightX, TREE_TOP + 50, rightWidth, 20, Component.translatable("string.adventurerscompass.teleport"), (onPress) -> {
-			ClientPlayNetworking.send(new TeleportPacket());
-			minecraft.gui.setScreen(null);
-		}));
-		addRenderableWidget(new TransparentButton(rightX, height - 30, rightWidth, 20, Component.translatable("gui.cancel"), (onPress) -> {
+		searchPanel.init(this::addRenderableWidget, rightX, TREE_TOP, rightWidth);
+		addRenderableWidget(new TransparentButton(rightX, height - 30, rightWidth, 20, Component.translatable("gui.done"), (onPress) -> {
 			minecraft.gui.setScreen(null);
 		}));
 		updateButtons();
@@ -136,6 +119,7 @@ public class AdventurersCompassScreen extends Screen {
 	public void extractRenderState(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTicks) {
 		super.extractRenderState(guiGraphics, mouseX, mouseY, partialTicks);
 		guiGraphics.centeredText(font, title, (MARGIN + leftColumnRight()) / 2, 12, 0xffffffff);
+		searchPanel.render(guiGraphics, font);
 		int outside = catalogue.countOutside(dimension);
 		if (outside > 0) {
 			guiGraphics.text(font, Component.translatable("string.adventurerscompass.otherDimensionsHidden", outside), MARGIN, height - MARGIN - 8, 0xff808080);
@@ -151,14 +135,10 @@ public class AdventurersCompassScreen extends Screen {
 		Set<String> searchable = selection.resolve(catalogue, dimension);
 		boolean canSearch = selection.canSearchIn(catalogue, dimension);
 		boolean affordable = AdventurersCompass.infiniteXp || player.experienceLevel >= maxXpLevels(searchable);
-		searchButton.active = canSearch && affordable;
 		// Greyed chips only: say why nothing can be searched here
-		searchButton.setTooltip(!canSearch && !selection.equals(Selection.EMPTY) ? Tooltip.create(Component.translatable("string.adventurerscompass.nothingSearchableHere")) : null);
-		searchForNextButton.visible = AdventurersCompass.maxNextSearches > 0;
-		searchForNextButton.active = hasTarget && canSearch && affordable;
+		Component refusal = !canSearch && !selection.equals(Selection.EMPTY) ? Component.translatable("string.adventurerscompass.nothingSearchableHere") : null;
+		searchPanel.update(canSearch && affordable, refusal);
 		clearButton.active = !selection.equals(Selection.EMPTY);
-		teleportButton.visible = AdventurersCompass.canTeleport;
-		teleportButton.active = hasTarget;
 	}
 
 	private static int maxXpLevels(Set<String> structureIds) {
