@@ -111,3 +111,16 @@ tasks.modrinth.dependsOn(tasks.modrinthSyncBody)
 loom {
     accessWidenerPath = file("src/main/resources/adventurerscompass.accesswidener")
 }
+
+// Fabric game tests (src/gametest): a separate source set and mod, run on a headless
+// server by the runGameTest task, which `check` (and so `build`) depends on.
+// Not part of the mod jar.
+fabricApi {
+	configureTests {
+		createSourceSet = true
+		modId = "adventurerscompass-gametest"
+		enableGameTests = true
+		enableClientGameTests = false
+		eula = true
+	}
+}
