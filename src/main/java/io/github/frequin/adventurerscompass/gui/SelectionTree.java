@@ -11,6 +11,7 @@ import io.github.frequin.adventurerscompass.domain.selection.GroupState;
 import io.github.frequin.adventurerscompass.domain.selection.Selection;
 import io.github.frequin.adventurerscompass.domain.selection.StructureState;
 import io.github.frequin.adventurerscompass.domain.selection.TreeEntry;
+import io.github.frequin.adventurerscompass.domain.selection.TreeFilter;
 import io.github.frequin.adventurerscompass.util.RenderUtils;
 import io.github.frequin.adventurerscompass.util.StructureUtils;
 
@@ -35,6 +36,7 @@ public class SelectionTree extends ObjectSelectionList<SelectionTree.Row> {
 
 	private final AdventurersCompassScreen screen;
 	private final Set<String> expandedGroups = new HashSet<String>();
+	private TreeFilter filter = TreeFilter.NONE;
 
 	public SelectionTree(AdventurersCompassScreen screen, Minecraft mc, int x, int y, int width, int height) {
 		super(mc, width, height, y, ROW_HEIGHT);
@@ -42,17 +44,24 @@ public class SelectionTree extends ObjectSelectionList<SelectionTree.Row> {
 		setX(x);
 	}
 
+	/** Narrows the tree to the search box's text or {@code @mod}; Groups are shown expanded while it is active. */
+	public void setFilter(TreeFilter filter, Catalogue catalogue, String dimension) {
+		this.filter = filter;
+		refresh(catalogue, dimension);
+		setScrollAmount(0);
+	}
+
 	/** Rebuilds the rows from the catalogue and the Selection, keeping the scroll position. */
 	public void refresh(Catalogue catalogue, String dimension) {
 		double scroll = scrollAmount();
 		clearEntries();
-		List<TreeEntry> tree = new ArrayList<TreeEntry>(catalogue.tree(dimension));
+		List<TreeEntry> tree = new ArrayList<TreeEntry>(filter.apply(catalogue.tree(dimension), catalogue, SelectionTree::name));
 		tree.sort(Comparator.comparing(SelectionTree::displayName, String.CASE_INSENSITIVE_ORDER));
 		for (TreeEntry entry : tree) {
 			switch (entry) {
 				case TreeEntry.GroupEntry group -> {
 					addEntry(new GroupRow(group));
-					if (expandedGroups.contains(group.groupId())) {
+					if (isExpanded(group.groupId())) {
 						group.structureIds().stream().sorted(Comparator.comparing(SelectionTree::name, String.CASE_INSENSITIVE_ORDER)).forEach(id -> addEntry(new StructureRow(id, true)));
 					}
 				}
@@ -102,6 +111,10 @@ public class SelectionTree extends ObjectSelectionList<SelectionTree.Row> {
 		}
 	}
 
+	private boolean isExpanded(String groupId) {
+		return !filter.isNone() || expandedGroups.contains(groupId);
+	}
+
 	private static String displayName(TreeEntry entry) {
 		return switch (entry) {
 			case TreeEntry.GroupEntry group -> name(group.groupId());
@@ -145,7 +158,7 @@ public class SelectionTree extends ObjectSelectionList<SelectionTree.Row> {
 			Minecraft mc = Minecraft.getInstance();
 			int textY = getY() + (getHeight() - mc.font.lineHeight) / 2 + 1;
 			int boxY = getY() + (getHeight() - BOX) / 2;
-			guiGraphics.text(mc.font, expandedGroups.contains(group.groupId()) ? "-" : "+", getX() + 3, textY, 0xffc0c0c0);
+			guiGraphics.text(mc.font, isExpanded(group.groupId()) ? "-" : "+", getX() + 3, textY, 0xffc0c0c0);
 			GroupState state = screen.selection().groupState(group.groupId(), screen.catalogue(), screen.dimension());
 			drawCheckbox(guiGraphics, getX() + 12, boxY, switch (state) {
 				case TICKED -> Look.TICKED;
@@ -160,7 +173,9 @@ public class SelectionTree extends ObjectSelectionList<SelectionTree.Row> {
 		@Override
 		public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
 			if (event.x() < getX() + 11) {
-				if (!expandedGroups.remove(group.groupId())) {
+				if (!filter.isNone()) {
+					// Every Group stays expanded while the filter is active
+				} else if (!expandedGroups.remove(group.groupId())) {
 					expandedGroups.add(group.groupId());
 				}
 				refresh(screen.catalogue(), screen.dimension());

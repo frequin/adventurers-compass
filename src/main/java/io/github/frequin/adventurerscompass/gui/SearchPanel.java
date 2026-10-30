@@ -20,6 +20,7 @@ import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -51,6 +52,7 @@ final class SearchPanel {
 	private Button passButton;
 	private Button teleportButton;
 	private boolean searchAllowed;
+	private Component searchRefusal;
 
 	SearchPanel(Minecraft minecraft, Player player, Supplier<ItemStack> compass) {
 		this.minecraft = minecraft;
@@ -81,15 +83,17 @@ final class SearchPanel {
 		add.accept(searchButton);
 		add.accept(passButton);
 		add.accept(teleportButton);
-		update(searchAllowed);
+		update(searchAllowed, searchRefusal);
 	}
 
 	/**
 	 * Refreshes the buttons. {@code searchAllowed} is the screen's verdict on the
-	 * Selection (something searchable here, enough XP); it gates "Search" and "Pass".
+	 * Selection (something searchable here, enough XP); it gates "Search" and
+	 * "Pass". {@code searchRefusal}, when not null, explains a greyed "Search".
 	 */
-	void update(boolean searchAllowed) {
+	void update(boolean searchAllowed, Component searchRefusal) {
 		this.searchAllowed = searchAllowed;
+		this.searchRefusal = searchRefusal;
 		if (searchButton == null) {
 			return;
 		}
@@ -97,6 +101,7 @@ final class SearchPanel {
 		boolean searching = state.isSearching();
 		searchButton.setMessage(Component.translatable(searching ? "string.adventurerscompass.cancelSearch" : "string.adventurerscompass.searchSelection"));
 		searchButton.active = searching || searchAllowed;
+		searchButton.setTooltip(!searching && searchRefusal != null ? Tooltip.create(searchRefusal) : null);
 		passButton.active = searchAllowed && state.target() != null;
 		teleportButton.visible = AdventurersCompass.canTeleport;
 		teleportButton.active = state.target() != null && state.target().dimension().equals(CompassTexts.currentDimension(player));
@@ -104,7 +109,7 @@ final class SearchPanel {
 
 	/** Draws the Target panel text. */
 	void render(GuiGraphicsExtractor guiGraphics, Font font) {
-		update(searchAllowed);
+		update(searchAllowed, searchRefusal);
 		int y = targetTextTop();
 		guiGraphics.text(font, Component.translatable("string.adventurerscompass.target"), x, y, 0xffaaaaaa, true);
 		Target target = state().target();

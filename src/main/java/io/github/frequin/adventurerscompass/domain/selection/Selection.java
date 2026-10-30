@@ -1,5 +1,7 @@
 package io.github.frequin.adventurerscompass.domain.selection;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
 
@@ -55,6 +57,22 @@ public record Selection(Set<String> structures, Set<String> groups) {
 		return new Selection(structures, next);
 	}
 
+	/** The ✕ of a chip: takes that Group or Structure out, nothing else. */
+	public Selection remove(Chip chip) {
+		return switch (chip.kind()) {
+			case GROUP -> untickGroup(chip.id());
+			case STRUCTURE -> {
+				Set<String> next = new TreeSet<>(structures);
+				next.remove(chip.id());
+				yield new Selection(next, groups);
+			}
+		};
+	}
+
+	public Selection clear() {
+		return EMPTY;
+	}
+
 	/** A click on a Structure's checkbox: ticks it, or unticks it (exploding its Group if needed). */
 	public Selection toggleStructure(String structureId, Catalogue catalogue) {
 		return structureState(structureId, catalogue) == StructureState.EMPTY ? tickStructure(structureId) : untickStructure(structureId, catalogue);
@@ -96,6 +114,32 @@ public record Selection(Set<String> structures, Set<String> groups) {
 			}
 		}
 		return searchable;
+	}
+
+	/**
+	 * Whether "Search" is allowed in {@code dimension}: at least one element of
+	 * the Selection generates there. Otherwise the search is refused and nothing is charged.
+	 */
+	public boolean canSearchIn(Catalogue catalogue, String dimension) {
+		return !resolve(catalogue, dimension).isEmpty();
+	}
+
+	/**
+	 * The Selection as chips for {@code dimension}: Groups first, then
+	 * Structures, each sorted by id. A chip is greyed when nothing it stands for
+	 * generates in the dimension; it stays on the compass but the search ignores it.
+	 */
+	public List<Chip> chips(Catalogue catalogue, String dimension) {
+		List<Chip> chips = new ArrayList<>();
+		for (String groupId : new TreeSet<>(groups)) {
+			boolean active = catalogue.members(groupId).stream().anyMatch(id -> catalogue.entry(id).get().generatesIn(dimension));
+			chips.add(new Chip(Chip.Kind.GROUP, groupId, active ? ChipState.ACTIVE : ChipState.ABSENT_FROM_DIMENSION));
+		}
+		for (String structureId : new TreeSet<>(structures)) {
+			boolean active = catalogue.entry(structureId).filter(entry -> entry.generatesIn(dimension)).isPresent();
+			chips.add(new Chip(Chip.Kind.STRUCTURE, structureId, active ? ChipState.ACTIVE : ChipState.ABSENT_FROM_DIMENSION));
+		}
+		return chips;
 	}
 
 }

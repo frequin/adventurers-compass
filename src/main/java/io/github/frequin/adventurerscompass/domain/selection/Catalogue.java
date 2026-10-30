@@ -51,6 +51,11 @@ public final class Catalogue {
 		return tree;
 	}
 
+	/** How many listed Structures the tree of {@code dimension} hides because they generate only elsewhere. */
+	public int countOutside(String dimension) {
+		return (int) entries.stream().filter(entry -> !entry.generatesIn(dimension)).count();
+	}
+
 	/** Every listed Structure of a Group, whatever dimension generates it. */
 	public List<String> members(String groupId) {
 		List<String> members = new ArrayList<>();
