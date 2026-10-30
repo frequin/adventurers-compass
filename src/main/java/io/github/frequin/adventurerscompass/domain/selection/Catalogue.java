@@ -7,9 +7,10 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * Snapshot of the listable Structures (Hidden ones are left out), built by the
- * server and sent to the client. Each entry carries its Group and the dimensions
- * that generate it.
+ * Snapshot of the Structures, built by the server and sent to the client. Each
+ * entry carries its Group, the dimensions that generate it and whether it is
+ * Hidden. Hidden entries are kept (a Selection may still hold them) but the
+ * tree and the search skip them.
  */
 public final class Catalogue {
 
@@ -42,7 +43,7 @@ public final class Catalogue {
 	public List<TreeEntry> tree(String dimension) {
 		Map<String, List<String>> groups = new LinkedHashMap<>();
 		for (CatalogueEntry entry : entries) {
-			if (entry.generatesIn(dimension)) {
+			if (entry.listedIn(dimension)) {
 				groups.computeIfAbsent(entry.groupId(), id -> new ArrayList<>()).add(entry.structureId());
 			}
 		}
@@ -51,9 +52,9 @@ public final class Catalogue {
 		return tree;
 	}
 
-	/** How many listed Structures the tree of {@code dimension} hides because they generate only elsewhere. */
+	/** How many non-Hidden Structures the tree of {@code dimension} leaves out because they generate only elsewhere. */
 	public int countOutside(String dimension) {
-		return (int) entries.stream().filter(entry -> !entry.generatesIn(dimension)).count();
+		return (int) entries.stream().filter(entry -> !entry.hidden() && !entry.generatesIn(dimension)).count();
 	}
 
 	/** Every listed Structure of a Group, whatever dimension generates it. */
