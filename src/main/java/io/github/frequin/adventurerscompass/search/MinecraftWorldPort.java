@@ -1,6 +1,9 @@
 package io.github.frequin.adventurerscompass.search;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 import io.github.frequin.adventurerscompass.domain.BlockXZ;
 import io.github.frequin.adventurerscompass.domain.ChunkCoord;
@@ -31,11 +34,15 @@ import net.minecraft.world.level.levelgen.structure.placement.StructurePlacement
 /**
  * The search's world port, backed by the server's chunk generators. Must be
  * used on the server thread: presence tests can generate chunks up to
- * structure starts.
+ * structure starts. One port serves one search, so the Structures it looks up
+ * are cached for the search's lifetime.
  */
 public final class MinecraftWorldPort implements WorldPort<StructurePlacement> {
 
 	private final MinecraftServer server;
+
+	/** Structure id to its registry entry (empty when unknown), looked up once per search. */
+	private final Map<String, Optional<Structure>> structures = new HashMap<>();
 
 	public MinecraftWorldPort(MinecraftServer server) {
 		this.server = server;
@@ -54,7 +61,11 @@ public final class MinecraftWorldPort implements WorldPort<StructurePlacement> {
 
 	@Override
 	public CandidateSource candidates(String dimension, StructurePlacement placement, BlockXZ origin) {
-		ChunkGeneratorStructureState state = level(dimension).getChunkSource().getGeneratorState();
+		ServerLevel level = level(dimension);
+		if (level == null) {
+			return new FixedCandidates(origin, List.of(), chunk -> locatePos(placement, chunk));
+		}
+		ChunkGeneratorStructureState state = level.getChunkSource().getGeneratorState();
 		if (placement instanceof RandomSpreadStructurePlacement randomSpread) {
 			int spacing = randomSpread.spacing();
 			long seed = state.getLevelSeed();
@@ -100,12 +111,14 @@ public final class MinecraftWorldPort implements WorldPort<StructurePlacement> {
 		return id == null ? null : server.getLevel(ResourceKey.create(Registries.DIMENSION, id));
 	}
 
-	private static Structure structure(ServerLevel level, String structureId) {
-		Identifier id = Identifier.tryParse(structureId);
-		if (level == null || id == null) {
+	private Structure structure(ServerLevel level, String structureId) {
+		if (level == null) {
 			return null;
 		}
-		return level.registryAccess().lookupOrThrow(Registries.STRUCTURE).getValue(id);
+		return structures.computeIfAbsent(structureId, key -> {
+			Identifier id = Identifier.tryParse(key);
+			return Optional.ofNullable(id == null ? null : level.registryAccess().lookupOrThrow(Registries.STRUCTURE).getValue(id));
+		}).orElse(null);
 	}
 
 	private static BlockXZ locatePos(StructurePlacement placement, ChunkCoord chunk) {
