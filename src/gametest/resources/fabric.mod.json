@@ -6,7 +6,6 @@
   "environment": "*",
   "entrypoints": {
     "fabric-gametest": [
-      "io.github.frequin.adventurerscompass.gametest.AdventurersCompassGameTests",
       "io.github.frequin.adventurerscompass.gametest.VisitedDetectionGameTests"
     ]
   },
