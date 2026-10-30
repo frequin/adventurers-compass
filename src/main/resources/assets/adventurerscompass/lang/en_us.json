@@ -35,6 +35,7 @@
     "string.adventurerscompass.removeChip": "Click to remove",
     "string.adventurerscompass.chipAbsentFromDimension": "Not generated in this dimension: ignored by the search. Click to remove.",
     "string.adventurerscompass.nothingSearchableHere": "Nothing in the Selection generates in this dimension",
+    "string.adventurerscompass.disabledDimension": "The compass doesn't work in this dimension",
     "string.adventurerscompass.searchSelection": "Search the nearest",
     "string.adventurerscompass.cancelSearch": "Cancel the search",
     "string.adventurerscompass.pass": "Pass",

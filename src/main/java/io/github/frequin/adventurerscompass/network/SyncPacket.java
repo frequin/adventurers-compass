@@ -20,8 +20,9 @@ import net.minecraft.resources.Identifier;
  * the catalogue of listable Structures, and the config the screen needs.
  *
  * @param xpLevels XP levels charged per Structure id of the catalogue
+ * @param dimensionDisabled the Current dimension is in {@code disabledDimensions} (the catalogue is then empty)
  */
-public record SyncPacket(boolean canTeleport, boolean infiniteXp, String dimension, Catalogue catalogue, Map<String, Integer> xpLevels) implements CustomPacketPayload {
+public record SyncPacket(boolean canTeleport, boolean infiniteXp, String dimension, Catalogue catalogue, Map<String, Integer> xpLevels, boolean dimensionDisabled) implements CustomPacketPayload {
 
 	public static final Type<SyncPacket> TYPE = new Type<SyncPacket>(Identifier.fromNamespaceAndPath(AdventurersCompass.MODID, "sync"));
 
@@ -35,7 +36,8 @@ public record SyncPacket(boolean canTeleport, boolean infiniteXp, String dimensi
 		final String dimension = buf.readUtf();
 		final Catalogue catalogue = SelectionCodecs.CATALOGUE_STREAM.decode(buf);
 		final Map<String, Integer> xpLevels = XP_LEVELS.decode(buf);
-		return new SyncPacket(canTeleport, infiniteXp, dimension, catalogue, xpLevels);
+		final boolean dimensionDisabled = buf.readBoolean();
+		return new SyncPacket(canTeleport, infiniteXp, dimension, catalogue, xpLevels, dimensionDisabled);
 	}
 
 	public void write(FriendlyByteBuf buf) {
@@ -44,6 +46,7 @@ public record SyncPacket(boolean canTeleport, boolean infiniteXp, String dimensi
 		buf.writeUtf(dimension);
 		SelectionCodecs.CATALOGUE_STREAM.encode(buf, catalogue);
 		XP_LEVELS.encode(buf, xpLevels);
+		buf.writeBoolean(dimensionDisabled);
 	}
 
 	public static void handle(SyncPacket packet, ClientPlayNetworking.Context context) {
@@ -54,6 +57,7 @@ public record SyncPacket(boolean canTeleport, boolean infiniteXp, String dimensi
 			AdventurersCompass.currentDimension = packet.dimension;
 			AdventurersCompass.catalogue = packet.catalogue;
 			AdventurersCompass.xpLevels = packet.xpLevels;
+			AdventurersCompass.dimensionDisabled = packet.dimensionDisabled;
 		});
 	}
 
