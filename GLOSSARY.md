@@ -33,4 +33,4 @@ The state of an Instance a player chose to pass over without visiting it; held b
 _Avoid_: Ignored, excluded, Visited (when the player has not been there)
 
 **Current dimension**:
-The dimension the player stands in; by default the only one searched and listed.
+The dimension the player stands in; the only one whose Structures are listed and searched.
