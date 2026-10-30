@@ -7,6 +7,15 @@ public enum Refusal {
 	NOTHING_SEARCHABLE,
 
 	/** "Pass" without a Target. */
-	NO_TARGET
+	NO_TARGET,
+
+	/** The Current dimension is listed in {@code disabledDimensions}. */
+	DISABLED_DIMENSION,
+
+	/** "Teleport": {@code allowTeleport} is off, or the player is neither op nor creative. */
+	TELEPORT_NOT_ALLOWED,
+
+	/** "Teleport" to a Target outside the Current dimension. */
+	TARGET_IN_OTHER_DIMENSION
 
 }
