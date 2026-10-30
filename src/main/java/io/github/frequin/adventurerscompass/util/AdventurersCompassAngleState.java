@@ -11,6 +11,10 @@ import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.item.properties.numeric.NeedleDirectionHelper;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.GlobalPos;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.world.level.Level;
 import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.Entity;
@@ -36,13 +40,19 @@ public class AdventurersCompassAngleState extends NeedleDirectionHelper {
 		if (stack.getItem() == AdventurersCompass.ADVENTURERS_COMPASS_ITEM) {
 			AdventurersCompassItem compassItem = (AdventurersCompassItem) stack.getItem();
 			if (compassItem.getCompassState(stack) == CompassState.FOUND) {
-				pos = new GlobalPos(level.dimension(), new BlockPos(stack.getOrDefault(AdventurersCompass.FOUND_X, 0), 0, stack.getOrDefault(AdventurersCompass.FOUND_Z, 0)));
+				pos = new GlobalPos(targetDimension(stack, level), new BlockPos(stack.getOrDefault(AdventurersCompass.FOUND_X, 0), 0, stack.getOrDefault(AdventurersCompass.FOUND_Z, 0)));
 			}
 		}
 		long gameTime = level.getGameTime();
 		return owner.asLivingEntity() == null || !isValidCompassTargetPos(owner.asLivingEntity(), pos) ? getRandomlySpinningRotation(seed, gameTime) : getRotationTowardsCompassTarget(owner.asLivingEntity(), gameTime, pos.pos());
 	}
 	
+	/** The Target's dimension; compasses found before it was stored assume the current one. */
+	private static ResourceKey<Level> targetDimension(ItemStack stack, ClientLevel level) {
+		Identifier id = Identifier.tryParse(stack.getOrDefault(AdventurersCompass.TARGET_DIMENSION, ""));
+		return id == null || stack.get(AdventurersCompass.TARGET_DIMENSION) == null ? level.dimension() : ResourceKey.create(Registries.DIMENSION, id);
+	}
+
 	private float getRandomlySpinningRotation(int seed, long gameTime) {
 		if (wobbler.shouldUpdate(gameTime)) {
 			wobbler.update(gameTime, random.nextFloat());

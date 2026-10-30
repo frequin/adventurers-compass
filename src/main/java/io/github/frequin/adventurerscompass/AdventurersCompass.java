@@ -15,6 +15,7 @@ import io.github.frequin.adventurerscompass.network.SearchForNextPacket;
 import io.github.frequin.adventurerscompass.network.SearchPacket;
 import io.github.frequin.adventurerscompass.network.SyncPacket;
 import io.github.frequin.adventurerscompass.network.TeleportPacket;
+import io.github.frequin.adventurerscompass.search.CompassSearches;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ListMultimap;
 import com.mojang.serialization.Codec;
@@ -40,6 +41,8 @@ public class AdventurersCompass implements ModInitializer {
 	
 	public static final DataComponentType<String> STRUCTURE_ID = DataComponentType.<String>builder().persistent(Codec.STRING).networkSynchronized(ByteBufCodecs.STRING_UTF8).build();
 	public static final DataComponentType<Integer> COMPASS_STATE = DataComponentType.<Integer>builder().persistent(Codec.INT).networkSynchronized(ByteBufCodecs.VAR_INT).build();
+	/** Dimension of the Target, e.g. {@code minecraft:overworld}. */
+	public static final DataComponentType<String> TARGET_DIMENSION = DataComponentType.<String>builder().persistent(Codec.STRING).networkSynchronized(ByteBufCodecs.STRING_UTF8).build();
 	public static final DataComponentType<Integer> FOUND_X = DataComponentType.<Integer>builder().persistent(Codec.INT).networkSynchronized(ByteBufCodecs.VAR_INT).build();
 	public static final DataComponentType<Integer> FOUND_Z = DataComponentType.<Integer>builder().persistent(Codec.INT).networkSynchronized(ByteBufCodecs.VAR_INT).build();
 	public static final DataComponentType<Integer> SEARCH_RADIUS = DataComponentType.<Integer>builder().persistent(Codec.INT).networkSynchronized(ByteBufCodecs.VAR_INT).build();
@@ -66,6 +69,7 @@ public class AdventurersCompass implements ModInitializer {
 		
 		Registry.register(BuiltInRegistries.DATA_COMPONENT_TYPE, Identifier.fromNamespaceAndPath(MODID, "structure_id"), STRUCTURE_ID);
 		Registry.register(BuiltInRegistries.DATA_COMPONENT_TYPE, Identifier.fromNamespaceAndPath(MODID, "compass_state"), COMPASS_STATE);
+		Registry.register(BuiltInRegistries.DATA_COMPONENT_TYPE, Identifier.fromNamespaceAndPath(MODID, "target_dimension"), TARGET_DIMENSION);
 		Registry.register(BuiltInRegistries.DATA_COMPONENT_TYPE, Identifier.fromNamespaceAndPath(MODID, "found_x"), FOUND_X);
 		Registry.register(BuiltInRegistries.DATA_COMPONENT_TYPE, Identifier.fromNamespaceAndPath(MODID, "found_z"), FOUND_Z);
 		Registry.register(BuiltInRegistries.DATA_COMPONENT_TYPE, Identifier.fromNamespaceAndPath(MODID, "search_radius"), SEARCH_RADIUS);
@@ -85,6 +89,8 @@ public class AdventurersCompass implements ModInitializer {
 		ServerPlayNetworking.registerGlobalReceiver(SearchPacket.TYPE, SearchPacket::handle);
 		ServerPlayNetworking.registerGlobalReceiver(SearchForNextPacket.TYPE, SearchForNextPacket::handle);
 		ServerPlayNetworking.registerGlobalReceiver(TeleportPacket.TYPE, TeleportPacket::handle);
+
+		CompassSearches.register();
 		
 		allowedStructures = new ArrayList<Identifier>();
 		xpLevelsForAllowedStructures = new HashMap<Identifier, Integer>();

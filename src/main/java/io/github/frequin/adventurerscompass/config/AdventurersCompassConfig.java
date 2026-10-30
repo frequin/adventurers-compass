@@ -25,7 +25,7 @@ public class AdventurersCompassConfig {
 	public static boolean allowTeleport = true;
 	public static int maxNextSearches = 100;
 	public static boolean displayCoordinates = true;
-	public static int maxRadius = 10000;
+	public static int maxRadius = 1000;
 	public static int maxSamples = 100000;
 	public static int compassDurability = 0;
 	public static int defaultXpLevel = 0;
@@ -106,10 +106,10 @@ public class AdventurersCompassConfig {
 			private final String displayCoordinatesComment = "Allows players to view the precise coordinates and distance of a located structure on the HUD, rather than relying on the direction the compass is pointing.";
 			private final boolean displayCoordinates;
 			
-			private final String maxRadiusComment = "The maximum radius that will be searched for a structure. Raising this value will increase search accuracy but will potentially make the process more resource intensive.";
+			private final String maxRadiusComment = "The maximum horizontal distance, in blocks, from where the search started to a structure the compass can find. Raising it makes searches that find nothing more expensive.";
 			private final int maxRadius;
 			
-			private final String maxSamplesComment = "The maximum number of samples to be taken when searching for a structure.";
+			private final String maxSamplesComment = "No longer used: searches are bounded by maxRadius and spread over server ticks.";
 			private final int maxSamples;
 
 			private final String compassDurabilityComment = "The number of successful structure searches before the compass breaks and must be repaired. Set to 0 to disable durability.";
@@ -128,7 +128,7 @@ public class AdventurersCompassConfig {
 				allowTeleport = true;
 				maxNextSearches = 100;
 				displayCoordinates = true;
-				maxRadius = 10000;
+				maxRadius = 1000;
 				maxSamples = 100000;
 				compassDurability = 0;
 				defaultXpLevel = 0;
