@@ -11,7 +11,6 @@ import io.github.frequin.adventurerscompass.config.AdventurersCompassConfig;
 import io.github.frequin.adventurerscompass.gui.GuiWrapper;
 import io.github.frequin.adventurerscompass.network.SyncPacket;
 import io.github.frequin.adventurerscompass.util.ItemUtils;
-import io.github.frequin.adventurerscompass.util.PlayerUtils;
 import io.github.frequin.adventurerscompass.util.StructureUtils;
 import io.github.frequin.adventurerscompass.domain.selection.Catalogue;
 
@@ -55,7 +54,7 @@ public class AdventurersCompassItem extends Item {
 			} else {
 				final ServerLevel serverLevel = (ServerLevel) level;
 				final ServerPlayer serverPlayer = (ServerPlayer) player;
-				final boolean canTeleport = PlayerUtils.canTeleport(serverLevel.getServer(), player);
+				final boolean canTeleport = ServerCompass.teleportContext(serverPlayer).allowed();
 				final boolean hasInfiniteXp = player.hasInfiniteMaterials();
 				final String dimension = serverLevel.dimension().identifier().toString();
 				final boolean dimensionDisabled = AdventurersCompassConfig.isDisabledDimension(dimension);

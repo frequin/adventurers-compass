@@ -5,7 +5,8 @@ import java.math.RoundingMode;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
-import java.util.regex.Pattern;
+
+import io.github.frequin.adventurerscompass.domain.Glob;
 
 /**
  * The XP scale: what a found Target costs. A Structure's cost is its
@@ -44,32 +45,11 @@ public record XpCosts(int defaultLevel, Map<String, Integer> perStructure, doubl
 
 	private int structureLevel(String structureId) {
 		for (Map.Entry<String, Integer> override : perStructure.entrySet()) {
-			if (globMatches(override.getKey(), structureId)) {
+			if (Glob.of(override.getKey()).matches(structureId)) {
 				return override.getValue();
 			}
 		}
 		return defaultLevel;
-	}
-
-	/** {@code *} matches any run of characters, {@code ?} exactly one; everything else is literal. */
-	static boolean globMatches(String glob, String id) {
-		StringBuilder regex = new StringBuilder();
-		StringBuilder literal = new StringBuilder();
-		for (char c : glob.toCharArray()) {
-			if (c == '*' || c == '?') {
-				if (!literal.isEmpty()) {
-					regex.append(Pattern.quote(literal.toString()));
-					literal.setLength(0);
-				}
-				regex.append(c == '*' ? ".*" : ".");
-			} else {
-				literal.append(c);
-			}
-		}
-		if (!literal.isEmpty()) {
-			regex.append(Pattern.quote(literal.toString()));
-		}
-		return Pattern.matches(regex.toString(), id);
 	}
 
 }

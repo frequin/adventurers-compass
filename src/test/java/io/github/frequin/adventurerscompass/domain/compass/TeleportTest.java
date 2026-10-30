@@ -56,6 +56,14 @@ class TeleportTest {
 	}
 
 	@Test
+	void theTeleportButtonIsOfferedToExactlyThePlayersTeleportAccepts() {
+		assertEquals(true, new TeleportContext(OVERWORLD, true, true, false).allowed());
+		assertEquals(true, new TeleportContext(OVERWORLD, true, false, true).allowed());
+		assertEquals(false, new TeleportContext(OVERWORLD, true, false, false).allowed());
+		assertEquals(false, new TeleportContext(OVERWORLD, false, true, true).allowed());
+	}
+
+	@Test
 	void teleportNeverCrossesDimensions() {
 		assertEquals(new Outcome.Refused(Refusal.TARGET_IN_OTHER_DIMENSION), compass.teleport(targeting(), op(NETHER)));
 	}

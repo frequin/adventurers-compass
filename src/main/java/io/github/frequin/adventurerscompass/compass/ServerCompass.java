@@ -74,12 +74,16 @@ public final class ServerCompass {
 
 	/** "Teleport" to the Target of the compass the player holds. */
 	public static void teleport(ServerPlayer player, ItemStack stack) {
-		TeleportContext context = new TeleportContext(player.level().dimension().identifier().toString(), AdventurersCompassConfig.allowTeleport, PlayerUtils.isOperator(player.level().getServer(), player), player.isCreative());
-		Outcome outcome = COMPASS.teleport(CompassStacks.read(stack), context);
+		Outcome outcome = COMPASS.teleport(CompassStacks.read(stack), teleportContext(player));
 		if (outcome instanceof Outcome.Refused refused) {
 			AdventurersCompass.LOGGER.warn("Player " + player.getDisplayName().getString() + " could not teleport: " + refused.reason());
 		}
 		apply(player, stack, outcome);
+	}
+
+	/** Who asks for "Teleport", and where: the one source of the teleport rule's inputs, for the command and the screen's button. */
+	public static TeleportContext teleportContext(ServerPlayer player) {
+		return new TeleportContext(player.level().dimension().identifier().toString(), AdventurersCompassConfig.allowTeleport, PlayerUtils.isOperator(player.level().getServer(), player), player.isCreative());
 	}
 
 	/** Stores a new Selection on the compass; a real change cancels the search and clears the Target and Skipped. */

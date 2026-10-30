@@ -9,4 +9,10 @@ package io.github.frequin.adventurerscompass.domain.compass;
  * @param creative      the player is in creative mode
  */
 public record TeleportContext(String dimension, boolean allowTeleport, boolean operator, boolean creative) {
+
+	/** Whether "Teleport" is open to this player: {@code allowTeleport}, then op or creative. */
+	public boolean allowed() {
+		return allowTeleport && (operator || creative);
+	}
+
 }
