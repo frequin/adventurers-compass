@@ -1,7 +1,5 @@
 package io.github.frequin.adventurerscompass.util;
 
-import io.github.frequin.adventurerscompass.config.AdventurersCompassConfig;
-
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.players.ServerOpListEntry;
@@ -10,11 +8,6 @@ import net.minecraft.world.level.storage.LevelData;
 import net.minecraft.world.level.storage.ServerLevelData;
 
 public class PlayerUtils {
-
-	/** Whether "Teleport" is open to this player: {@code allowTeleport}, then op (or cheats in single player) or creative. */
-	public static boolean canTeleport(MinecraftServer server, Player player) {
-		return AdventurersCompassConfig.allowTeleport && (isOperator(server, player) || player.isCreative());
-	}
 
 	/** An op, or the single player with cheats on. */
 	public static boolean isOperator(MinecraftServer server, Player player) {

@@ -2,7 +2,8 @@ package io.github.frequin.adventurerscompass.domain.selection;
 
 import java.util.List;
 import java.util.Set;
-import java.util.regex.Pattern;
+
+import io.github.frequin.adventurerscompass.domain.Glob;
 
 /**
  * Decides whether a Structure is Hidden: it carries the common tag
@@ -38,23 +39,11 @@ public final class HiddenRule {
 				if (tags.contains(entry.substring(1))) {
 					return true;
 				}
-			} else if (globToRegex(entry).matcher(structureId).matches()) {
+			} else if (Glob.of(entry).matches(structureId)) {
 				return true;
 			}
 		}
 		return false;
-	}
-
-	private static Pattern globToRegex(String glob) {
-		StringBuilder regex = new StringBuilder();
-		for (char c : glob.toCharArray()) {
-			switch (c) {
-				case '*' -> regex.append(".*");
-				case '?' -> regex.append('.');
-				default -> regex.append(Pattern.quote(String.valueOf(c)));
-			}
-		}
-		return Pattern.compile(regex.toString());
 	}
 
 }

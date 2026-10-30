@@ -136,7 +136,7 @@ public final class Compass {
 
 	/** "Teleport" to the Target: neither wears the compass nor marks the Target Visited. */
 	public Outcome teleport(CompassState state, TeleportContext context) {
-		if (!context.allowTeleport() || !(context.operator() || context.creative())) {
+		if (!context.allowed()) {
 			return new Outcome.Refused(Refusal.TELEPORT_NOT_ALLOWED);
 		}
 		if (state.target() == null) {
