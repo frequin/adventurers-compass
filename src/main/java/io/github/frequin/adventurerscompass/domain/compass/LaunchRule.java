@@ -5,9 +5,8 @@ import java.util.function.Predicate;
 
 /**
  * A rule checked before "Search" or "Pass" starts a search. The first rule
- * that refuses wins and the compass is left unchanged. Later tickets add
- * their own (broken compass, disabled dimension, XP threshold) to
- * {@link Compass#Compass(java.util.List)}.
+ * that refuses wins and the compass is left unchanged. A compass gets its
+ * rules, in order, from {@link Compass#Compass(java.util.List)}.
  */
 @FunctionalInterface
 public interface LaunchRule {

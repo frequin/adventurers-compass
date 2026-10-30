@@ -16,10 +16,11 @@ import org.junit.jupiter.api.Test;
 class DomainIsPureJavaTest {
 
 	private static final Path DOMAIN = Path.of("src/main/java/io/github/frequin/adventurerscompass/domain");
-	private static final Pattern FORBIDDEN = Pattern.compile("^import\\s+(static\\s+)?(net\\.minecraft|net\\.fabricmc|com\\.mojang|io\\.github\\.frequin\\.adventurerscompass\\.(?!domain))", Pattern.MULTILINE);
+	/** Any use of Minecraft, Fabric or Mojang code, imported or fully qualified, and any import of the mod's adapters. */
+	private static final Pattern FORBIDDEN = Pattern.compile("\\b(net\\.minecraft|net\\.fabricmc|com\\.mojang)\\.|^import\\s+(static\\s+)?io\\.github\\.frequin\\.adventurerscompass\\.(?!domain)", Pattern.MULTILINE);
 
 	@Test
-	void importsNoMinecraftFabricOrAdapterCode() throws IOException {
+	void usesNoMinecraftFabricOrAdapterCode() throws IOException {
 		List<Path> sources;
 		try (Stream<Path> files = Files.walk(DOMAIN)) {
 			sources = files.filter(file -> file.toString().endsWith(".java")).toList();
