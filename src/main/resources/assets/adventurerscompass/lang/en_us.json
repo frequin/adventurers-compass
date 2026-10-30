@@ -50,6 +50,15 @@
     "string.adventurerscompass.hud.nothingFound": "%s: nothing within %s blocks (%s Visited, %s Skipped ignored)",
     "string.adventurerscompass.hud.coordinates": "X %s, Z %s",
 
+    "_comment": "STRINGS - VISITED",
+    "string.adventurerscompass.hud.targetVisited": "%s · Visited — Search for the next one",
+    "string.adventurerscompass.markVisited": "Mark Visited",
+    "string.adventurerscompass.targetVisited": "%s (Visited)",
+    "string.adventurerscompass.visitedList": "Visited (%s)",
+    "string.adventurerscompass.noVisited": "Nothing Visited yet",
+    "string.adventurerscompass.unmarkVisited": "Click to unmark: it can be found again",
+    "string.adventurerscompass.visitedDistance": "%s m",
+
     "_comment": "STRINGS - DIMENSIONS",
     "dimension.minecraft.overworld": "Overworld",
     "dimension.minecraft.the_nether": "Nether",

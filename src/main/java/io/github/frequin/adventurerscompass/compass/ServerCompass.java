@@ -64,6 +64,11 @@ public final class ServerCompass {
 		apply(player, stack, COMPASS.cancel(CompassStacks.read(stack)));
 	}
 
+	/** "Mark Visited" with the compass the player holds: marks its Target, wherever it is. */
+	public static void markVisited(ServerPlayer player, ItemStack stack) {
+		apply(player, stack, COMPASS.markVisited(CompassStacks.read(stack)));
+	}
+
 	/** Stores a new Selection on the compass; a real change cancels the search and clears the Target and Skipped. */
 	public static void selectionChanged(ServerPlayer player, ItemStack stack, Selection selection) {
 		if (selection.equals(stack.getOrDefault(AdventurersCompass.SELECTION, Selection.EMPTY))) {
@@ -117,6 +122,8 @@ public final class ServerCompass {
 			switch (effect) {
 				case Effect.StartSearch start -> CompassSearches.start(player, start.id(), start.request(), result -> searchEnded(player, start.id(), result));
 				case Effect.CancelSearch cancel -> CompassSearches.cancel(player, cancel.id());
+				case Effect.MarkVisited mark -> CompassVisited.mark(player, mark.instance());
+				case Effect.TargetVisited visited -> CompassVisited.playArrivalSound(player);
 			}
 		}
 	}

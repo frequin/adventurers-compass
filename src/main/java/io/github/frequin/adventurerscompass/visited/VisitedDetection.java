@@ -2,6 +2,7 @@ package io.github.frequin.adventurerscompass.visited;
 
 import java.util.Map;
 
+import io.github.frequin.adventurerscompass.compass.CompassVisited;
 import io.github.frequin.adventurerscompass.config.AdventurersCompassConfig;
 import io.github.frequin.adventurerscompass.domain.ChunkCoord;
 import io.github.frequin.adventurerscompass.domain.InstanceKey;
@@ -80,15 +81,16 @@ public final class VisitedDetection {
 				}
 				StructureStart start = structures.getStartForStructure(structure, level.getChunk(startChunk.x(), startChunk.z(), ChunkStatus.STRUCTURE_STARTS));
 				if (start != null && start.isValid() && structures.structureHasPieceAt(pos, start) && PlayerVisited.mark(player, key)) {
-					announce(player, structureId);
+					CompassVisited.becameVisited(player, key);
 				}
 			}
 		}
 	}
 
-	private static void announce(ServerPlayer player, Identifier structureId) {
+	/** The action-bar message of a newly Visited Instance, unless disabled in config. */
+	public static void announce(ServerPlayer player, InstanceKey instance) {
 		if (AdventurersCompassConfig.visitedMessage) {
-			player.sendOverlayMessage(Component.translatable("string.adventurerscompass.visited", structureName(structureId)));
+			player.sendOverlayMessage(Component.translatable("string.adventurerscompass.visited", structureName(Identifier.parse(instance.structureId()))));
 		}
 	}
 

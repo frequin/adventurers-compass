@@ -91,8 +91,13 @@ public class AdventurersCompassScreen extends Screen {
 		setInitialFocus(filterBox);
 
 		int chipsTop = SELECTION_PANEL_TOP + 12;
-		int clearTop = height - 30 - 25;
-		addRenderableWidget(new SelectionChips(this, rightX, chipsTop, rightWidth, clearTop - chipsTop - 5));
+		// The space down to "Done" is shared between the chips (with "Clear") and the Visited list
+		int shared = height - 30 - 5 - chipsTop - 25 - VisitedList.CAPTION_HEIGHT;
+		int chipsHeight = Math.max(12, shared / 2);
+		int clearTop = chipsTop + chipsHeight + 5;
+		addRenderableWidget(new SelectionChips(this, rightX, chipsTop, rightWidth, chipsHeight));
+		int visitedTop = clearTop + 25;
+		addRenderableWidget(new VisitedList(player, rightX, visitedTop, rightWidth, Math.max(VisitedList.CAPTION_HEIGHT + 12, height - 35 - visitedTop)));
 		clearButton = addRenderableWidget(new TransparentButton(rightX, clearTop, rightWidth, 20, Component.translatable("string.adventurerscompass.clearSelection"), (onPress) -> {
 			updateSelection(selection.clear());
 		}));

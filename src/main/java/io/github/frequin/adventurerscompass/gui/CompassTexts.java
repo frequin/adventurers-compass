@@ -8,7 +8,9 @@ import io.github.frequin.adventurerscompass.domain.BlockXZ;
 import io.github.frequin.adventurerscompass.domain.compass.CompassState;
 import io.github.frequin.adventurerscompass.domain.compass.Target;
 import io.github.frequin.adventurerscompass.domain.search.SearchResult;
+import io.github.frequin.adventurerscompass.domain.visited.VisitedSet;
 import io.github.frequin.adventurerscompass.util.StructureUtils;
+import io.github.frequin.adventurerscompass.visited.PlayerVisited;
 
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
@@ -29,9 +31,10 @@ public final class CompassTexts {
 	 */
 	public static List<Component> hudLines(CompassState state, Player player, boolean displayCoordinates) {
 		List<Component> lines = new ArrayList<>();
-		switch (state.status(currentDimension(player))) {
+		switch (state.status(currentDimension(player), visited(player).asSet())) {
 			case SEARCHING -> lines.add(Component.translatable("string.adventurerscompass.hud.searching"));
 			case TARGET -> lines.add(Component.translatable("string.adventurerscompass.hud.target", structureName(state.target()), distance(state.target(), player)));
+			case TARGET_VISITED -> lines.add(Component.translatable("string.adventurerscompass.hud.targetVisited", structureName(state.target())));
 			case OTHER_DIMENSION -> lines.add(Component.translatable("string.adventurerscompass.hud.otherDimension", structureName(state.target()), dimensionName(state.target().dimension())));
 			case NOTHING_FOUND -> lines.add(nothingFound(state.nothingFound()));
 			case IDLE -> {
@@ -61,6 +64,11 @@ public final class CompassTexts {
 	public static int distance(Target target, Player player) {
 		BlockXZ here = new BlockXZ(player.blockPosition().getX(), player.blockPosition().getZ());
 		return (int) Math.round(Math.sqrt(here.distanceSq(target.pos())));
+	}
+
+	/** The player's Visited Instances, as synced by the server to this player only. */
+	public static VisitedSet visited(Player player) {
+		return player.getAttachedOrElse(PlayerVisited.VISITED, VisitedSet.empty());
 	}
 
 	public static String currentDimension(Player player) {

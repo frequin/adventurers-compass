@@ -30,6 +30,7 @@ public class AdventurersCompassConfig {
 	public static Map<String, Integer> perStructureXpLevels = new HashMap<String, Integer>();
 	public static List<String> structureBlacklist = new ArrayList<String>();
 	public static boolean visitedMessage = true;
+	public static boolean targetVisitedSound = true;
 	
 	public static boolean hudEnabled = true;
 	public static boolean displayWithChatOpen = true;
@@ -53,6 +54,7 @@ public class AdventurersCompassConfig {
 				perStructureXpLevels = data.common.perStructureXpLevels;
 				structureBlacklist = data.common.structureBlacklist;
 				visitedMessage = data.common.visitedMessage;
+				targetVisitedSound = data.common.targetVisitedSound;
 				
 				hudEnabled = data.client.hudEnabled;
 				displayWithChatOpen = data.client.displayWithChatOpen;
@@ -71,7 +73,7 @@ public class AdventurersCompassConfig {
 	public static void save() {
 		try {
 			Writer writer = Files.newBufferedWriter(getFilePath());
-			Data data = new Data(new Data.Common(allowTeleport, displayCoordinates, maxRadius, compassDurability, defaultXpLevel, perStructureXpLevels, structureBlacklist, visitedMessage), new Data.Client(hudEnabled, displayWithChatOpen, translateStructureNames, overlayLineOffset, overlaySide));
+			Data data = new Data(new Data.Common(allowTeleport, displayCoordinates, maxRadius, compassDurability, defaultXpLevel, perStructureXpLevels, structureBlacklist, visitedMessage, targetVisitedSound), new Data.Client(hudEnabled, displayWithChatOpen, translateStructureNames, overlayLineOffset, overlaySide));
 			gson.toJson(data, writer);
 			writer.close();
 		} catch (IOException e) {
@@ -120,6 +122,9 @@ public class AdventurersCompassConfig {
 
 			private final String visitedMessageComment = "Shows a message above the hotbar the first time a player stands in a piece of a structure Instance, which then becomes Visited and is skipped by searches.";
 			private final boolean visitedMessage;
+
+			private final String targetVisitedSoundComment = "Plays a soft sound to the player when the Target of a compass they carry becomes Visited (by walking into it or with \"Mark Visited\"). Other Structures stay silent.";
+			private final boolean targetVisitedSound;
 			
 			private Common() {
 				allowTeleport = true;
@@ -130,9 +135,10 @@ public class AdventurersCompassConfig {
 				perStructureXpLevels = new HashMap<String, Integer>();
 				structureBlacklist = new ArrayList<String>();
 				visitedMessage = true;
+				targetVisitedSound = true;
 			}
 
-			private Common(boolean allowTeleport, boolean displayCoordinates, int maxRadius, int compassDurability, int defaultXpLevel, Map<String, Integer> perStructureXpLevels, List<String> structureBlacklist, boolean visitedMessage) {
+			private Common(boolean allowTeleport, boolean displayCoordinates, int maxRadius, int compassDurability, int defaultXpLevel, Map<String, Integer> perStructureXpLevels, List<String> structureBlacklist, boolean visitedMessage, boolean targetVisitedSound) {
 				this.allowTeleport = allowTeleport;
 				this.displayCoordinates = displayCoordinates;
 				this.maxRadius = maxRadius;
@@ -141,6 +147,7 @@ public class AdventurersCompassConfig {
 				this.perStructureXpLevels = perStructureXpLevels;
 				this.structureBlacklist = structureBlacklist;
 				this.visitedMessage = visitedMessage;
+				this.targetVisitedSound = targetVisitedSound;
 			}
 		}
 		
