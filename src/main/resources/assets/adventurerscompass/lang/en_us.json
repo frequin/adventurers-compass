@@ -6,6 +6,7 @@
     "item.adventurerscompass.adventurerscompass": "Adventurer's Compass",
 
     "_comment": "STRINGS - BUTTONS",
+    "string.adventurerscompass.visited": "Visited: %s",
     "string.adventurerscompass.back": "Back",
     "string.adventurerscompass.searchForGroup": "Search for Group",
     "string.adventurerscompass.selectStructure": "Select Structure",

@@ -19,6 +19,8 @@ import io.github.frequin.adventurerscompass.network.SyncPacket;
 import io.github.frequin.adventurerscompass.network.TeleportPacket;
 import io.github.frequin.adventurerscompass.network.UpdateSelectionPacket;
 import io.github.frequin.adventurerscompass.search.CompassSearches;
+import io.github.frequin.adventurerscompass.visited.PlayerVisited;
+import io.github.frequin.adventurerscompass.visited.VisitedDetection;
 import com.mojang.serialization.Codec;
 
 import net.fabricmc.api.ModInitializer;
@@ -97,6 +99,8 @@ public class AdventurersCompass implements ModInitializer {
 		ServerPlayNetworking.registerGlobalReceiver(UpdateSelectionPacket.TYPE, UpdateSelectionPacket::handle);
 
 		CompassSearches.register();
+		PlayerVisited.register();
+		VisitedDetection.register();
 	}
 
 }

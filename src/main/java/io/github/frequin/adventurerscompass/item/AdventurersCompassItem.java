@@ -24,6 +24,7 @@ import io.github.frequin.adventurerscompass.domain.selection.Catalogue;
 import io.github.frequin.adventurerscompass.domain.selection.CatalogueEntry;
 import io.github.frequin.adventurerscompass.domain.selection.Selection;
 import io.github.frequin.adventurerscompass.search.CompassSearches;
+import io.github.frequin.adventurerscompass.visited.PlayerVisited;
 
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.core.BlockPos;
@@ -164,7 +165,7 @@ public class AdventurersCompassItem extends Item {
 		}
 		int maxRadius = AdventurersCompassConfig.maxRadius;
 		stack.set(AdventurersCompass.SEARCH_RADIUS, maxRadius);
-		SearchRequest request = new SearchRequest(dimension, new BlockXZ(pos.getX(), pos.getZ()), structures, maxRadius, Set.of(), skipped);
+		SearchRequest request = new SearchRequest(dimension, new BlockXZ(pos.getX(), pos.getZ()), structures, maxRadius, PlayerVisited.get(serverPlayer).asSet(), skipped);
 		CompassSearches.start(serverPlayer, request, result -> {
 			switch (result) {
 				case SearchResult.Found found -> {
