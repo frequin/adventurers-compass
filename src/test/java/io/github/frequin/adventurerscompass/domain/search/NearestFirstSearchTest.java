@@ -214,6 +214,44 @@ class NearestFirstSearchTest {
 		assertEquals(Optional.of(found), search.step(UNLIMITED));
 	}
 
+	@Test
+	void findsTheNearestInstanceOfAConcentricRingsPlacement() {
+		var strongholds = FakeWorld.Placement.rings("strongholds");
+		var world = new FakeWorld()
+				.decoy(strongholds, 1, 1)
+				.instance("minecraft:stronghold", strongholds, 40, 40)
+				.instance("minecraft:stronghold", strongholds, -30, 10)
+				.instance("minecraft:stronghold", strongholds, 70, 0);
+
+		var result = runToEnd(search(world, new BlockXZ(0, 0), 1000, Set.of("minecraft:stronghold")));
+
+		assertEquals(new SearchResult.Found(key("minecraft:stronghold", -30, 10), new BlockXZ(-480, 160)), result);
+	}
+
+	@Test
+	void findsTheNearestInstanceOfAPlacementWithoutAKnownLayout() {
+		var odd = FakeWorld.Placement.everyChunk("odd");
+		var huts = new FakeWorld.Placement("huts", 34);
+		var world = new FakeWorld()
+				.instance("mod:odd", odd, 12, -9)
+				.instance("mod:odd", odd, 3, 20)
+				.instance("mod:hut", huts, 30, 30);
+
+		var result = runToEnd(search(world, new BlockXZ(0, 0), 1000, Set.of("mod:odd", "mod:hut")));
+
+		assertEquals(new SearchResult.Found(key("mod:odd", 12, -9), new BlockXZ(192, -144)), result);
+	}
+
+	@Test
+	void findsNothingInAnEmptyPlacementWithoutAKnownLayout() {
+		var odd = FakeWorld.Placement.everyChunk("odd");
+		var world = new FakeWorld().placement("mod:odd", odd);
+
+		var result = runToEnd(search(world, new BlockXZ(0, 0), 200, Set.of("mod:odd")));
+
+		assertEquals(new SearchResult.NothingFound(OVERWORLD, 200, 0, 0), result);
+	}
+
 	private static InstanceKey key(String structureId, int chunkX, int chunkZ) {
 		return new InstanceKey(OVERWORLD, structureId, new ChunkCoord(chunkX, chunkZ));
 	}
