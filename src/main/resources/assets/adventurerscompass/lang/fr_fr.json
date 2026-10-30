@@ -6,6 +6,7 @@
     "item.adventurerscompass.adventurerscompass": "Boussole de l'aventurier",
 
     "_comment": "STRINGS - BUTTONS",
+    "string.adventurerscompass.visited": "Visitée : %s",
     "string.adventurerscompass.back": "Retour",
     "string.adventurerscompass.searchForGroup": "Rechercher par Groupe",
     "string.adventurerscompass.selectStructure": "Sélectionner la structure",

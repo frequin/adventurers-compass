@@ -16,6 +16,8 @@ import io.github.frequin.adventurerscompass.network.SearchPacket;
 import io.github.frequin.adventurerscompass.network.SyncPacket;
 import io.github.frequin.adventurerscompass.network.TeleportPacket;
 import io.github.frequin.adventurerscompass.search.CompassSearches;
+import io.github.frequin.adventurerscompass.visited.PlayerVisited;
+import io.github.frequin.adventurerscompass.visited.VisitedDetection;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ListMultimap;
 import com.mojang.serialization.Codec;
@@ -91,6 +93,8 @@ public class AdventurersCompass implements ModInitializer {
 		ServerPlayNetworking.registerGlobalReceiver(TeleportPacket.TYPE, TeleportPacket::handle);
 
 		CompassSearches.register();
+		PlayerVisited.register();
+		VisitedDetection.register();
 		
 		allowedStructures = new ArrayList<Identifier>();
 		xpLevelsForAllowedStructures = new HashMap<Identifier, Integer>();

@@ -31,6 +31,7 @@ public class AdventurersCompassConfig {
 	public static int defaultXpLevel = 0;
 	public static Map<String, Integer> perStructureXpLevels = new HashMap<String, Integer>();
 	public static List<String> structureBlacklist = new ArrayList<String>();
+	public static boolean visitedMessage = true;
 	
 	public static boolean displayWithChatOpen = true;
 	public static boolean translateStructureNames = true;
@@ -54,6 +55,7 @@ public class AdventurersCompassConfig {
 				defaultXpLevel = data.common.defaultXpLevel;
 				perStructureXpLevels = data.common.perStructureXpLevels;
 				structureBlacklist = data.common.structureBlacklist;
+				visitedMessage = data.common.visitedMessage;
 				
 				displayWithChatOpen = data.client.displayWithChatOpen;
 				translateStructureNames = data.client.translateStructureNames;
@@ -71,7 +73,7 @@ public class AdventurersCompassConfig {
 	public static void save() {
 		try {
 			Writer writer = Files.newBufferedWriter(getFilePath());
-			Data data = new Data(new Data.Common(allowTeleport, maxNextSearches, displayCoordinates, maxRadius, maxSamples, compassDurability, defaultXpLevel, perStructureXpLevels, structureBlacklist), new Data.Client(displayWithChatOpen, translateStructureNames, overlayLineOffset, overlaySide));
+			Data data = new Data(new Data.Common(allowTeleport, maxNextSearches, displayCoordinates, maxRadius, maxSamples, compassDurability, defaultXpLevel, perStructureXpLevels, structureBlacklist, visitedMessage), new Data.Client(displayWithChatOpen, translateStructureNames, overlayLineOffset, overlaySide));
 			gson.toJson(data, writer);
 			writer.close();
 		} catch (IOException e) {
@@ -123,6 +125,9 @@ public class AdventurersCompassConfig {
 			
 			private final String structureBlacklistComment = "A list of structures that the compass will not display in the GUI and will not be able to search for. The wildcard character * can be used to match any number of characters, and ? can be used to match one character. Ex (ignore backslashes): [\"minecraft:stronghold\", \"minecraft:endcity\", \"minecraft:*village*\"]";
 			private final List<String> structureBlacklist;
+
+			private final String visitedMessageComment = "Shows a message above the hotbar the first time a player stands in a piece of a structure Instance, which then becomes Visited and is skipped by searches.";
+			private final boolean visitedMessage;
 			
 			private Common() {
 				allowTeleport = true;
@@ -134,9 +139,10 @@ public class AdventurersCompassConfig {
 				defaultXpLevel = 0;
 				perStructureXpLevels = new HashMap<String, Integer>();
 				structureBlacklist = new ArrayList<String>();
+				visitedMessage = true;
 			}
 
-			private Common(boolean allowTeleport, int maxNextSearches, boolean displayCoordinates, int maxRadius, int maxSamples, int compassDurability, int defaultXpLevel, Map<String, Integer> perStructureXpLevels, List<String> structureBlacklist) {
+			private Common(boolean allowTeleport, int maxNextSearches, boolean displayCoordinates, int maxRadius, int maxSamples, int compassDurability, int defaultXpLevel, Map<String, Integer> perStructureXpLevels, List<String> structureBlacklist, boolean visitedMessage) {
 				this.allowTeleport = allowTeleport;
 				this.maxNextSearches = maxNextSearches;
 				this.displayCoordinates = displayCoordinates;
@@ -146,6 +152,7 @@ public class AdventurersCompassConfig {
 				this.defaultXpLevel = defaultXpLevel;
 				this.perStructureXpLevels = perStructureXpLevels;
 				this.structureBlacklist = structureBlacklist;
+				this.visitedMessage = visitedMessage;
 			}
 		}
 		
