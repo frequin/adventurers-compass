@@ -15,7 +15,7 @@ import io.github.frequin.adventurerscompass.domain.search.SearchResult;
 public final class Compass {
 
 	/** The rules every compass applies before a search starts. */
-	public static final List<LaunchRule> DEFAULT_RULES = List.of(LaunchRule.SOMETHING_SEARCHABLE, LaunchRule.NOT_BROKEN);
+	public static final List<LaunchRule> DEFAULT_RULES = List.of(LaunchRule.SOMETHING_SEARCHABLE, LaunchRule.NOT_BROKEN, LaunchRule.ENOUGH_XP);
 
 	private final List<LaunchRule> rules;
 

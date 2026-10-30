@@ -1,8 +1,10 @@
 package io.github.frequin.adventurerscompass.domain.compass;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -16,6 +18,8 @@ import io.github.frequin.adventurerscompass.domain.search.FakeWorld;
 import io.github.frequin.adventurerscompass.domain.search.NearestFirstSearch;
 import io.github.frequin.adventurerscompass.domain.search.SearchRequest;
 import io.github.frequin.adventurerscompass.domain.search.SearchResult;
+import io.github.frequin.adventurerscompass.domain.xp.PlayerXp;
+import io.github.frequin.adventurerscompass.domain.xp.XpCosts;
 
 class CompassTest {
 
@@ -255,6 +259,36 @@ class CompassTest {
 		var after = compass.searchEnded(passing.state(), id, result);
 
 		assertEquals(new SearchResult.NothingFound(OVERWORLD, 1000, 0, 1), after.nothingFound());
+	}
+
+	private static final XpCosts NOMAD_COSTS = new XpCosts(5, Map.of("minecraft:stronghold", 10), 2, Map.of(OVERWORLD, 1.0));
+
+	private static SearchContext overworldWithLevels(int levels, boolean creative) {
+		return new SearchContext(OVERWORLD, HERE, Set.of(VILLAGE, "minecraft:stronghold"), 1000, Set.of(), NOMAD_COSTS, new PlayerXp(levels, creative));
+	}
+
+	@Test
+	void searchAndPassAreRefusedUnderTheHighestCostOfTheSearchableStructures() {
+		var target = withTarget();
+
+		assertEquals(new Outcome.Refused(Refusal.NOT_ENOUGH_XP), compass.search(target, overworldWithLevels(9, false), UUID.randomUUID()));
+		assertEquals(new Outcome.Refused(Refusal.NOT_ENOUGH_XP), compass.pass(target, overworldWithLevels(9, false), UUID.randomUUID()));
+		assertInstanceOf(Outcome.Accepted.class, compass.search(target, overworldWithLevels(10, false), UUID.randomUUID()));
+	}
+
+	@Test
+	void creativeLaunchesWithoutLevels() {
+		assertInstanceOf(Outcome.Accepted.class, compass.search(withTarget(), overworldWithLevels(0, true), UUID.randomUUID()));
+	}
+
+	@Test
+	void launchingChargesNothing() {
+		var context = overworldWithLevels(10, false);
+
+		var outcome = accepted(compass.search(withTarget(), context, UUID.randomUUID()));
+
+		assertEquals(1, outcome.effects().size());
+		assertInstanceOf(Effect.StartSearch.class, outcome.effects().get(0));
 	}
 
 	private static SearchResult runToEnd(NearestFirstSearch<?> search) {

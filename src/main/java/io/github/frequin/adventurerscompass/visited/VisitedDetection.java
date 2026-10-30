@@ -95,7 +95,7 @@ public final class VisitedDetection {
 	}
 
 	/** The Structure's translated name when the client has one, else a readable form of its id. */
-	static Component structureName(Identifier structureId) {
+	public static Component structureName(Identifier structureId) {
 		String[] words = structureId.getPath().split("_");
 		StringBuilder fallback = new StringBuilder();
 		for (String word : words) {

@@ -178,28 +178,6 @@ public class StructureUtils {
 		return dimensionsForAllowedStructures;
 	}
 	
-	public static int getXpLevelsForStructure(ServerLevel serverLevel, Identifier structureKey) {
-		int xpLevels = AdventurersCompassConfig.defaultXpLevel;
-		for (String structureRegex : AdventurersCompassConfig.perStructureXpLevels.keySet()) {
-			if (structureKey.toString().matches(convertToRegex(structureRegex))) {
-				xpLevels = AdventurersCompassConfig.perStructureXpLevels.get(structureRegex);
-				if (xpLevels > 3) {
-					xpLevels = 3;
-				}
-				break;
-			}
-		}
-		return xpLevels;
-	}
-
-	public static Map<Identifier, Integer> getXpLevelsForAllowedStructures(ServerLevel serverLevel, List<Identifier> allowedStructures) {
-		final Map<Identifier, Integer> xpLevels = new HashMap<Identifier, Integer>();
-		for (Identifier structureKey : allowedStructures) {
-			xpLevels.put(structureKey, getXpLevelsForStructure(serverLevel, structureKey));
-		}
-		return xpLevels;
-	}
-
 	public static int getHorizontalDistanceToLocation(Player player, int x, int z) {
 		return getHorizontalDistanceToLocation(player.blockPosition(), x, z);
 	}

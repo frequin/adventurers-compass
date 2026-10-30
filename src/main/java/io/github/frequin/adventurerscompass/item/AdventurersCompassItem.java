@@ -1,12 +1,12 @@
 package io.github.frequin.adventurerscompass.item;
 
-import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Consumer;
 
 import io.github.frequin.adventurerscompass.AdventurersCompass;
 import io.github.frequin.adventurerscompass.compass.CompassStacks;
 import io.github.frequin.adventurerscompass.compass.ServerCompass;
+import io.github.frequin.adventurerscompass.compass.ServerXp;
 import io.github.frequin.adventurerscompass.config.AdventurersCompassConfig;
 import io.github.frequin.adventurerscompass.gui.GuiWrapper;
 import io.github.frequin.adventurerscompass.network.SyncPacket;
@@ -14,7 +14,6 @@ import io.github.frequin.adventurerscompass.util.ItemUtils;
 import io.github.frequin.adventurerscompass.util.PlayerUtils;
 import io.github.frequin.adventurerscompass.util.StructureUtils;
 import io.github.frequin.adventurerscompass.domain.selection.Catalogue;
-import io.github.frequin.adventurerscompass.domain.selection.CatalogueEntry;
 
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.ChatFormatting;
@@ -62,10 +61,7 @@ public class AdventurersCompassItem extends Item {
 				final boolean dimensionDisabled = AdventurersCompassConfig.isDisabledDimension(dimension);
 				// The compass lists nothing in a disabled dimension
 				final Catalogue catalogue = dimensionDisabled ? Catalogue.EMPTY : StructureUtils.buildCatalogue(serverLevel);
-				final Map<String, Integer> xpLevels = new HashMap<String, Integer>();
-				for (CatalogueEntry entry : catalogue.entries()) {
-					xpLevels.put(entry.structureId(), StructureUtils.getXpLevelsForStructure(serverLevel, Identifier.parse(entry.structureId())));
-				}
+				final Map<String, Integer> xpLevels = ServerXp.realCosts(catalogue, dimension);
 				ServerPlayNetworking.send(serverPlayer, new SyncPacket(canTeleport, hasInfiniteXp, dimension, catalogue, xpLevels, dimensionDisabled));
 			}
 		} else if (player instanceof ServerPlayer serverPlayer) {
