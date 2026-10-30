@@ -28,7 +28,7 @@ public class AdventurersCompassConfig {
 	public static int compassDurability = 0;
 	public static int defaultXpLevel = 0;
 	public static Map<String, Integer> perStructureXpLevels = new HashMap<String, Integer>();
-	public static List<String> structureBlacklist = new ArrayList<String>();
+	public static List<String> hiddenStructures = new ArrayList<String>();
 	public static boolean visitedMessage = true;
 	
 	public static boolean hudEnabled = true;
@@ -51,7 +51,7 @@ public class AdventurersCompassConfig {
 				compassDurability = data.common.compassDurability;
 				defaultXpLevel = data.common.defaultXpLevel;
 				perStructureXpLevels = data.common.perStructureXpLevels;
-				structureBlacklist = data.common.structureBlacklist;
+				hiddenStructures = data.common.hiddenStructures;
 				visitedMessage = data.common.visitedMessage;
 				
 				hudEnabled = data.client.hudEnabled;
@@ -71,7 +71,7 @@ public class AdventurersCompassConfig {
 	public static void save() {
 		try {
 			Writer writer = Files.newBufferedWriter(getFilePath());
-			Data data = new Data(new Data.Common(allowTeleport, displayCoordinates, maxRadius, compassDurability, defaultXpLevel, perStructureXpLevels, structureBlacklist, visitedMessage), new Data.Client(hudEnabled, displayWithChatOpen, translateStructureNames, overlayLineOffset, overlaySide));
+			Data data = new Data(new Data.Common(allowTeleport, displayCoordinates, maxRadius, compassDurability, defaultXpLevel, perStructureXpLevels, hiddenStructures, visitedMessage), new Data.Client(hudEnabled, displayWithChatOpen, translateStructureNames, overlayLineOffset, overlaySide));
 			gson.toJson(data, writer);
 			writer.close();
 		} catch (IOException e) {
@@ -115,8 +115,8 @@ public class AdventurersCompassConfig {
 			private final String perStructureXpLevelsComment = "A map of per-structure XP level costs that override defaultXpLevels. Structures not listed here use defaultXpLevels. Max of 3 levels. The wildcard character * can be used to match any number of characters, and ? can be used to match one character. Ex: {\"minecraft:buried_treasure\":3, \"minecraft:end*\":2, \"minecraft:*village*\":1}";
 			private final Map<String, Integer> perStructureXpLevels;
 			
-			private final String structureBlacklistComment = "A list of structures that the compass will not display in the GUI and will not be able to search for. The wildcard character * can be used to match any number of characters, and ? can be used to match one character. Ex (ignore backslashes): [\"minecraft:stronghold\", \"minecraft:endcity\", \"minecraft:*village*\"]";
-			private final List<String> structureBlacklist;
+			private final String hiddenStructuresComment = "Structures to Hide: they are not listed in the compass screen and never searched. Each entry is a structure id, where * matches any number of characters and ? one character, or a structure tag starting with #. Structures with the tag #c:hidden_from_locator_selection are always Hidden. A Hidden structure already in a compass Selection stays there as a greyed chip, and a Target already found is kept. Ex (ignore backslashes): [\"minecraft:stronghold\", \"minecraft:*village*\", \"#minecraft:village\"]";
+			private final List<String> hiddenStructures;
 
 			private final String visitedMessageComment = "Shows a message above the hotbar the first time a player stands in a piece of a structure Instance, which then becomes Visited and is skipped by searches.";
 			private final boolean visitedMessage;
@@ -128,18 +128,18 @@ public class AdventurersCompassConfig {
 				compassDurability = 0;
 				defaultXpLevel = 0;
 				perStructureXpLevels = new HashMap<String, Integer>();
-				structureBlacklist = new ArrayList<String>();
+				hiddenStructures = new ArrayList<String>();
 				visitedMessage = true;
 			}
 
-			private Common(boolean allowTeleport, boolean displayCoordinates, int maxRadius, int compassDurability, int defaultXpLevel, Map<String, Integer> perStructureXpLevels, List<String> structureBlacklist, boolean visitedMessage) {
+			private Common(boolean allowTeleport, boolean displayCoordinates, int maxRadius, int compassDurability, int defaultXpLevel, Map<String, Integer> perStructureXpLevels, List<String> hiddenStructures, boolean visitedMessage) {
 				this.allowTeleport = allowTeleport;
 				this.displayCoordinates = displayCoordinates;
 				this.maxRadius = maxRadius;
 				this.compassDurability = compassDurability;
 				this.defaultXpLevel = defaultXpLevel;
 				this.perStructureXpLevels = perStructureXpLevels;
-				this.structureBlacklist = structureBlacklist;
+				this.hiddenStructures = hiddenStructures;
 				this.visitedMessage = visitedMessage;
 			}
 		}

@@ -138,9 +138,11 @@ public class SelectionChips extends AbstractWidget {
 
 	private static List<Component> tooltip(Chip chip) {
 		Component kind = Component.translatable(chip.kind() == Chip.Kind.GROUP ? "string.adventurerscompass.group" : "string.adventurerscompass.structure");
-		Component hint = chip.isActive()
-				? Component.translatable("string.adventurerscompass.removeChip")
-				: Component.translatable("string.adventurerscompass.chipAbsentFromDimension");
+		Component hint = Component.translatable(switch (chip.state()) {
+			case ACTIVE -> "string.adventurerscompass.removeChip";
+			case ABSENT_FROM_DIMENSION -> "string.adventurerscompass.chipAbsentFromDimension";
+			case HIDDEN -> "string.adventurerscompass.chipHidden";
+		});
 		return List.of(Component.empty().append(kind).append(" · " + chip.id()), hint);
 	}
 

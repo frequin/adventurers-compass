@@ -29,14 +29,14 @@ public record Selection(Set<String> structures, Set<String> groups) {
 
 	/**
 	 * Unticks a Structure. If it was ticked through its Group, the Group is
-	 * exploded: it is replaced by its other Structures, ticked one by one.
+	 * exploded: it is replaced by its other non-Hidden Structures, ticked one by one.
 	 */
 	public Selection untickStructure(String structureId, Catalogue catalogue) {
 		Set<String> nextStructures = new TreeSet<>(structures);
 		Set<String> nextGroups = new TreeSet<>(groups);
 		catalogue.groupOf(structureId).filter(groups::contains).ifPresent(groupId -> {
 			nextGroups.remove(groupId);
-			nextStructures.addAll(catalogue.members(groupId));
+			catalogue.members(groupId).stream().filter(id -> !catalogue.entry(id).get().hidden()).forEach(nextStructures::add);
 		});
 		nextStructures.remove(structureId);
 		return new Selection(nextStructures, nextGroups);
@@ -88,7 +88,7 @@ public record Selection(Set<String> structures, Set<String> groups) {
 			return GroupState.TICKED;
 		}
 		for (String structureId : catalogue.members(groupId)) {
-			if (structures.contains(structureId) && catalogue.entry(structureId).get().generatesIn(dimension)) {
+			if (structures.contains(structureId) && catalogue.entry(structureId).get().listedIn(dimension)) {
 				return GroupState.PARTIAL;
 			}
 		}
@@ -109,7 +109,7 @@ public record Selection(Set<String> structures, Set<String> groups) {
 	public Set<String> resolve(Catalogue catalogue, String dimension) {
 		Set<String> searchable = new TreeSet<>();
 		for (CatalogueEntry entry : catalogue.entries()) {
-			if (entry.generatesIn(dimension) && (structures.contains(entry.structureId()) || groups.contains(entry.groupId()))) {
+			if (entry.listedIn(dimension) && (structures.contains(entry.structureId()) || groups.contains(entry.groupId()))) {
 				searchable.add(entry.structureId());
 			}
 		}
@@ -127,19 +127,33 @@ public record Selection(Set<String> structures, Set<String> groups) {
 	/**
 	 * The Selection as chips for {@code dimension}: Groups first, then
 	 * Structures, each sorted by id. A chip is greyed when nothing it stands for
-	 * generates in the dimension; it stays on the compass but the search ignores it.
+	 * generates in the dimension, or when what it stands for is Hidden; it stays
+	 * on the compass but the search ignores it. Hidden wins over absent.
 	 */
 	public List<Chip> chips(Catalogue catalogue, String dimension) {
 		List<Chip> chips = new ArrayList<>();
 		for (String groupId : new TreeSet<>(groups)) {
-			boolean active = catalogue.members(groupId).stream().anyMatch(id -> catalogue.entry(id).get().generatesIn(dimension));
-			chips.add(new Chip(Chip.Kind.GROUP, groupId, active ? ChipState.ACTIVE : ChipState.ABSENT_FROM_DIMENSION));
+			chips.add(new Chip(Chip.Kind.GROUP, groupId, groupChipState(groupId, catalogue, dimension)));
 		}
 		for (String structureId : new TreeSet<>(structures)) {
-			boolean active = catalogue.entry(structureId).filter(entry -> entry.generatesIn(dimension)).isPresent();
-			chips.add(new Chip(Chip.Kind.STRUCTURE, structureId, active ? ChipState.ACTIVE : ChipState.ABSENT_FROM_DIMENSION));
+			chips.add(new Chip(Chip.Kind.STRUCTURE, structureId, catalogue.entry(structureId).map(entry -> entry.hidden() ? ChipState.HIDDEN : entry.generatesIn(dimension) ? ChipState.ACTIVE : ChipState.ABSENT_FROM_DIMENSION).orElse(ChipState.ABSENT_FROM_DIMENSION)));
 		}
 		return chips;
+	}
+
+	/**
+	 * ACTIVE when a non-Hidden member generates in the dimension. Otherwise
+	 * HIDDEN when the members that generate there (or, if none does, all its
+	 * members) are Hidden, else ABSENT_FROM_DIMENSION.
+	 */
+	private static ChipState groupChipState(String groupId, Catalogue catalogue, String dimension) {
+		List<CatalogueEntry> members = catalogue.members(groupId).stream().map(id -> catalogue.entry(id).get()).toList();
+		if (members.stream().anyMatch(entry -> entry.listedIn(dimension))) {
+			return ChipState.ACTIVE;
+		}
+		List<CatalogueEntry> here = members.stream().filter(entry -> entry.generatesIn(dimension)).toList();
+		List<CatalogueEntry> considered = here.isEmpty() ? members : here;
+		return !considered.isEmpty() && considered.stream().allMatch(CatalogueEntry::hidden) ? ChipState.HIDDEN : ChipState.ABSENT_FROM_DIMENSION;
 	}
 
 }

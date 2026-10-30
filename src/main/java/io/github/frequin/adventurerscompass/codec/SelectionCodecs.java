@@ -34,6 +34,7 @@ public final class SelectionCodecs {
 			ByteBufCodecs.STRING_UTF8, CatalogueEntry::groupId,
 			ID_SET_STREAM, CatalogueEntry::dimensions,
 			ByteBufCodecs.STRING_UTF8, CatalogueEntry::source,
+			ByteBufCodecs.BOOL, CatalogueEntry::hidden,
 			CatalogueEntry::new);
 
 	public static final StreamCodec<ByteBuf, Catalogue> CATALOGUE_STREAM = CATALOGUE_ENTRY_STREAM.apply(ByteBufCodecs.list()).map(Catalogue::new, Catalogue::entries);
