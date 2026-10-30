@@ -71,6 +71,11 @@ public final class ServerCompass {
 		apply(player, stack, COMPASS.cancel(CompassStacks.read(stack)));
 	}
 
+	/** "Mark Visited" with the compass the player holds: marks its Target, wherever it is. */
+	public static void markVisited(ServerPlayer player, ItemStack stack) {
+		apply(player, stack, COMPASS.markVisited(CompassStacks.read(stack)));
+	}
+
 	/** "Teleport" to the Target of the compass the player holds. */
 	public static void teleport(ServerPlayer player, ItemStack stack) {
 		TeleportContext context = new TeleportContext(player.level().dimension().identifier().toString(), AdventurersCompassConfig.allowTeleport, PlayerUtils.isOperator(player.level().getServer(), player), player.isCreative());
@@ -137,6 +142,8 @@ public final class ServerCompass {
 			switch (effect) {
 				case Effect.StartSearch start -> CompassSearches.start(player, start.id(), start.request(), result -> searchEnded(player, start.id(), result));
 				case Effect.CancelSearch cancel -> CompassSearches.cancel(player, cancel.id());
+				case Effect.MarkVisited mark -> CompassVisited.mark(player, mark.instance());
+				case Effect.TargetVisited visited -> CompassVisited.playArrivalSound(player);
 				case Effect.TeleportTo teleport -> TeleportPacket.teleport(player, teleport.pos().x(), teleport.pos().z());
 			}
 		}

@@ -86,6 +86,27 @@ public final class Compass {
 		return state.isSearching() ? List.of(new Effect.CancelSearch(state.search())) : List.of();
 	}
 
+	/**
+	 * "Mark Visited": marks the Target Visited, wherever its dimension. The
+	 * compass itself is unchanged (no wear, no new search).
+	 */
+	public Outcome markVisited(CompassState state) {
+		if (state.target() == null) {
+			return new Outcome.Refused(Refusal.NO_TARGET);
+		}
+		return new Outcome.Accepted(state, List.of(new Effect.MarkVisited(state.target().instance())));
+	}
+
+	/**
+	 * An Instance just became Visited for the player carrying this compass. When
+	 * it is the Target, the Target is kept (the compass keeps pointing at it,
+	 * with no new search) and the arrival is signalled.
+	 */
+	public Outcome instanceVisited(CompassState state, InstanceKey instance) {
+		boolean isTarget = state.target() != null && state.target().instance().equals(instance);
+		return new Outcome.Accepted(state, isTarget ? List.of(new Effect.TargetVisited(instance)) : List.of());
+	}
+
 	/** The search {@code id} ended with {@code result}. */
 	public CompassState searchEnded(CompassState state, UUID id, SearchResult result) {
 		if (!id.equals(state.search())) {

@@ -27,13 +27,25 @@ public record CompassState(UUID search, Target target, Set<InstanceKey> skipped,
 		return search != null;
 	}
 
-	/** What the compass shows to a player standing in {@code currentDimension}. */
+	/** What the compass shows to a player standing in {@code currentDimension}, ignoring Visited. */
 	public Status status(String currentDimension) {
+		return status(currentDimension, Set.of());
+	}
+
+	/**
+	 * What the compass shows to a player standing in {@code currentDimension}
+	 * whose Visited Instances are {@code visited}. Visited is read, not stored,
+	 * so unmarking the Target makes it a plain Target again.
+	 */
+	public Status status(String currentDimension, Set<InstanceKey> visited) {
 		if (isSearching()) {
 			return Status.SEARCHING;
 		}
 		if (target != null) {
-			return target.dimension().equals(currentDimension) ? Status.TARGET : Status.OTHER_DIMENSION;
+			if (!target.dimension().equals(currentDimension)) {
+				return Status.OTHER_DIMENSION;
+			}
+			return visited.contains(target.instance()) ? Status.TARGET_VISITED : Status.TARGET;
 		}
 		return nothingFound != null ? Status.NOTHING_FOUND : Status.IDLE;
 	}

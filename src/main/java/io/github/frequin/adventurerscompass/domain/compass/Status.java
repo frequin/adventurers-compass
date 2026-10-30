@@ -12,6 +12,12 @@ public enum Status {
 	/** The Target is in the Current dimension: the needle points at it. */
 	TARGET,
 
+	/**
+	 * The Target in the Current dimension is Visited: the needle still points
+	 * at it and the HUD reads "Visited — Search for the next one".
+	 */
+	TARGET_VISITED,
+
 	/** The Target is in another dimension: the needle spins until the player returns. */
 	OTHER_DIMENSION,
 

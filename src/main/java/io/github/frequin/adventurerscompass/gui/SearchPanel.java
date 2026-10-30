@@ -8,6 +8,7 @@ import io.github.frequin.adventurerscompass.compass.CompassStacks;
 import io.github.frequin.adventurerscompass.domain.compass.CompassState;
 import io.github.frequin.adventurerscompass.domain.compass.Target;
 import io.github.frequin.adventurerscompass.network.CancelPacket;
+import io.github.frequin.adventurerscompass.network.MarkVisitedPacket;
 import io.github.frequin.adventurerscompass.network.PassPacket;
 import io.github.frequin.adventurerscompass.network.SearchPacket;
 import io.github.frequin.adventurerscompass.network.TeleportPacket;
@@ -28,7 +29,7 @@ import net.minecraft.world.item.ItemStack;
 /**
  * The search part of the compass screen's right column: "Search", which turns
  * into "Cancel" while a search runs, "Pass", then the Target panel (name,
- * distance and dimension) with "Teleport". Starting a search closes the
+ * distance and dimension) with "Mark Visited" and "Teleport". Starting a search closes the
  * screen. It reads the held compass every frame, so it follows the state the
  * server syncs.
  */
@@ -51,6 +52,8 @@ final class SearchPanel {
 	private Button searchButton;
 	private Button passButton;
 	private Button teleportButton;
+	private Button markVisitedButton;
+	private int width;
 	private boolean searchAllowed;
 	private Component searchRefusal;
 
@@ -64,6 +67,7 @@ final class SearchPanel {
 	void init(Consumer<AbstractWidget> add, int x, int y, int width) {
 		this.x = x;
 		this.top = y;
+		this.width = width;
 		searchButton = new TransparentButton(x, y, width, BUTTON_HEIGHT, Component.empty(), (onPress) -> {
 			if (state().isSearching()) {
 				ClientPlayNetworking.send(new CancelPacket());
@@ -80,9 +84,13 @@ final class SearchPanel {
 			ClientPlayNetworking.send(new TeleportPacket());
 			minecraft.gui.setScreen(null);
 		});
+		markVisitedButton = new TransparentButton(x, targetTextTop() + TARGET_TEXT_LINES * LINE + GAP, width, BUTTON_HEIGHT, Component.translatable("string.adventurerscompass.markVisited"), (onPress) -> {
+			ClientPlayNetworking.send(new MarkVisitedPacket());
+		});
 		add.accept(searchButton);
 		add.accept(passButton);
 		add.accept(teleportButton);
+		add.accept(markVisitedButton);
 		update(searchAllowed, searchRefusal);
 	}
 
@@ -105,6 +113,12 @@ final class SearchPanel {
 		passButton.active = searchAllowed && state.target() != null;
 		teleportButton.visible = AdventurersCompass.canTeleport;
 		teleportButton.active = state.target() != null && state.target().dimension().equals(CompassTexts.currentDimension(player));
+		// "Mark Visited" shares the row with "Teleport" when teleporting is allowed
+		int half = (width - GAP) / 2;
+		markVisitedButton.setWidth(teleportButton.visible ? half : width);
+		teleportButton.setX(teleportButton.visible ? x + half + GAP : x);
+		teleportButton.setWidth(teleportButton.visible ? width - half - GAP : width);
+		markVisitedButton.active = state.target() != null && !targetVisited(state);
 	}
 
 	/** Draws the Target panel text. */
@@ -117,7 +131,10 @@ final class SearchPanel {
 			guiGraphics.text(font, Component.translatable("string.adventurerscompass.noTarget"), x, y + LINE, 0xff808080, true);
 			return;
 		}
-		guiGraphics.text(font, CompassTexts.structureName(target), x, y + LINE, 0xffffffff, true);
+		Component name = targetVisited(state())
+				? Component.translatable("string.adventurerscompass.targetVisited", CompassTexts.structureName(target))
+				: CompassTexts.structureName(target);
+		guiGraphics.text(font, name, x, y + LINE, 0xffffffff, true);
 		Component where = target.dimension().equals(CompassTexts.currentDimension(player))
 				? Component.translatable("string.adventurerscompass.targetHere", CompassTexts.distance(target, player), CompassTexts.dimensionName(target.dimension()))
 				: Component.translatable("string.adventurerscompass.targetElsewhere", CompassTexts.dimensionName(target.dimension()));
@@ -126,6 +143,10 @@ final class SearchPanel {
 
 	private int targetTextTop() {
 		return top + 2 * (BUTTON_HEIGHT + GAP);
+	}
+
+	private boolean targetVisited(CompassState state) {
+		return state.target() != null && CompassTexts.visited(player).contains(state.target().instance());
 	}
 
 	private CompassState state() {

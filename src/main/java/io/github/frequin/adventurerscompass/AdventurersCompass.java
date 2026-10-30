@@ -19,10 +19,12 @@ import io.github.frequin.adventurerscompass.domain.selection.Catalogue;
 import io.github.frequin.adventurerscompass.domain.selection.Selection;
 import io.github.frequin.adventurerscompass.item.AdventurersCompassItem;
 import io.github.frequin.adventurerscompass.network.CancelPacket;
+import io.github.frequin.adventurerscompass.network.MarkVisitedPacket;
 import io.github.frequin.adventurerscompass.network.PassPacket;
 import io.github.frequin.adventurerscompass.network.SearchPacket;
 import io.github.frequin.adventurerscompass.network.SyncPacket;
 import io.github.frequin.adventurerscompass.network.TeleportPacket;
+import io.github.frequin.adventurerscompass.network.UnmarkVisitedPacket;
 import io.github.frequin.adventurerscompass.network.UpdateSelectionPacket;
 import io.github.frequin.adventurerscompass.search.CompassSearches;
 import io.github.frequin.adventurerscompass.visited.PlayerVisited;
@@ -93,6 +95,8 @@ public class AdventurersCompass implements ModInitializer {
 		PayloadTypeRegistry.serverboundPlay().register(CancelPacket.TYPE, CancelPacket.CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(TeleportPacket.TYPE, TeleportPacket.CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(UpdateSelectionPacket.TYPE, UpdateSelectionPacket.CODEC);
+		PayloadTypeRegistry.serverboundPlay().register(MarkVisitedPacket.TYPE, MarkVisitedPacket.CODEC);
+		PayloadTypeRegistry.serverboundPlay().register(UnmarkVisitedPacket.TYPE, UnmarkVisitedPacket.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(SyncPacket.TYPE, SyncPacket.CODEC);
 
 		ServerPlayNetworking.registerGlobalReceiver(SearchPacket.TYPE, SearchPacket::handle);
@@ -100,6 +104,8 @@ public class AdventurersCompass implements ModInitializer {
 		ServerPlayNetworking.registerGlobalReceiver(CancelPacket.TYPE, CancelPacket::handle);
 		ServerPlayNetworking.registerGlobalReceiver(TeleportPacket.TYPE, TeleportPacket::handle);
 		ServerPlayNetworking.registerGlobalReceiver(UpdateSelectionPacket.TYPE, UpdateSelectionPacket::handle);
+		ServerPlayNetworking.registerGlobalReceiver(MarkVisitedPacket.TYPE, MarkVisitedPacket::handle);
+		ServerPlayNetworking.registerGlobalReceiver(UnmarkVisitedPacket.TYPE, UnmarkVisitedPacket::handle);
 
 		CompassSearches.register();
 		ServerCompass.register();
