@@ -2,7 +2,6 @@ package io.github.frequin.adventurerscompass.network;
 
 import io.github.frequin.adventurerscompass.AdventurersCompass;
 import io.github.frequin.adventurerscompass.compass.ServerCompass;
-import io.github.frequin.adventurerscompass.util.ItemUtils;
 
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.core.BlockPos;
@@ -12,7 +11,6 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.tags.BlockTags;
-import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 
 public record TeleportPacket() implements CustomPacketPayload {
@@ -29,12 +27,7 @@ public record TeleportPacket() implements CustomPacketPayload {
 	}
 
 	public static void handle(TeleportPacket packet, ServerPlayNetworking.Context context) {
-		context.server().execute(() -> {
-			final ItemStack stack = ItemUtils.getHeldItem(context.player(), AdventurersCompass.ADVENTURERS_COMPASS_ITEM);
-			if (!stack.isEmpty()) {
-				ServerCompass.teleport((ServerPlayer) context.player(), stack);
-			}
-		});
+		HeldCompass.run(context, ServerCompass::teleport);
 	}
 
 	/** Moves the player to the first free height at X/Z of the Current dimension. */
