@@ -19,6 +19,8 @@
 - New nomadic defaults: `maxRadius` 1000 (was 10000), `allowTeleport` false (was true; when on, only ops and creative players can teleport, never across dimensions), `compassDurability` 3 (was 0), `defaultXpLevel` 5 (was 0, and the 3-level cap is gone), `defaultDimensionXpMultiplier` 2 with `dimensionXpMultipliers` `{"minecraft:overworld": 1}`
 - `structureBlacklist` is renamed `hiddenStructures` and also accepts `#tag` entries
 - Removed options: `maxNextSearches`, `maxSamples`
+- The screen's "Sort By" button is gone: the tree lists Groups and their Structures alphabetically. The old sorts by source, Group and dimension no longer fit a tree that already nests Structures in their Groups and shows only the Current dimension; filtering by source is done with `@mod` in the search box
+- Crouch-using the compass no longer clears or cancels anything: using it always opens the screen, where "Search" turns into "Cancel" while a search runs
 - New options: `disabledDimensions`, `visitedMessage`, `targetVisitedSound` (server), `hudEnabled` (client)
 
 The changelog of the original mod is kept in [CHANGELOG-explorers-compass.md](CHANGELOG-explorers-compass.md).

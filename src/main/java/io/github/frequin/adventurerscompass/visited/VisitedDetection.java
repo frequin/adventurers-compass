@@ -6,6 +6,7 @@ import io.github.frequin.adventurerscompass.compass.CompassVisited;
 import io.github.frequin.adventurerscompass.config.AdventurersCompassConfig;
 import io.github.frequin.adventurerscompass.domain.ChunkCoord;
 import io.github.frequin.adventurerscompass.domain.InstanceKey;
+import io.github.frequin.adventurerscompass.util.LevelUtils;
 import it.unimi.dsi.fastutil.longs.LongIterator;
 import it.unimi.dsi.fastutil.longs.LongSet;
 
@@ -65,7 +66,7 @@ public final class VisitedDetection {
 		if (references.isEmpty()) {
 			return;
 		}
-		String dimension = level.dimension().identifier().toString();
+		String dimension = LevelUtils.dimensionId(level);
 		Registry<Structure> registry = level.registryAccess().lookupOrThrow(Registries.STRUCTURE);
 		for (Map.Entry<Structure, LongSet> entry : references.entrySet()) {
 			Structure structure = entry.getKey();

@@ -42,13 +42,14 @@ public class AdventurersCompassAngleState extends NeedleDirectionHelper {
 		GlobalPos pos = level.getRespawnData().globalPos();
 		if (stack.getItem() == AdventurersCompass.ADVENTURERS_COMPASS_ITEM) {
 			CompassState state = CompassStacks.read(stack);
-			switch (state.status(level.dimension().identifier().toString())) {
-				case SEARCHING, OTHER_DIMENSION -> {
-					return getRandomlySpinningRotation(seed, gameTime);
-				}
-				case TARGET -> pos = new GlobalPos(level.dimension(), new BlockPos(state.target().pos().x(), 0, state.target().pos().z()));
-				default -> {
-				}
+			String dimension = LevelUtils.dimensionId(level);
+			boolean targetHere = state.target() != null && state.target().dimension().equals(dimension);
+			if (state.isSearching() || state.target() != null && !targetHere) {
+				return getRandomlySpinningRotation(seed, gameTime);
+			}
+			// A kept Target is pointed at even while the HUD shows "nothing found"
+			if (targetHere) {
+				pos = new GlobalPos(level.dimension(), new BlockPos(state.target().pos().x(), 0, state.target().pos().z()));
 			}
 		}
 		return owner.asLivingEntity() == null || !isValidCompassTargetPos(owner.asLivingEntity(), pos) ? getRandomlySpinningRotation(seed, gameTime) : getRotationTowardsCompassTarget(owner.asLivingEntity(), gameTime, pos.pos());

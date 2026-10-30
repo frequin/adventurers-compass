@@ -56,7 +56,7 @@ public final class SearchScheduler<K> {
 		if (previous != null) {
 			turns.remove(player);
 			previous.search().cancel();
-			previous.onEnd().accept(previous.search().step(0).orElseThrow());
+			previous.onEnd().accept(new SearchResult.Cancelled());
 		}
 	}
 

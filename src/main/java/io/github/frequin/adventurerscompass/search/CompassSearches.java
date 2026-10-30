@@ -25,7 +25,7 @@ public final class CompassSearches {
 
 	private static final SearchScheduler<UUID> SCHEDULER = new SearchScheduler<>(Clock.SYSTEM, SearchScheduler.DEFAULT_TICK_BUDGET_NANOS);
 
-	/** Player UUID to the id of their running search. */
+	/** Player UUID to the id of their running search. Server thread only: not synchronized. */
 	private static final Map<UUID, UUID> RUNNING = new HashMap<>();
 
 	private CompassSearches() {

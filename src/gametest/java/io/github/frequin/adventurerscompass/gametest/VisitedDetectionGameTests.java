@@ -6,6 +6,7 @@ import io.github.frequin.adventurerscompass.domain.ChunkCoord;
 import io.github.frequin.adventurerscompass.domain.InstanceKey;
 import io.github.frequin.adventurerscompass.visited.PlayerVisited;
 import io.github.frequin.adventurerscompass.visited.VisitedDetection;
+import io.github.frequin.adventurerscompass.util.LevelUtils;
 import net.fabricmc.fabric.api.gametest.v1.GameTest;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.Registries;
@@ -53,7 +54,7 @@ public class VisitedDetectionGameTests {
 
 		stand(player, firstPiece);
 		VisitedDetection.poll(player);
-		InstanceKey expected = new InstanceKey(level.dimension().identifier().toString(), VILLAGE_PLAINS, new ChunkCoord(startChunk.x(), startChunk.z()));
+		InstanceKey expected = new InstanceKey(LevelUtils.dimensionId(level),VILLAGE_PLAINS, new ChunkCoord(startChunk.x(), startChunk.z()));
 		helper.assertValueEqual(List.of(expected), PlayerVisited.get(player).list(), "Visited Instances");
 		helper.succeed();
 	}

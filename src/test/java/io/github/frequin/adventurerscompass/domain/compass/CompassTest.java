@@ -215,16 +215,43 @@ class CompassTest {
 	}
 
 	@Test
-	void nothingFoundIsKeptForTheHudInPlaceOfTheTarget() {
+	void aPassThatFindsNothingShowsNothingFoundAndKeepsTheTarget() {
+		var target = withTarget();
 		var id = UUID.randomUUID();
-		var searching = accepted(compass.pass(withTarget(), overworld(), id)).state();
+		var searching = accepted(compass.pass(target, overworld(), id)).state();
 		var nothing = new SearchResult.NothingFound(OVERWORLD, 1000, 0, 1);
 
 		var after = compass.searchEnded(searching, id, nothing);
 
 		assertEquals(nothing, after.nothingFound());
-		assertEquals(null, after.target());
+		assertEquals(target.target(), after.target());
 		assertEquals(Status.NOTHING_FOUND, after.status(OVERWORLD));
+	}
+
+	@Test
+	void aSearchThatFindsNothingShowsNothingFoundAndKeepsTheTarget() {
+		var target = withTarget();
+		var id = UUID.randomUUID();
+		var searching = accepted(compass.search(target, overworld(), id)).state();
+
+		var after = compass.searchEnded(searching, id, new SearchResult.NothingFound(OVERWORLD, 1000, 0, 0));
+
+		assertEquals(target.target(), after.target());
+		assertEquals(Status.NOTHING_FOUND, after.status(OVERWORLD));
+	}
+
+	@Test
+	void nothingFoundInTheNetherDoesNotCostTheOverworldTargetOnReturn() {
+		var target = withTarget();
+		var id = UUID.randomUUID();
+		var nether = new SearchContext(NETHER, HERE, Set.of("minecraft:fortress"), 1000, Set.of());
+		var searching = accepted(compass.search(target, nether, id)).state();
+		var nothing = compass.searchEnded(searching, id, new SearchResult.NothingFound(NETHER, 1000, 0, 0));
+
+		var back = accepted(compass.dimensionChanged(nothing)).state();
+
+		assertEquals(Status.TARGET, back.status(OVERWORLD));
+		assertEquals(target.target(), back.target());
 	}
 
 	@Test
