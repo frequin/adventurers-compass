@@ -22,7 +22,7 @@ public class AdventurersCompassConfig {
 	private static Path configFilePath;
 	private static Gson gson = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
 	
-	public static boolean allowTeleport = true;
+	public static boolean allowTeleport = false;
 	public static boolean displayCoordinates = true;
 	public static int maxRadius = 1000;
 	public static int compassDurability = 0;
@@ -30,6 +30,7 @@ public class AdventurersCompassConfig {
 	public static Map<String, Integer> perStructureXpLevels = new HashMap<String, Integer>();
 	public static List<String> structureBlacklist = new ArrayList<String>();
 	public static boolean visitedMessage = true;
+	public static List<String> disabledDimensions = new ArrayList<String>();
 	public static boolean targetVisitedSound = true;
 	
 	public static boolean hudEnabled = true;
@@ -54,6 +55,7 @@ public class AdventurersCompassConfig {
 				perStructureXpLevels = data.common.perStructureXpLevels;
 				structureBlacklist = data.common.structureBlacklist;
 				visitedMessage = data.common.visitedMessage;
+				disabledDimensions = data.common.disabledDimensions == null ? new ArrayList<String>() : data.common.disabledDimensions;
 				targetVisitedSound = data.common.targetVisitedSound;
 				
 				hudEnabled = data.client.hudEnabled;
@@ -73,7 +75,7 @@ public class AdventurersCompassConfig {
 	public static void save() {
 		try {
 			Writer writer = Files.newBufferedWriter(getFilePath());
-			Data data = new Data(new Data.Common(allowTeleport, displayCoordinates, maxRadius, compassDurability, defaultXpLevel, perStructureXpLevels, structureBlacklist, visitedMessage, targetVisitedSound), new Data.Client(hudEnabled, displayWithChatOpen, translateStructureNames, overlayLineOffset, overlaySide));
+			Data data = new Data(new Data.Common(allowTeleport, displayCoordinates, maxRadius, compassDurability, defaultXpLevel, perStructureXpLevels, structureBlacklist, visitedMessage, disabledDimensions, targetVisitedSound), new Data.Client(hudEnabled, displayWithChatOpen, translateStructureNames, overlayLineOffset, overlaySide));
 			gson.toJson(data, writer);
 			writer.close();
 		} catch (IOException e) {
@@ -81,6 +83,11 @@ public class AdventurersCompassConfig {
 		}
 	}
 	
+	/** Whether the compass refuses to search in this dimension id ({@code disabledDimensions}). */
+	public static boolean isDisabledDimension(String dimension) {
+		return disabledDimensions.contains(dimension);
+	}
+
 	private static Path getFilePath() {
 		if(configFilePath == null) {
 			configFilePath = FabricLoader.getInstance().getConfigDir().resolve(AdventurersCompass.MODID + ".json");
@@ -99,7 +106,7 @@ public class AdventurersCompassConfig {
 		}
 		
 		private static class Common {
-			private final String allowTeleportComment = "Allows a player to teleport to a located structure when in creative mode, opped, or in cheat mode.";
+			private final String allowTeleportComment = "Allows ops (or the single player with cheats on) and creative players to teleport to the Target. Teleporting never crosses dimensions, does not wear the compass and does not mark the Target Visited.";
 			private final boolean allowTeleport;
 
 			private final String displayCoordinatesComment = "Shows the Target's X and Z on a second HUD line. The distance is always shown.";
@@ -123,11 +130,14 @@ public class AdventurersCompassConfig {
 			private final String visitedMessageComment = "Shows a message above the hotbar the first time a player stands in a piece of a structure Instance, which then becomes Visited and is skipped by searches.";
 			private final boolean visitedMessage;
 
+			private final String disabledDimensionsComment = "Dimension ids where the compass does not work: the screen lists nothing and Search and Pass are refused, with no XP taken. A Target found in another dimension is kept. Ex: [\"minecraft:the_end\"]";
+			private final List<String> disabledDimensions;
+
 			private final String targetVisitedSoundComment = "Plays a soft sound to the player when the Target of a compass they carry becomes Visited (by walking into it or with \"Mark Visited\"). Other Structures stay silent.";
 			private final boolean targetVisitedSound;
 			
 			private Common() {
-				allowTeleport = true;
+				allowTeleport = false;
 				displayCoordinates = true;
 				maxRadius = 1000;
 				compassDurability = 0;
@@ -135,10 +145,11 @@ public class AdventurersCompassConfig {
 				perStructureXpLevels = new HashMap<String, Integer>();
 				structureBlacklist = new ArrayList<String>();
 				visitedMessage = true;
+				disabledDimensions = new ArrayList<String>();
 				targetVisitedSound = true;
 			}
 
-			private Common(boolean allowTeleport, boolean displayCoordinates, int maxRadius, int compassDurability, int defaultXpLevel, Map<String, Integer> perStructureXpLevels, List<String> structureBlacklist, boolean visitedMessage, boolean targetVisitedSound) {
+			private Common(boolean allowTeleport, boolean displayCoordinates, int maxRadius, int compassDurability, int defaultXpLevel, Map<String, Integer> perStructureXpLevels, List<String> structureBlacklist, boolean visitedMessage, List<String> disabledDimensions, boolean targetVisitedSound) {
 				this.allowTeleport = allowTeleport;
 				this.displayCoordinates = displayCoordinates;
 				this.maxRadius = maxRadius;
@@ -147,6 +158,7 @@ public class AdventurersCompassConfig {
 				this.perStructureXpLevels = perStructureXpLevels;
 				this.structureBlacklist = structureBlacklist;
 				this.visitedMessage = visitedMessage;
+				this.disabledDimensions = disabledDimensions;
 				this.targetVisitedSound = targetVisitedSound;
 			}
 		}

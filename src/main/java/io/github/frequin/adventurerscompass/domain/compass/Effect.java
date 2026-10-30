@@ -2,6 +2,7 @@ package io.github.frequin.adventurerscompass.domain.compass;
 
 import java.util.UUID;
 
+import io.github.frequin.adventurerscompass.domain.BlockXZ;
 import io.github.frequin.adventurerscompass.domain.InstanceKey;
 import io.github.frequin.adventurerscompass.domain.search.SearchRequest;
 
@@ -22,6 +23,10 @@ public sealed interface Effect {
 
 	/** The Target became Visited: play the arrival sound (when enabled). */
 	record TargetVisited(InstanceKey instance) implements Effect {
+	}
+
+	/** Move the player to this position of the Current dimension (the height is the adapter's). */
+	record TeleportTo(BlockXZ pos) implements Effect {
 	}
 
 }

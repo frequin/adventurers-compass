@@ -67,6 +67,8 @@ public class AdventurersCompass implements ModInitializer {
 	public static boolean synced;
 	public static boolean canTeleport;
 	public static boolean infiniteXp;
+	/** Client side: the Current dimension is in the server's {@code disabledDimensions}. */
+	public static boolean dimensionDisabled;
 	/** Client side: the Current dimension and the catalogue last sent by the server. */
 	public static String currentDimension = "";
 	public static Catalogue catalogue = Catalogue.EMPTY;
