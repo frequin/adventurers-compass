@@ -15,8 +15,18 @@ jobs:
           distribution: 'temurin'
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v5
-      - name: Gradle build
+      # `build` runs `check`, which runs the JUnit tests (`test`) and the
+      # Fabric game tests (`runGameTest`); any failure fails the job.
+      - name: Gradle build (unit tests and game tests)
         run: ./gradlew build
+      - name: Upload test reports
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: |
+            build/reports/tests/
+            build/run/gameTest/logs/
       - name: Remove sources JAR
         run: |
           find -type f -path './build/libs/*' -name '*sources*' -delete
