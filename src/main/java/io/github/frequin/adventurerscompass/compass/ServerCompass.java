@@ -1,5 +1,6 @@
 package io.github.frequin.adventurerscompass.compass;
 
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
@@ -9,12 +10,17 @@ import io.github.frequin.adventurerscompass.domain.BlockXZ;
 import io.github.frequin.adventurerscompass.domain.compass.Compass;
 import io.github.frequin.adventurerscompass.domain.compass.CompassState;
 import io.github.frequin.adventurerscompass.domain.compass.Effect;
+import io.github.frequin.adventurerscompass.domain.compass.LaunchRule;
 import io.github.frequin.adventurerscompass.domain.compass.Outcome;
+import io.github.frequin.adventurerscompass.domain.compass.Refusal;
 import io.github.frequin.adventurerscompass.domain.compass.SearchContext;
+import io.github.frequin.adventurerscompass.domain.compass.TeleportContext;
 import io.github.frequin.adventurerscompass.domain.search.SearchResult;
 import io.github.frequin.adventurerscompass.domain.selection.Selection;
+import io.github.frequin.adventurerscompass.network.TeleportPacket;
 import io.github.frequin.adventurerscompass.search.CompassSearches;
 import io.github.frequin.adventurerscompass.util.ItemUtils;
+import io.github.frequin.adventurerscompass.util.PlayerUtils;
 import io.github.frequin.adventurerscompass.util.StructureUtils;
 import io.github.frequin.adventurerscompass.visited.PlayerVisited;
 import io.github.frequin.adventurerscompass.visited.VisitedDetection;
@@ -35,7 +41,7 @@ import net.minecraft.world.item.ItemStack;
  */
 public final class ServerCompass {
 
-	private static final Compass COMPASS = new Compass();
+	private static final Compass COMPASS = new Compass(List.of(LaunchRule.notIn(AdventurersCompassConfig::isDisabledDimension), LaunchRule.SOMETHING_SEARCHABLE, LaunchRule.ENOUGH_XP));
 
 	private ServerCompass() {
 	}
@@ -64,6 +70,16 @@ public final class ServerCompass {
 	/** "Cancel" with the compass the player holds. */
 	public static void cancel(ServerPlayer player, ItemStack stack) {
 		apply(player, stack, COMPASS.cancel(CompassStacks.read(stack)));
+	}
+
+	/** "Teleport" to the Target of the compass the player holds. */
+	public static void teleport(ServerPlayer player, ItemStack stack) {
+		TeleportContext context = new TeleportContext(player.level().dimension().identifier().toString(), AdventurersCompassConfig.allowTeleport, PlayerUtils.isOperator(player.level().getServer(), player), player.isCreative());
+		Outcome outcome = COMPASS.teleport(CompassStacks.read(stack), context);
+		if (outcome instanceof Outcome.Refused refused) {
+			AdventurersCompass.LOGGER.warn("Player " + player.getDisplayName().getString() + " could not teleport: " + refused.reason());
+		}
+		apply(player, stack, outcome);
 	}
 
 	/** Stores a new Selection on the compass; a real change cancels the search and clears the Target and Skipped. */
@@ -111,6 +127,9 @@ public final class ServerCompass {
 	}
 
 	private static void apply(ServerPlayer player, ItemStack stack, Outcome outcome) {
+		if (outcome instanceof Outcome.Refused(Refusal reason) && reason == Refusal.DISABLED_DIMENSION) {
+			player.sendOverlayMessage(Component.translatable("string.adventurerscompass.disabledDimension"));
+		}
 		if (!(outcome instanceof Outcome.Accepted accepted)) {
 			return;
 		}
@@ -119,6 +138,7 @@ public final class ServerCompass {
 			switch (effect) {
 				case Effect.StartSearch start -> CompassSearches.start(player, start.id(), start.request(), result -> searchEnded(player, start.id(), result));
 				case Effect.CancelSearch cancel -> CompassSearches.cancel(player, cancel.id());
+				case Effect.TeleportTo teleport -> TeleportPacket.teleport(player, teleport.pos().x(), teleport.pos().z());
 			}
 		}
 	}

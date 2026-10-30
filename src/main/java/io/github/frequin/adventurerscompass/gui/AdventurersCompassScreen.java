@@ -147,6 +147,11 @@ public class AdventurersCompassScreen extends Screen {
 			refusal = Component.translatable("string.adventurerscompass.notEnoughXp", threshold.levels());
 		}
 		searchPanel.setCost(threshold);
+		if (AdventurersCompass.dimensionDisabled) {
+			// disabledDimensions: Search and Pass greyed whatever the Selection
+			canSearch = false;
+			refusal = Component.translatable("string.adventurerscompass.disabledDimension");
+		}
 		searchPanel.update(canSearch && affordable, refusal);
 		clearButton.active = !selection.equals(Selection.EMPTY);
 	}

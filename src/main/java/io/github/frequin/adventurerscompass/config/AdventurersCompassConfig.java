@@ -23,7 +23,7 @@ public class AdventurersCompassConfig {
 	private static Path configFilePath;
 	private static Gson gson = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
 	
-	public static boolean allowTeleport = true;
+	public static boolean allowTeleport = false;
 	public static boolean displayCoordinates = true;
 	public static int maxRadius = 1000;
 	public static int compassDurability = 0;
@@ -31,8 +31,9 @@ public class AdventurersCompassConfig {
 	public static Map<String, Integer> perStructureXpLevels = new HashMap<String, Integer>();
 	public static double defaultDimensionXpMultiplier = 2;
 	public static Map<String, Double> dimensionXpMultipliers = defaultDimensionXpMultipliers();
-	public static List<String> structureBlacklist = new ArrayList<String>();
+	public static List<String> hiddenStructures = new ArrayList<String>();
 	public static boolean visitedMessage = true;
+	public static List<String> disabledDimensions = new ArrayList<String>();
 	
 	public static boolean hudEnabled = true;
 	public static boolean displayWithChatOpen = true;
@@ -56,8 +57,9 @@ public class AdventurersCompassConfig {
 				perStructureXpLevels = data.common.perStructureXpLevels;
 				defaultDimensionXpMultiplier = data.common.defaultDimensionXpMultiplier;
 				dimensionXpMultipliers = data.common.dimensionXpMultipliers;
-				structureBlacklist = data.common.structureBlacklist;
+				hiddenStructures = data.common.hiddenStructures;
 				visitedMessage = data.common.visitedMessage;
+				disabledDimensions = data.common.disabledDimensions == null ? new ArrayList<String>() : data.common.disabledDimensions;
 				
 				hudEnabled = data.client.hudEnabled;
 				displayWithChatOpen = data.client.displayWithChatOpen;
@@ -76,7 +78,7 @@ public class AdventurersCompassConfig {
 	public static void save() {
 		try {
 			Writer writer = Files.newBufferedWriter(getFilePath());
-			Data data = new Data(new Data.Common(allowTeleport, displayCoordinates, maxRadius, compassDurability, defaultXpLevel, perStructureXpLevels, defaultDimensionXpMultiplier, dimensionXpMultipliers, structureBlacklist, visitedMessage), new Data.Client(hudEnabled, displayWithChatOpen, translateStructureNames, overlayLineOffset, overlaySide));
+			Data data = new Data(new Data.Common(allowTeleport, displayCoordinates, maxRadius, compassDurability, defaultXpLevel, perStructureXpLevels, defaultDimensionXpMultiplier, dimensionXpMultipliers, hiddenStructures, visitedMessage, disabledDimensions), new Data.Client(hudEnabled, displayWithChatOpen, translateStructureNames, overlayLineOffset, overlaySide));
 			gson.toJson(data, writer);
 			writer.close();
 		} catch (IOException e) {
@@ -89,6 +91,11 @@ public class AdventurersCompassConfig {
 		Map<String, Double> multipliers = new LinkedHashMap<String, Double>();
 		multipliers.put("minecraft:overworld", 1.0);
 		return multipliers;
+	}
+
+	/** Whether the compass refuses to search in this dimension id ({@code disabledDimensions}). */
+	public static boolean isDisabledDimension(String dimension) {
+		return disabledDimensions.contains(dimension);
 	}
 
 	private static Path getFilePath() {
@@ -109,7 +116,7 @@ public class AdventurersCompassConfig {
 		}
 		
 		private static class Common {
-			private final String allowTeleportComment = "Allows a player to teleport to a located structure when in creative mode, opped, or in cheat mode.";
+			private final String allowTeleportComment = "Allows ops (or the single player with cheats on) and creative players to teleport to the Target. Teleporting never crosses dimensions, does not wear the compass and does not mark the Target Visited.";
 			private final boolean allowTeleport;
 
 			private final String displayCoordinatesComment = "Shows the Target's X and Z on a second HUD line. The distance is always shown.";
@@ -135,14 +142,17 @@ public class AdventurersCompassConfig {
 			private final String dimensionXpMultipliersComment = "Per-dimension multipliers of the cost, by dimension id, applied to the dimension the player searches in. Ex: {\"minecraft:overworld\":1, \"minecraft:the_nether\":2, \"minecraft:the_end\":3}";
 			private final Map<String, Double> dimensionXpMultipliers;
 			
-			private final String structureBlacklistComment = "A list of structures that the compass will not display in the GUI and will not be able to search for. The wildcard character * can be used to match any number of characters, and ? can be used to match one character. Ex (ignore backslashes): [\"minecraft:stronghold\", \"minecraft:endcity\", \"minecraft:*village*\"]";
-			private final List<String> structureBlacklist;
+			private final String hiddenStructuresComment = "Structures to Hide: they are not listed in the compass screen and never searched. Each entry is a structure id, where * matches any number of characters and ? one character, or a structure tag starting with #. Structures with the tag #c:hidden_from_locator_selection are always Hidden. A Hidden structure already in a compass Selection stays there as a greyed chip, and a Target already found is kept. Ex (ignore backslashes): [\"minecraft:stronghold\", \"minecraft:*village*\", \"#minecraft:village\"]";
+			private final List<String> hiddenStructures;
 
 			private final String visitedMessageComment = "Shows a message above the hotbar the first time a player stands in a piece of a structure Instance, which then becomes Visited and is skipped by searches.";
 			private final boolean visitedMessage;
+
+			private final String disabledDimensionsComment = "Dimension ids where the compass does not work: the screen lists nothing and Search and Pass are refused, with no XP taken. A Target found in another dimension is kept. Ex: [\"minecraft:the_end\"]";
+			private final List<String> disabledDimensions;
 			
 			private Common() {
-				allowTeleport = true;
+				allowTeleport = false;
 				displayCoordinates = true;
 				maxRadius = 1000;
 				compassDurability = 0;
@@ -150,11 +160,12 @@ public class AdventurersCompassConfig {
 				perStructureXpLevels = new HashMap<String, Integer>();
 				defaultDimensionXpMultiplier = 2;
 				dimensionXpMultipliers = defaultDimensionXpMultipliers();
-				structureBlacklist = new ArrayList<String>();
+				hiddenStructures = new ArrayList<String>();
 				visitedMessage = true;
+				disabledDimensions = new ArrayList<String>();
 			}
 
-			private Common(boolean allowTeleport, boolean displayCoordinates, int maxRadius, int compassDurability, int defaultXpLevel, Map<String, Integer> perStructureXpLevels, double defaultDimensionXpMultiplier, Map<String, Double> dimensionXpMultipliers, List<String> structureBlacklist, boolean visitedMessage) {
+			private Common(boolean allowTeleport, boolean displayCoordinates, int maxRadius, int compassDurability, int defaultXpLevel, Map<String, Integer> perStructureXpLevels, double defaultDimensionXpMultiplier, Map<String, Double> dimensionXpMultipliers, List<String> hiddenStructures, boolean visitedMessage, List<String> disabledDimensions) {
 				this.allowTeleport = allowTeleport;
 				this.displayCoordinates = displayCoordinates;
 				this.maxRadius = maxRadius;
@@ -163,8 +174,9 @@ public class AdventurersCompassConfig {
 				this.perStructureXpLevels = perStructureXpLevels;
 				this.defaultDimensionXpMultiplier = defaultDimensionXpMultiplier;
 				this.dimensionXpMultipliers = dimensionXpMultipliers;
-				this.structureBlacklist = structureBlacklist;
+				this.hiddenStructures = hiddenStructures;
 				this.visitedMessage = visitedMessage;
+				this.disabledDimensions = disabledDimensions;
 			}
 		}
 		

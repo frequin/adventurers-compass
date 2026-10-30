@@ -1,6 +1,7 @@
 package io.github.frequin.adventurerscompass.domain.compass;
 
 import java.util.Optional;
+import java.util.function.Predicate;
 
 /**
  * A rule checked before "Search" or "Pass" starts a search. The first rule
@@ -18,5 +19,10 @@ public interface LaunchRule {
 
 	/** Refuses when the player has fewer levels than the highest real cost of the searchable Structures; creative passes. */
 	LaunchRule ENOUGH_XP = (state, context) -> context.playerXp().canLaunch(context.xpThreshold()) ? Optional.empty() : Optional.of(Refusal.NOT_ENOUGH_XP);
+
+	/** Refuses in a Current dimension where the compass does not work ({@code disabledDimensions}). */
+	static LaunchRule notIn(Predicate<String> disabledDimension) {
+		return (state, context) -> disabledDimension.test(context.dimension()) ? Optional.of(Refusal.DISABLED_DIMENSION) : Optional.empty();
+	}
 
 }

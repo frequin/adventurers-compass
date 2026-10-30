@@ -47,7 +47,8 @@ class SelectionCodecsTest {
 	void aCatalogueCrossesTheNetwork() {
 		Catalogue catalogue = new Catalogue(List.of(
 				new CatalogueEntry("minecraft:village_plains", "minecraft:villages", Set.of("minecraft:overworld"), "Minecraft"),
-				new CatalogueEntry("minecraft:ruined_portal", "minecraft:ruined_portals", Set.of("minecraft:overworld", "minecraft:the_nether"), "Minecraft")));
+				new CatalogueEntry("minecraft:ruined_portal", "minecraft:ruined_portals", Set.of("minecraft:overworld", "minecraft:the_nether"), "Minecraft"),
+				new CatalogueEntry("minecraft:stronghold", "minecraft:strongholds", Set.of("minecraft:overworld"), "Minecraft", true)));
 		ByteBuf buf = Unpooled.buffer();
 		SelectionCodecs.CATALOGUE_STREAM.encode(buf, catalogue);
 

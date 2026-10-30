@@ -14,6 +14,7 @@ import io.github.frequin.adventurerscompass.AdventurersCompass;
 import io.github.frequin.adventurerscompass.config.AdventurersCompassConfig;
 import io.github.frequin.adventurerscompass.domain.selection.Catalogue;
 import io.github.frequin.adventurerscompass.domain.selection.CatalogueEntry;
+import io.github.frequin.adventurerscompass.domain.selection.HiddenRule;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ListMultimap;
 
@@ -50,16 +51,21 @@ public class StructureUtils {
 		return structureIdsToGroupIds;
 	}
 	
-	/** The catalogue of listable Structures, with their Group, generating dimensions and source. */
+	/**
+	 * The catalogue of every Structure, with its Group, generating dimensions,
+	 * source and whether it is Hidden (common tag or {@code hiddenStructures}).
+	 */
 	public static Catalogue buildCatalogue(ServerLevel level) {
 		final Map<Identifier, Identifier> groups = structureIdsToGroupIds(level);
+		final HiddenRule hiddenRule = HiddenRule.of(AdventurersCompassConfig.hiddenStructures);
 		final List<CatalogueEntry> entries = new ArrayList<CatalogueEntry>();
-		for (Identifier structureId : getAllowedStructureIds(level)) {
+		for (Identifier structureId : getStructureIds(level)) {
 			final Set<String> dimensions = new TreeSet<String>();
 			for (Identifier dimension : getGeneratingDimensionIds(level, getStructureForId(level, structureId))) {
 				dimensions.add(dimension.toString());
 			}
-			entries.add(new CatalogueEntry(structureId.toString(), groups.get(structureId).toString(), dimensions, getSourceName(structureId.getNamespace())));
+			final boolean hidden = hiddenRule.isHidden(structureId.toString(), getTagIds(level, getStructureForId(level, structureId)));
+			entries.add(new CatalogueEntry(structureId.toString(), groups.get(structureId).toString(), dimensions, getSourceName(structureId.getNamespace()), hidden));
 		}
 		return new Catalogue(entries);
 	}
@@ -128,36 +134,27 @@ public class StructureUtils {
 		return null;
 	}
 
-	public static List<Identifier> getAllowedStructureIds(ServerLevel level) {
+	/** Every registered Structure with a usable id, Hidden ones included. */
+	public static List<Identifier> getStructureIds(ServerLevel level) {
 		final List<Identifier> structureIDs = new ArrayList<Identifier>();
 		if (getStructureRegistry(level).isPresent()) {
 			for (Structure structure : getStructureRegistry(level).get()) {
-				if (structure != null && getIdForStructure(level, structure) != null && !getIdForStructure(level, structure).getNamespace().isEmpty() && !getIdForStructure(level, structure).getPath().isEmpty() && !structureIsBlacklisted(level, structure) && !structureIsHidden(level, structure)) {
-					structureIDs.add(getIdForStructure(level, structure));
+				final Identifier id = structure == null ? null : getIdForStructure(level, structure);
+				if (id != null && !id.getNamespace().isEmpty() && !id.getPath().isEmpty()) {
+					structureIDs.add(id);
 				}
 			}
 		}
-
 		return structureIDs;
 	}
-	
-	public static boolean structureIsBlacklisted(ServerLevel level, Structure structure) {
-		final List<String> structureBlacklist = AdventurersCompassConfig.structureBlacklist;
-		for (String structureKey : structureBlacklist) {
-			if (getIdForStructure(level, structure).toString().matches(convertToRegex(structureKey))) {
-				return true;
-			}
-		}
-		return false;
-	}
-	
-	public static boolean structureIsHidden(ServerLevel level, Structure structure) {
+
+	/** Ids of the tags a Structure carries, without {@code #}. */
+	public static Set<String> getTagIds(ServerLevel level, Structure structure) {
+		final Set<String> tags = new TreeSet<String>();
 		if (getStructureRegistry(level).isPresent()) {
-			final Registry<Structure> structureRegistry = getStructureRegistry(level).get();
-			final Holder<Structure> structureHolder = structureRegistry.wrapAsHolder(structure);
-			return structureHolder.tags().anyMatch(tag -> tag.location().toString().equals("c:hidden_from_locator_selection"));
+			getStructureRegistry(level).get().wrapAsHolder(structure).tags().forEach(tag -> tags.add(tag.location().toString()));
 		}
-		return false;
+		return tags;
 	}
 	
 	public static List<Identifier> getGeneratingDimensionIds(ServerLevel serverLevel, Structure structure) {

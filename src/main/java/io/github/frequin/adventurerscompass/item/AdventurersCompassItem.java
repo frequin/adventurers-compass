@@ -52,12 +52,14 @@ public class AdventurersCompassItem extends Item {
 			} else {
 				final ServerLevel serverLevel = (ServerLevel) level;
 				final ServerPlayer serverPlayer = (ServerPlayer) player;
-				final boolean canTeleport = AdventurersCompassConfig.allowTeleport && PlayerUtils.canTeleport(serverLevel.getServer(), player);
+				final boolean canTeleport = PlayerUtils.canTeleport(serverLevel.getServer(), player);
 				final boolean hasInfiniteXp = player.hasInfiniteMaterials();
-				final Catalogue catalogue = StructureUtils.buildCatalogue(serverLevel);
 				final String dimension = serverLevel.dimension().identifier().toString();
+				final boolean dimensionDisabled = AdventurersCompassConfig.isDisabledDimension(dimension);
+				// The compass lists nothing in a disabled dimension
+				final Catalogue catalogue = dimensionDisabled ? Catalogue.EMPTY : StructureUtils.buildCatalogue(serverLevel);
 				final Map<String, Integer> xpLevels = ServerXp.realCosts(catalogue, dimension);
-				ServerPlayNetworking.send(serverPlayer, new SyncPacket(canTeleport, hasInfiniteXp, dimension, catalogue, xpLevels));
+				ServerPlayNetworking.send(serverPlayer, new SyncPacket(canTeleport, hasInfiniteXp, dimension, catalogue, xpLevels, dimensionDisabled));
 			}
 		} else if (player instanceof ServerPlayer serverPlayer) {
 			// Crouch-use: "Cancel"
