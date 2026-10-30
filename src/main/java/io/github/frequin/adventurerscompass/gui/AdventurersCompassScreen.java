@@ -137,6 +137,11 @@ public class AdventurersCompassScreen extends Screen {
 		boolean affordable = AdventurersCompass.infiniteXp || player.experienceLevel >= maxXpLevels(searchable);
 		// Greyed chips only: say why nothing can be searched here
 		Component refusal = !canSearch && !selection.equals(Selection.EMPTY) ? Component.translatable("string.adventurerscompass.nothingSearchableHere") : null;
+		if (AdventurersCompass.dimensionDisabled) {
+			// disabledDimensions: Search and Pass greyed whatever the Selection
+			canSearch = false;
+			refusal = Component.translatable("string.adventurerscompass.disabledDimension");
+		}
 		searchPanel.update(canSearch && affordable, refusal);
 		clearButton.active = !selection.equals(Selection.EMPTY);
 	}

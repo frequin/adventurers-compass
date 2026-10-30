@@ -39,6 +39,7 @@
     "string.adventurerscompass.removeChip": "Cliquer pour retirer",
     "string.adventurerscompass.chipAbsentFromDimension": "Absente de cette dimension : ignorée par la recherche. Cliquer pour retirer.",
     "string.adventurerscompass.nothingSearchableHere": "Rien dans la Selection n'existe dans cette dimension",
+    "string.adventurerscompass.disabledDimension": "La boussole ne marche pas dans cette dimension",
     "string.adventurerscompass.searchSelection": "Chercher la plus proche",
     "string.adventurerscompass.cancelSearch": "Annuler la recherche",
     "string.adventurerscompass.pass": "Passer",

@@ -92,6 +92,15 @@ class CompassWearTest {
 	}
 
 	@Test
+	void teleportingDoesNotWearTheCompass() {
+		var worn = searchAndFind(CompassState.EMPTY, 1, SURVIVAL);
+
+		var after = accepted(compass.teleport(worn, new TeleportContext(OVERWORLD, true, true, false))).state();
+
+		assertEquals(2, after.searchesLeft(DURABILITY));
+	}
+
+	@Test
 	void theCompassBreaksAfterDurabilityFoundTargets() {
 		var state = CompassState.EMPTY;
 		for (int n = 1; n <= DURABILITY; n++) {
