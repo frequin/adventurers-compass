@@ -7,6 +7,9 @@ public enum Refusal {
 	NOTHING_SEARCHABLE,
 
 	/** "Pass" without a Target. */
-	NO_TARGET
+	NO_TARGET,
+
+	/** The player has fewer levels than the highest cost of the searchable Structures (never in creative). */
+	NOT_ENOUGH_XP
 
 }
