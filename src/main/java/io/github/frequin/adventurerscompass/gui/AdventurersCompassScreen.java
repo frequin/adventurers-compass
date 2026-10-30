@@ -17,6 +17,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.input.KeyEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -117,9 +118,19 @@ public class AdventurersCompassScreen extends Screen {
 			catalogue = AdventurersCompass.catalogue;
 			dimension = AdventurersCompass.currentDimension;
 			tree.refresh(catalogue, dimension);
-			updateButtons();
 			AdventurersCompass.synced = false;
 		}
+		// Levels can change while the screen is open: re-read them every tick
+		updateButtons();
+	}
+
+	@Override
+	public boolean keyPressed(KeyEvent event) {
+		// Prototype variant A: Enter in the empty search box searches the Selection
+		if (event.isConfirmation() && filterBox.isFocused() && filterBox.getValue().isEmpty() && searchPanel.searchFromKeyboard()) {
+			return true;
+		}
+		return super.keyPressed(event);
 	}
 
 	@Override

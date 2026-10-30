@@ -75,8 +75,7 @@ final class SearchPanel {
 			if (state().isSearching()) {
 				ClientPlayNetworking.send(new CancelPacket());
 			} else {
-				ClientPlayNetworking.send(new SearchPacket());
-				minecraft.gui.setScreen(null);
+				search();
 			}
 		});
 		passButton = new TransparentButton(x, y + BUTTON_HEIGHT + GAP, width, BUTTON_HEIGHT, Component.translatable("string.adventurerscompass.pass"), (onPress) -> {
@@ -127,6 +126,24 @@ final class SearchPanel {
 		teleportButton.setX(teleportButton.visible ? x + half + GAP : x);
 		teleportButton.setWidth(teleportButton.visible ? width - half - GAP : width);
 		markVisitedButton.active = state.target() != null && !targetVisited(state);
+	}
+
+	/**
+	 * The keyboard shortcut for "Search": starts a search when the button would,
+	 * never cancels one. Returns whether it searched.
+	 */
+	boolean searchFromKeyboard() {
+		update(searchAllowed, searchRefusal);
+		if (searchButton == null || !searchButton.active || state().isSearching()) {
+			return false;
+		}
+		search();
+		return true;
+	}
+
+	private void search() {
+		ClientPlayNetworking.send(new SearchPacket());
+		minecraft.gui.setScreen(null);
 	}
 
 	/** The XP the Search button announces: the threshold, "≤" when costs vary, nothing when free or in creative. */
