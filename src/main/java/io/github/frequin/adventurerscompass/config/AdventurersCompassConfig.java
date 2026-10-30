@@ -25,7 +25,7 @@ public class AdventurersCompassConfig {
 	public static boolean allowTeleport = true;
 	public static boolean displayCoordinates = true;
 	public static int maxRadius = 1000;
-	public static int compassDurability = 0;
+	public static int compassDurability = 3;
 	public static int defaultXpLevel = 0;
 	public static Map<String, Integer> perStructureXpLevels = new HashMap<String, Integer>();
 	public static List<String> structureBlacklist = new ArrayList<String>();
@@ -106,7 +106,7 @@ public class AdventurersCompassConfig {
 			private final String maxRadiusComment = "The maximum horizontal distance, in blocks, from where the search started to a structure the compass can find. Raising it makes searches that find nothing more expensive.";
 			private final int maxRadius;
 			
-			private final String compassDurabilityComment = "The number of successful structure searches before the compass breaks and must be repaired. Set to 0 to disable durability.";
+			private final String compassDurabilityComment = "The number of Targets a compass can find (Pass included) before it breaks. A broken compass keeps its Target but cannot search until repaired by crafting it with a compass, which keeps its Selection and Target. Creative players never wear it. Set to 0 to disable wear.";
 			private final int compassDurability;
 
 			private final String defaultXpLevelComment = "The default number of XP levels consumed when searching for a structure. Individual structures can be configured via xpLevelOverrides. Max of 3 levels.";
@@ -125,7 +125,7 @@ public class AdventurersCompassConfig {
 				allowTeleport = true;
 				displayCoordinates = true;
 				maxRadius = 1000;
-				compassDurability = 0;
+				compassDurability = 3;
 				defaultXpLevel = 0;
 				perStructureXpLevels = new HashMap<String, Integer>();
 				structureBlacklist = new ArrayList<String>();

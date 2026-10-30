@@ -24,6 +24,7 @@ import io.github.frequin.adventurerscompass.network.SearchPacket;
 import io.github.frequin.adventurerscompass.network.SyncPacket;
 import io.github.frequin.adventurerscompass.network.TeleportPacket;
 import io.github.frequin.adventurerscompass.network.UpdateSelectionPacket;
+import io.github.frequin.adventurerscompass.recipe.RepairCompassRecipe;
 import io.github.frequin.adventurerscompass.search.CompassSearches;
 import io.github.frequin.adventurerscompass.visited.PlayerVisited;
 import io.github.frequin.adventurerscompass.visited.VisitedDetection;
@@ -60,7 +61,10 @@ public class AdventurersCompass implements ModInitializer {
 	public static final DataComponentType<SearchResult.NothingFound> NOTHING_FOUND = DataComponentType.<SearchResult.NothingFound>builder().persistent(CompassCodecs.NOTHING_FOUND).networkSynchronized(CompassCodecs.NOTHING_FOUND_STREAM).build();
 	/** The server's {@code displayCoordinates}, copied on the compass when a Target is found, for the HUD. */
 	public static final DataComponentType<Boolean> DISPLAY_COORDS = DataComponentType.<Boolean>builder().persistent(Codec.BOOL).networkSynchronized(ByteBufCodecs.BOOL).build();
+	/** Wear: Targets found since the last repair. */
 	public static final DataComponentType<Integer> DAMAGE = DataComponentType.<Integer>builder().persistent(Codec.INT).networkSynchronized(ByteBufCodecs.VAR_INT).build();
+	/** The server's {@code compassDurability}, copied on the compass while it ticks in an inventory, for the wear bar and tooltip. */
+	public static final DataComponentType<Integer> DURABILITY = DataComponentType.<Integer>builder().persistent(Codec.INT).networkSynchronized(ByteBufCodecs.VAR_INT).build();
 	
 	public static boolean synced;
 	public static boolean canTeleport;
@@ -83,6 +87,8 @@ public class AdventurersCompass implements ModInitializer {
 		Registry.register(BuiltInRegistries.DATA_COMPONENT_TYPE, Identifier.fromNamespaceAndPath(MODID, "nothing_found"), NOTHING_FOUND);
 		Registry.register(BuiltInRegistries.DATA_COMPONENT_TYPE, Identifier.fromNamespaceAndPath(MODID, "display_coords"), DISPLAY_COORDS);
 		Registry.register(BuiltInRegistries.DATA_COMPONENT_TYPE, Identifier.fromNamespaceAndPath(MODID, "damage"), DAMAGE);
+		Registry.register(BuiltInRegistries.DATA_COMPONENT_TYPE, Identifier.fromNamespaceAndPath(MODID, "durability"), DURABILITY);
+		Registry.register(BuiltInRegistries.RECIPE_SERIALIZER, Identifier.fromNamespaceAndPath(MODID, "repair_compass"), RepairCompassRecipe.SERIALIZER);
 
 		CreativeModeTabEvents.modifyOutputEvent(CreativeModeTabs.TOOLS_AND_UTILITIES).register(entries -> entries.accept(ADVENTURERS_COMPASS_ITEM));
 

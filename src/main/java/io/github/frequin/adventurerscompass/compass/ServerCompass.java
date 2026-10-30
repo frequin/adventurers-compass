@@ -11,6 +11,7 @@ import io.github.frequin.adventurerscompass.domain.compass.CompassState;
 import io.github.frequin.adventurerscompass.domain.compass.Effect;
 import io.github.frequin.adventurerscompass.domain.compass.Outcome;
 import io.github.frequin.adventurerscompass.domain.compass.SearchContext;
+import io.github.frequin.adventurerscompass.domain.compass.WearContext;
 import io.github.frequin.adventurerscompass.domain.search.SearchResult;
 import io.github.frequin.adventurerscompass.domain.selection.Selection;
 import io.github.frequin.adventurerscompass.search.CompassSearches;
@@ -45,17 +46,11 @@ public final class ServerCompass {
 
 	/** "Search" with the compass the player holds. */
 	public static void search(ServerPlayer player, ItemStack stack) {
-		if (isBroken(stack)) {
-			return;
-		}
 		apply(player, stack, COMPASS.search(CompassStacks.read(stack), context(player, stack), UUID.randomUUID()));
 	}
 
 	/** "Pass" with the compass the player holds. */
 	public static void pass(ServerPlayer player, ItemStack stack) {
-		if (isBroken(stack)) {
-			return;
-		}
 		apply(player, stack, COMPASS.pass(CompassStacks.read(stack), context(player, stack), UUID.randomUUID()));
 	}
 
@@ -105,7 +100,7 @@ public final class ServerCompass {
 		Selection selection = stack.getOrDefault(AdventurersCompass.SELECTION, Selection.EMPTY);
 		Set<String> searchable = selection.resolve(StructureUtils.buildCatalogue(level), dimension);
 		BlockXZ origin = new BlockXZ(player.blockPosition().getX(), player.blockPosition().getZ());
-		return new SearchContext(dimension, origin, searchable, AdventurersCompassConfig.maxRadius, PlayerVisited.get(player).asSet());
+		return new SearchContext(dimension, origin, searchable, AdventurersCompassConfig.maxRadius, PlayerVisited.get(player).asSet(), AdventurersCompassConfig.compassDurability);
 	}
 
 	private static void apply(ServerPlayer player, ItemStack stack, Outcome outcome) {
@@ -131,11 +126,11 @@ public final class ServerCompass {
 		if (stack.isEmpty()) {
 			return;
 		}
-		CompassStacks.write(stack, COMPASS.searchEnded(CompassStacks.read(stack), searchId, result));
+		WearContext wear = new WearContext(AdventurersCompassConfig.compassDurability, player.hasInfiniteMaterials());
+		CompassStacks.write(stack, COMPASS.searchEnded(CompassStacks.read(stack), searchId, result, wear));
 		if (result instanceof SearchResult.Found found) {
-			// Interim until the XP (#24) and wear (#25) rules move into the domain
+			// Interim until the XP rule (#24) moves into the domain
 			stack.set(AdventurersCompass.DISPLAY_COORDS, AdventurersCompassConfig.displayCoordinates);
-			AdventurersCompass.ADVENTURERS_COMPASS_ITEM.wear(player, stack);
 			chargeXp(player, Identifier.parse(found.instance().structureId()));
 		}
 	}
@@ -161,8 +156,9 @@ public final class ServerCompass {
 		}
 	}
 
-	private static boolean isBroken(ItemStack stack) {
-		return AdventurersCompass.ADVENTURERS_COMPASS_ITEM.isBroken(stack);
+	/** Repair: resets wear and keeps the rest of the state. */
+	public static void repair(ItemStack stack) {
+		CompassStacks.write(stack, COMPASS.repair(CompassStacks.read(stack)));
 	}
 
 }
