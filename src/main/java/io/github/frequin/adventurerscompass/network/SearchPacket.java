@@ -12,33 +12,23 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.ItemStack;
 
-public record SearchPacket(Identifier structureOrGroupId, boolean isGroup) implements CustomPacketPayload {
-	
+/** Client to server: search the nearest Instance of the held compass's Selection. */
+public record SearchPacket() implements CustomPacketPayload {
+
 	public static final Type<SearchPacket> TYPE = new Type<SearchPacket>(Identifier.fromNamespaceAndPath(AdventurersCompass.MODID, "search"));
-	
-	public static final StreamCodec<FriendlyByteBuf, SearchPacket> CODEC = StreamCodec.ofMember(SearchPacket::write, SearchPacket::read);
 
-	public static SearchPacket read(FriendlyByteBuf buf) {
-		final Identifier structureOrGroupId = buf.readIdentifier();
-		final boolean isGroup = buf.readBoolean();
-		return new SearchPacket(structureOrGroupId, isGroup);
-	}
-
-	public void write(FriendlyByteBuf buf) {
-		buf.writeIdentifier(structureOrGroupId);
-		buf.writeBoolean(isGroup);
-	}
+	public static final StreamCodec<FriendlyByteBuf, SearchPacket> CODEC = StreamCodec.unit(new SearchPacket());
 
 	public static void handle(SearchPacket packet, ServerPlayNetworking.Context context) {
 		context.server().execute(() -> {
 			final ItemStack stack = ItemUtils.getHeldItem(context.player(), AdventurersCompass.ADVENTURERS_COMPASS_ITEM);
 			if (!stack.isEmpty()) {
 				final AdventurersCompassItem adventurersCompass = (AdventurersCompassItem) stack.getItem();
-				adventurersCompass.searchForStructure((ServerLevel) context.player().level(), context.player(), context.player().blockPosition(), packet.structureOrGroupId, packet.isGroup, stack);
+				adventurersCompass.searchSelection((ServerLevel) context.player().level(), context.player(), context.player().blockPosition(), stack);
 			}
 		});
 	}
-	
+
 	@Override
 	public Type<SearchPacket> type() {
 		return TYPE;

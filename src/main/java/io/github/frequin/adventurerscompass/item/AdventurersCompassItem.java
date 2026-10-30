@@ -1,6 +1,7 @@
 package io.github.frequin.adventurerscompass.item;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -19,9 +20,11 @@ import io.github.frequin.adventurerscompass.domain.ChunkCoord;
 import io.github.frequin.adventurerscompass.domain.InstanceKey;
 import io.github.frequin.adventurerscompass.domain.search.SearchRequest;
 import io.github.frequin.adventurerscompass.domain.search.SearchResult;
+import io.github.frequin.adventurerscompass.domain.selection.Catalogue;
+import io.github.frequin.adventurerscompass.domain.selection.CatalogueEntry;
+import io.github.frequin.adventurerscompass.domain.selection.Selection;
 import io.github.frequin.adventurerscompass.search.CompassSearches;
 import io.github.frequin.adventurerscompass.visited.PlayerVisited;
-import com.google.common.collect.ListMultimap;
 
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.core.BlockPos;
@@ -64,10 +67,13 @@ public class AdventurersCompassItem extends Item {
 				final boolean canTeleport = AdventurersCompassConfig.allowTeleport && PlayerUtils.canTeleport(serverLevel.getServer(), player);
 				final int maxNextSearches = AdventurersCompassConfig.maxNextSearches;
 				final boolean hasInfiniteXp = player.hasInfiniteMaterials();
-				final List<Identifier> allowedStructureIds = StructureUtils.getAllowedStructureIds(serverLevel);
-				final Map<Identifier, Integer> xpLevels = StructureUtils.getXpLevelsForAllowedStructures(serverLevel, allowedStructureIds);
-				final ListMultimap<Identifier, Identifier> generatingDimensions = StructureUtils.getGeneratingDimensionIdsForAllowedStructures(serverLevel, allowedStructureIds);
-				ServerPlayNetworking.send(serverPlayer, new SyncPacket(canTeleport, maxNextSearches, hasInfiniteXp, allowedStructureIds, xpLevels, generatingDimensions, StructureUtils.structureIdsToGroupIds(serverLevel)));
+				final Catalogue catalogue = StructureUtils.buildCatalogue(serverLevel);
+				final Map<String, Integer> xpLevels = new HashMap<String, Integer>();
+				for (CatalogueEntry entry : catalogue.entries()) {
+					xpLevels.put(entry.structureId(), StructureUtils.getXpLevelsForStructure(serverLevel, Identifier.parse(entry.structureId())));
+				}
+				final String dimension = serverLevel.dimension().identifier().toString();
+				ServerPlayNetworking.send(serverPlayer, new SyncPacket(canTeleport, maxNextSearches, hasInfiniteXp, dimension, catalogue, xpLevels));
 			}
 		} else {
 			if (player instanceof ServerPlayer serverPlayer) {
@@ -116,53 +122,40 @@ public class AdventurersCompassItem extends Item {
 		return super.allowComponentsUpdateAnimation(player, hand, oldStack, newStack);
 	}
 
-	public void searchForStructure(ServerLevel level, Player player, BlockPos pos, Identifier structureOrGroupId, boolean isGroup, ItemStack stack) {
+	/** Searches the nearest Instance of the compass's Selection in the Current dimension. */
+	public void searchSelection(ServerLevel level, Player player, BlockPos pos, ItemStack stack) {
 		if (!isBroken(stack)) {
-			List<Identifier> structureIds = isGroup ? StructureUtils.getStructuresForGroup(level, structureOrGroupId) : List.of(structureOrGroupId);
-			startSearch(level, player, pos, stack, structureOrGroupId, isGroup, structureIds, new ArrayList<BlockPos>());
-
-			int xpLevels = StructureUtils.getXpLevelsForStructure(level, structureOrGroupId);
-			if (!player.hasInfiniteMaterials() && xpLevels > 0) {
-				player.giveExperienceLevels(-xpLevels);
-			}
+			startSearch(level, player, pos, stack, new ArrayList<BlockPos>());
 		}
 	}
 
 	public void searchForNextStructure(ServerLevel level, Player player, BlockPos pos, ItemStack stack) {
 		if (!isBroken(stack)) {
-			String structureIdStr = stack.getOrDefault(AdventurersCompass.STRUCTURE_ID, null);
 			List<BlockPos> prevPos = stack.getOrDefault(AdventurersCompass.PREV_POS, null);
-			boolean isGroup = stack.getOrDefault(AdventurersCompass.IS_GROUP, false);
-			if (structureIdStr != null && prevPos != null) {
-				Identifier structureId = Identifier.parse(structureIdStr);
-				// The compass stores the id of the Structure found, even for a Group search, so find the Group again
-				Identifier searchedId = isGroup ? StructureUtils.structureIdsToGroupIds(level).get(structureId) : structureId;
-				List<Identifier> structureIds = isGroup ? StructureUtils.getStructuresForGroup(level, searchedId) : List.of(structureId);
-				startSearch(level, player, pos, stack, searchedId, isGroup, structureIds, new ArrayList<BlockPos>(prevPos));
-
-				int xpLevels = StructureUtils.getXpLevelsForStructure(level, structureId);
-				if (!player.hasInfiniteMaterials() && xpLevels > 0) {
-					player.giveExperienceLevels(-xpLevels);
-				}
+			if (prevPos != null) {
+				startSearch(level, player, pos, stack, new ArrayList<BlockPos>(prevPos));
 			}
 		}
 	}
 
 	/**
-	 * Starts a nearest-first search on the server's scheduler. Instances found by
-	 * earlier "search for next" calls ({@code prevPos}, their locate positions)
-	 * are set aside as Skipped.
+	 * Starts a nearest-first search of the resolved Selection on the server's
+	 * scheduler, one search for the whole Selection. Instances found by earlier
+	 * "search for next" calls ({@code prevPos}, their locate positions) are set
+	 * aside as Skipped. XP is charged when an Instance is found, at the cost of
+	 * its Structure.
 	 */
-	private void startSearch(ServerLevel level, Player player, BlockPos pos, ItemStack stack, Identifier searchedId, boolean isGroup, List<Identifier> structureIds, List<BlockPos> prevPos) {
+	private void startSearch(ServerLevel level, Player player, BlockPos pos, ItemStack stack, List<BlockPos> prevPos) {
 		if (!(player instanceof ServerPlayer serverPlayer)) {
 			return;
 		}
-		search(stack, searchedId, isGroup);
 		String dimension = level.dimension().identifier().toString();
-		Set<String> structures = new HashSet<String>();
-		for (Identifier id : structureIds) {
-			structures.add(id.toString());
+		Selection selection = stack.getOrDefault(AdventurersCompass.SELECTION, Selection.EMPTY);
+		Set<String> structures = selection.resolve(StructureUtils.buildCatalogue(level), dimension);
+		if (structures.isEmpty()) {
+			return;
 		}
+		search(stack);
 		Set<InstanceKey> skipped = new HashSet<InstanceKey>();
 		for (BlockPos previous : prevPos) {
 			ChunkCoord chunk = ChunkCoord.containing(new BlockXZ(previous.getX(), previous.getZ()));
@@ -177,9 +170,11 @@ public class AdventurersCompassItem extends Item {
 			switch (result) {
 				case SearchResult.Found found -> {
 					prevPos.add(new BlockPos(found.pos().x(), 0, found.pos().z()));
-					succeed(player, stack, Identifier.parse(found.instance().structureId()), isGroup, found.instance().dimension(), found.pos().x(), found.pos().z(), prevPos, AdventurersCompassConfig.displayCoordinates);
+					Identifier structureId = Identifier.parse(found.instance().structureId());
+					succeed(player, stack, structureId, found.instance().dimension(), found.pos().x(), found.pos().z(), prevPos, AdventurersCompassConfig.displayCoordinates);
+					chargeXp(level, player, structureId);
 				}
-				case SearchResult.NothingFound nothing -> fail(stack, searchedId, nothing.radius());
+				case SearchResult.NothingFound nothing -> fail(stack, nothing.radius());
 				case SearchResult.Cancelled cancelled -> {
 					// Cancelled by a new search (which already reset the compass) or by crouch-use (which clears it).
 				}
@@ -187,11 +182,17 @@ public class AdventurersCompassItem extends Item {
 		});
 	}
 
-	public void succeed(Player player, ItemStack stack, Identifier structureID, boolean isGroup, String dimension, int x, int z, List<BlockPos> prevPos, boolean displayCoordinates) {
+	private static void chargeXp(ServerLevel level, Player player, Identifier structureId) {
+		int xpLevels = Math.min(StructureUtils.getXpLevelsForStructure(level, structureId), player.experienceLevel);
+		if (!player.hasInfiniteMaterials() && xpLevels > 0) {
+			player.giveExperienceLevels(-xpLevels);
+		}
+	}
+
+	public void succeed(Player player, ItemStack stack, Identifier structureID, String dimension, int x, int z, List<BlockPos> prevPos, boolean displayCoordinates) {
 		clearSearchData(stack);
 		setCompassState(stack, CompassState.FOUND);
 		stack.set(AdventurersCompass.STRUCTURE_ID, structureID.toString());
-		stack.set(AdventurersCompass.IS_GROUP, isGroup);
 		stack.set(AdventurersCompass.TARGET_DIMENSION, dimension);
 		stack.set(AdventurersCompass.FOUND_X, x);
 		stack.set(AdventurersCompass.FOUND_Z, z);
@@ -200,20 +201,16 @@ public class AdventurersCompassItem extends Item {
 		damageCompass(player, stack);
 	}
 
-	public void fail(ItemStack stack, Identifier structureId, int radius) {
+	public void fail(ItemStack stack, int radius) {
 		clearSearchData(stack);
 		setCompassState(stack, CompassState.NOT_FOUND);
-		stack.set(AdventurersCompass.STRUCTURE_ID, structureId.toString());
 		stack.set(AdventurersCompass.SEARCH_RADIUS, radius);
 	}
 
-	public void search(ItemStack stack, Identifier structureId, boolean isGroup) {
+	public void search(ItemStack stack) {
 		clearSearchData(stack);
 		stack.set(AdventurersCompass.COMPASS_STATE, CompassState.SEARCHING.getID());
-		stack.set(AdventurersCompass.STRUCTURE_ID, structureId.toString());
-		stack.set(AdventurersCompass.IS_GROUP, isGroup);
 		stack.set(AdventurersCompass.SEARCH_RADIUS, 0);
-		stack.set(AdventurersCompass.SAMPLES, 0);
 	}
 
 	public void setCompassState(ItemStack stack, CompassState state) {

@@ -26,6 +26,8 @@
     "string.adventurerscompass.radius": "Radius",
     "string.adventurerscompass.samples": "Samples",
     "string.adventurerscompass.search": "Search",
+    "string.adventurerscompass.composeSelection": "Compose the Selection",
+    "string.adventurerscompass.searchSelection": "Search the nearest",
     "string.adventurerscompass.searchForNext": "Search for Next",
     "string.adventurerscompass.searching": "Searching",
     "string.adventurerscompass.sortBy": "Sort By",
