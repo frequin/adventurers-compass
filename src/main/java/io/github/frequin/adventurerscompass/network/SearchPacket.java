@@ -1,7 +1,7 @@
 package io.github.frequin.adventurerscompass.network;
 
 import io.github.frequin.adventurerscompass.AdventurersCompass;
-import io.github.frequin.adventurerscompass.item.AdventurersCompassItem;
+import io.github.frequin.adventurerscompass.compass.ServerCompass;
 import io.github.frequin.adventurerscompass.util.ItemUtils;
 
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
@@ -9,10 +9,9 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.Identifier;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.ItemStack;
 
-/** Client to server: search the nearest Instance of the held compass's Selection. */
+/** Client to server: "Search" with the held compass (the nearest Instance of its Selection). */
 public record SearchPacket() implements CustomPacketPayload {
 
 	public static final Type<SearchPacket> TYPE = new Type<SearchPacket>(Identifier.fromNamespaceAndPath(AdventurersCompass.MODID, "search"));
@@ -23,8 +22,7 @@ public record SearchPacket() implements CustomPacketPayload {
 		context.server().execute(() -> {
 			final ItemStack stack = ItemUtils.getHeldItem(context.player(), AdventurersCompass.ADVENTURERS_COMPASS_ITEM);
 			if (!stack.isEmpty()) {
-				final AdventurersCompassItem adventurersCompass = (AdventurersCompassItem) stack.getItem();
-				adventurersCompass.searchSelection((ServerLevel) context.player().level(), context.player(), context.player().blockPosition(), stack);
+				ServerCompass.search(context.player(), stack);
 			}
 		});
 	}

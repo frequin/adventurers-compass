@@ -1,0 +1,83 @@
+package io.github.frequin.adventurerscompass.gui;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+
+import io.github.frequin.adventurerscompass.domain.BlockXZ;
+import io.github.frequin.adventurerscompass.domain.compass.CompassState;
+import io.github.frequin.adventurerscompass.domain.compass.Target;
+import io.github.frequin.adventurerscompass.domain.search.SearchResult;
+import io.github.frequin.adventurerscompass.util.StructureUtils;
+
+import net.fabricmc.api.EnvType;
+import net.fabricmc.api.Environment;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.entity.player.Player;
+
+/** The words the HUD and the screen use for the compass state. */
+@Environment(EnvType.CLIENT)
+public final class CompassTexts {
+
+	private CompassTexts() {
+	}
+
+	/**
+	 * The HUD: line 1 "Structure · distance" or the state in its place, line 2
+	 * "X …, Z …" when {@code displayCoordinates}. Empty when there is nothing to say.
+	 */
+	public static List<Component> hudLines(CompassState state, Player player, boolean displayCoordinates) {
+		List<Component> lines = new ArrayList<>();
+		switch (state.status(currentDimension(player))) {
+			case SEARCHING -> lines.add(Component.translatable("string.adventurerscompass.hud.searching"));
+			case TARGET -> lines.add(Component.translatable("string.adventurerscompass.hud.target", structureName(state.target()), distance(state.target(), player)));
+			case OTHER_DIMENSION -> lines.add(Component.translatable("string.adventurerscompass.hud.otherDimension", structureName(state.target()), dimensionName(state.target().dimension())));
+			case NOTHING_FOUND -> lines.add(nothingFound(state.nothingFound()));
+			case IDLE -> {
+			}
+		}
+		if (displayCoordinates && state.target() != null && !state.isSearching()) {
+			lines.add(Component.translatable("string.adventurerscompass.hud.coordinates", state.target().pos().x(), state.target().pos().z()));
+		}
+		return lines;
+	}
+
+	public static Component nothingFound(SearchResult.NothingFound nothing) {
+		return Component.translatable("string.adventurerscompass.hud.nothingFound", dimensionName(nothing.dimension()), nothing.radius(), nothing.visitedIgnored(), nothing.skippedIgnored());
+	}
+
+	public static Component structureName(Target target) {
+		return Component.literal(StructureUtils.getStructureName(Identifier.parse(target.structureId())));
+	}
+
+	/** {@code dimension.<namespace>.<path>}, else the path in title case ("the_nether" gives "The Nether"). */
+	public static Component dimensionName(String dimension) {
+		Identifier id = Identifier.parse(dimension);
+		return Component.translatableWithFallback("dimension." + id.getNamespace() + "." + id.getPath(), titleCase(id.getPath()));
+	}
+
+	/** Horizontal distance in whole blocks. */
+	public static int distance(Target target, Player player) {
+		BlockXZ here = new BlockXZ(player.blockPosition().getX(), player.blockPosition().getZ());
+		return (int) Math.round(Math.sqrt(here.distanceSq(target.pos())));
+	}
+
+	public static String currentDimension(Player player) {
+		return player.level().dimension().identifier().toString();
+	}
+
+	private static String titleCase(String path) {
+		StringBuilder name = new StringBuilder();
+		for (String word : path.split("[_/]")) {
+			if (!word.isEmpty()) {
+				if (!name.isEmpty()) {
+					name.append(' ');
+				}
+				name.append(word.substring(0, 1).toUpperCase(Locale.ROOT)).append(word.substring(1));
+			}
+		}
+		return name.toString();
+	}
+
+}
