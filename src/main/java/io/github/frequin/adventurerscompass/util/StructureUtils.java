@@ -6,11 +6,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.TreeSet;
 
 import org.apache.commons.lang3.text.WordUtils;
 
 import io.github.frequin.adventurerscompass.AdventurersCompass;
 import io.github.frequin.adventurerscompass.config.AdventurersCompassConfig;
+import io.github.frequin.adventurerscompass.domain.selection.Catalogue;
+import io.github.frequin.adventurerscompass.domain.selection.CatalogueEntry;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ListMultimap;
 
@@ -47,6 +50,32 @@ public class StructureUtils {
 		return structureIdsToGroupIds;
 	}
 	
+	/** The catalogue of listable Structures, with their Group, generating dimensions and source. */
+	public static Catalogue buildCatalogue(ServerLevel level) {
+		final Map<Identifier, Identifier> groups = structureIdsToGroupIds(level);
+		final List<CatalogueEntry> entries = new ArrayList<CatalogueEntry>();
+		for (Identifier structureId : getAllowedStructureIds(level)) {
+			final Set<String> dimensions = new TreeSet<String>();
+			for (Identifier dimension : getGeneratingDimensionIds(level, getStructureForId(level, structureId))) {
+				dimensions.add(dimension.toString());
+			}
+			entries.add(new CatalogueEntry(structureId.toString(), groups.get(structureId).toString(), dimensions, getSourceName(structureId.getNamespace())));
+		}
+		return new Catalogue(entries);
+	}
+
+	/** Display name of the mod that owns a namespace; usable on both sides. */
+	public static String getSourceName(String namespace) {
+		if (namespace.equals("minecraft")) {
+			return "Minecraft";
+		}
+		Optional<? extends ModContainer> sourceContainer = FabricLoader.getInstance().getModContainer(namespace);
+		if (sourceContainer.isPresent()) {
+			return sourceContainer.get().getMetadata().getName();
+		}
+		return namespace;
+	}
+
 	public static Identifier getGroupForStructure(ServerLevel level, Structure structure) {
 		if (getStructureRegistry(level).isPresent()) {
 			Registry<StructureSet> registry = getStructureSetRegistry(level).get();

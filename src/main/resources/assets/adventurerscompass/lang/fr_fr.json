@@ -25,6 +25,8 @@
     "string.adventurerscompass.radius": "Rayon",
     "string.adventurerscompass.samples": "Echantillons",
     "string.adventurerscompass.search": "Rechercher",
+    "string.adventurerscompass.composeSelection": "Composer la Selection",
+    "string.adventurerscompass.searchSelection": "Chercher la plus proche",
     "string.adventurerscompass.searchForNext": "Rechercher le suivant",
     "string.adventurerscompass.searching": "En cours de recherche",
     "string.adventurerscompass.sortBy": "Trier par ",
