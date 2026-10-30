@@ -13,7 +13,7 @@ import io.github.frequin.adventurerscompass.domain.search.SearchResult;
  * @param search       id of the running search, or {@code null} when none runs
  * @param target       the Target, or {@code null}
  * @param skipped      Instances passed over with "Pass"
- * @param nothingFound the last search's "nothing found", or {@code null}; cleared by the next search
+ * @param nothingFound the last search's "nothing found", or {@code null}; shown over the Target, cleared by the next search, a Selection change or a dimension change
  * @param wear         Targets found since the last repair (Pass included)
  */
 public record CompassState(UUID search, Target target, Set<InstanceKey> skipped, SearchResult.NothingFound nothingFound, int wear) {
@@ -47,13 +47,17 @@ public record CompassState(UUID search, Target target, Set<InstanceKey> skipped,
 		if (isSearching()) {
 			return Status.SEARCHING;
 		}
+		if (nothingFound != null) {
+			// The last "nothing found" shows over a kept Target until the next change
+			return Status.NOTHING_FOUND;
+		}
 		if (target != null) {
 			if (!target.dimension().equals(currentDimension)) {
 				return Status.OTHER_DIMENSION;
 			}
 			return visited.contains(target.instance()) ? Status.TARGET_VISITED : Status.TARGET;
 		}
-		return nothingFound != null ? Status.NOTHING_FOUND : Status.IDLE;
+		return Status.IDLE;
 	}
 
 	/** Searches left before the compass breaks; {@code durability} 0 or less means it never wears. */

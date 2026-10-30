@@ -21,7 +21,7 @@ public enum Status {
 	/** The Target is in another dimension: the needle spins until the player returns. */
 	OTHER_DIMENSION,
 
-	/** The last search found nothing: the HUD explains why. */
+	/** The last search found nothing: the HUD explains why; a kept Target is still pointed at. */
 	NOTHING_FOUND
 
 }

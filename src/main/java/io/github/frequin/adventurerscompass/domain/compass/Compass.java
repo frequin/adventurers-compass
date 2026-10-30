@@ -74,12 +74,13 @@ public final class Compass {
 	}
 
 	/**
-	 * The player changed dimension: cancels the search and keeps the Target and
-	 * Skipped. Whether the Target is in the Current dimension is read by
+	 * The player changed dimension: cancels the search, keeps the Target and
+	 * Skipped, and forgets the last "nothing found", which was about the
+	 * dimension left. Whether the Target is in the Current dimension is read by
 	 * {@link CompassState#status}, so it becomes active again on return.
 	 */
 	public Outcome dimensionChanged(CompassState state) {
-		return new Outcome.Accepted(state.withSearch(null), cancelling(state));
+		return new Outcome.Accepted(state.withSearch(null).withNothingFound(null), cancelling(state));
 	}
 
 	private static List<Effect> cancelling(CompassState state) {
@@ -120,7 +121,8 @@ public final class Compass {
 		}
 		return switch (result) {
 			case SearchResult.Found found -> state.withSearch(null).withTarget(new Target(found.instance(), found.pos())).withNothingFound(null).withWear(worn(state.wear(), wear));
-			case SearchResult.NothingFound nothing -> state.withSearch(null).withTarget(null).withNothingFound(nothing);
+			// The Target is kept (a detour costs nothing); the status shows "nothing found" until the next change
+			case SearchResult.NothingFound nothing -> state.withSearch(null).withNothingFound(nothing);
 			case SearchResult.Cancelled cancelled -> state.withSearch(null);
 		};
 	}

@@ -6,6 +6,7 @@ import java.util.Locale;
 
 import io.github.frequin.adventurerscompass.domain.BlockXZ;
 import io.github.frequin.adventurerscompass.domain.compass.CompassState;
+import io.github.frequin.adventurerscompass.domain.compass.Status;
 import io.github.frequin.adventurerscompass.domain.compass.Target;
 import io.github.frequin.adventurerscompass.domain.search.SearchResult;
 import io.github.frequin.adventurerscompass.domain.visited.VisitedSet;
@@ -31,7 +32,8 @@ public final class CompassTexts {
 	 */
 	public static List<Component> hudLines(CompassState state, Player player, boolean displayCoordinates) {
 		List<Component> lines = new ArrayList<>();
-		switch (state.status(currentDimension(player), visited(player).asSet())) {
+		Status status = state.status(currentDimension(player), visited(player).asSet());
+		switch (status) {
 			case SEARCHING -> lines.add(Component.translatable("string.adventurerscompass.hud.searching"));
 			case TARGET -> lines.add(Component.translatable("string.adventurerscompass.hud.target", structureName(state.target()), distance(state.target(), player)));
 			case TARGET_VISITED -> lines.add(Component.translatable("string.adventurerscompass.hud.targetVisited", structureName(state.target())));
@@ -40,7 +42,8 @@ public final class CompassTexts {
 			case IDLE -> {
 			}
 		}
-		if (displayCoordinates && state.target() != null && !state.isSearching()) {
+		// Line 2 belongs to the Target named on line 1, not to a "nothing found" shown over it
+		if (displayCoordinates && state.target() != null && status != Status.SEARCHING && status != Status.NOTHING_FOUND) {
 			lines.add(Component.translatable("string.adventurerscompass.hud.coordinates", state.target().pos().x(), state.target().pos().z()));
 		}
 		return lines;
