@@ -196,7 +196,6 @@ public final class ServerCompass {
 		WearContext wear = new WearContext(AdventurersCompassConfig.compassDurability, player.hasInfiniteMaterials());
 		CompassStacks.write(stack, COMPASS.searchEnded(CompassStacks.read(stack), searchId, result, wear));
 		if (result instanceof SearchResult.Found found) {
-			stack.set(AdventurersCompass.DISPLAY_COORDS, AdventurersCompassConfig.displayCoordinates);
 			pay(player, found);
 		}
 	}

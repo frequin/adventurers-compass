@@ -46,28 +46,22 @@ public class AdventurersCompassItem extends Item {
 
 	@Override
 	public InteractionResult use(Level level, Player player, InteractionHand hand) {
-		if (!player.isCrouching()) {
-			// A broken compass still opens: it shows its Target and refuses "Search" and "Pass"
-			if (level.isClientSide()) {
-				final ItemStack stack = ItemUtils.getHeldItem(player, AdventurersCompass.ADVENTURERS_COMPASS_ITEM);
-				GuiWrapper.openGUI(level, player, stack);
-			} else {
-				final ServerLevel serverLevel = (ServerLevel) level;
-				final ServerPlayer serverPlayer = (ServerPlayer) player;
-				final boolean canTeleport = ServerCompass.teleportContext(serverPlayer).allowed();
-				final boolean hasInfiniteXp = player.hasInfiniteMaterials();
-				final String dimension = serverLevel.dimension().identifier().toString();
-				final boolean dimensionDisabled = AdventurersCompassConfig.isDisabledDimension(dimension);
-				// The compass lists nothing in a disabled dimension
-				final Catalogue catalogue = dimensionDisabled ? Catalogue.EMPTY : StructureUtils.buildCatalogue(serverLevel);
-				final Map<String, Integer> xpLevels = ServerXp.realCosts(catalogue, dimension);
-				ServerPlayNetworking.send(serverPlayer, new SyncPacket(canTeleport, hasInfiniteXp, dimension, catalogue, xpLevels, dimensionDisabled));
-			}
-		} else if (player instanceof ServerPlayer serverPlayer) {
-			// Crouch-use: "Cancel"
-			ServerCompass.cancel(serverPlayer, player.getItemInHand(hand));
+		// A broken compass still opens: it shows its Target and refuses "Search" and "Pass"
+		if (level.isClientSide()) {
+			final ItemStack stack = ItemUtils.getHeldItem(player, AdventurersCompass.ADVENTURERS_COMPASS_ITEM);
+			GuiWrapper.openGUI(level, player, stack);
+		} else {
+			final ServerLevel serverLevel = (ServerLevel) level;
+			final ServerPlayer serverPlayer = (ServerPlayer) player;
+			final boolean canTeleport = ServerCompass.teleportContext(serverPlayer).allowed();
+			final boolean hasInfiniteXp = player.hasInfiniteMaterials();
+			final String dimension = serverLevel.dimension().identifier().toString();
+			final boolean dimensionDisabled = AdventurersCompassConfig.isDisabledDimension(dimension);
+			// The compass lists nothing in a disabled dimension
+			final Catalogue catalogue = dimensionDisabled ? Catalogue.EMPTY : StructureUtils.buildCatalogue(serverLevel);
+			final Map<String, Integer> xpLevels = ServerXp.realCosts(catalogue, dimension);
+			ServerPlayNetworking.send(serverPlayer, new SyncPacket(canTeleport, hasInfiniteXp, dimension, catalogue, xpLevels, dimensionDisabled));
 		}
-
 		return InteractionResult.CONSUME;
 	}
 
@@ -109,9 +103,13 @@ public class AdventurersCompassItem extends Item {
 	@Override
 	public void inventoryTick(ItemStack stack, ServerLevel level, Entity owner, EquipmentSlot slot) {
 		ServerCompass.interruptIfOrphaned(stack);
-		// The client reads the server's durability from the compass, for the wear bar, the tooltip and the screen
+		// The client reads these server settings from the compass: durability for
+		// the wear bar, the tooltip and the screen; displayCoordinates for the HUD
 		if (durability(stack) != AdventurersCompassConfig.compassDurability) {
 			stack.set(AdventurersCompass.DURABILITY, AdventurersCompassConfig.compassDurability);
+		}
+		if (stack.getOrDefault(AdventurersCompass.DISPLAY_COORDS, false) != AdventurersCompassConfig.displayCoordinates) {
+			stack.set(AdventurersCompass.DISPLAY_COORDS, AdventurersCompassConfig.displayCoordinates);
 		}
 	}
 
