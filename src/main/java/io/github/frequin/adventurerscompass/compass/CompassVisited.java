@@ -2,10 +2,6 @@ package io.github.frequin.adventurerscompass.compass;
 
 import io.github.frequin.adventurerscompass.config.AdventurersCompassConfig;
 import io.github.frequin.adventurerscompass.domain.InstanceKey;
-import io.github.frequin.adventurerscompass.domain.compass.Compass;
-import io.github.frequin.adventurerscompass.domain.compass.Effect;
-import io.github.frequin.adventurerscompass.domain.compass.Outcome;
-import io.github.frequin.adventurerscompass.util.ItemUtils;
 import io.github.frequin.adventurerscompass.visited.PlayerVisited;
 import io.github.frequin.adventurerscompass.visited.VisitedDetection;
 
@@ -14,7 +10,6 @@ import net.minecraft.network.protocol.game.ClientboundSoundPacket;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
-import net.minecraft.world.item.ItemStack;
 
 /**
  * The server side of the Visited rules of the compass: "Mark Visited",
@@ -22,8 +17,6 @@ import net.minecraft.world.item.ItemStack;
  * message, and the sound when it is the Target of a compass the player carries).
  */
 public final class CompassVisited {
-
-	private static final Compass COMPASS = new Compass();
 
 	private CompassVisited() {
 	}
@@ -47,18 +40,7 @@ public final class CompassVisited {
 	 */
 	public static void becameVisited(ServerPlayer player, InstanceKey instance) {
 		VisitedDetection.announce(player, instance);
-		boolean arrived = false;
-		for (int slot = 0; slot < player.getInventory().getContainerSize(); slot++) {
-			ItemStack stack = player.getInventory().getItem(slot);
-			if (ItemUtils.isCompass(stack)
-					&& COMPASS.instanceVisited(CompassStacks.read(stack), instance) instanceof Outcome.Accepted accepted
-					&& accepted.effects().stream().anyMatch(Effect.TargetVisited.class::isInstance)) {
-				arrived = true;
-			}
-		}
-		if (arrived) {
-			playArrivalSound(player);
-		}
+		ServerCompass.instanceVisited(player, instance);
 	}
 
 	/** The soft sound of a Target that became Visited, heard by this player only. */

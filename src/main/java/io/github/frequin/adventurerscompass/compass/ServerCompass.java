@@ -7,6 +7,7 @@ import java.util.UUID;
 import io.github.frequin.adventurerscompass.AdventurersCompass;
 import io.github.frequin.adventurerscompass.config.AdventurersCompassConfig;
 import io.github.frequin.adventurerscompass.domain.BlockXZ;
+import io.github.frequin.adventurerscompass.domain.InstanceKey;
 import io.github.frequin.adventurerscompass.domain.compass.Compass;
 import io.github.frequin.adventurerscompass.domain.compass.CompassState;
 import io.github.frequin.adventurerscompass.domain.compass.Effect;
@@ -101,11 +102,26 @@ public final class ServerCompass {
 
 	/** Every compass the player carries cancels its search and keeps its Target and Skipped. */
 	private static void dimensionChanged(ServerPlayer player) {
-		for (int slot = 0; slot < player.getInventory().getContainerSize(); slot++) {
-			ItemStack stack = player.getInventory().getItem(slot);
-			if (ItemUtils.isCompass(stack)) {
-				apply(player, stack, COMPASS.dimensionChanged(CompassStacks.read(stack)));
+		for (ItemStack stack : ItemUtils.allCompasses(player)) {
+			apply(player, stack, COMPASS.dimensionChanged(CompassStacks.read(stack)));
+		}
+	}
+
+	/**
+	 * An Instance just became Visited for the player: every compass they carry
+	 * hears it. A compass whose Target it is keeps it; the arrival sound plays
+	 * once, however many compasses point at it.
+	 */
+	static void instanceVisited(ServerPlayer player, InstanceKey instance) {
+		boolean arrived = false;
+		for (ItemStack stack : ItemUtils.allCompasses(player)) {
+			Outcome outcome = COMPASS.instanceVisited(CompassStacks.read(stack), instance);
+			boolean arrival = outcome instanceof Outcome.Accepted accepted && accepted.effects().stream().anyMatch(Effect.TargetVisited.class::isInstance);
+			if (arrival && arrived) {
+				continue;
 			}
+			arrived |= arrival;
+			apply(player, stack, outcome);
 		}
 	}
 
@@ -179,15 +195,10 @@ public final class ServerCompass {
 	}
 
 	private static ItemStack findBySearch(ServerPlayer player, UUID searchId) {
-		for (int slot = 0; slot < player.getInventory().getContainerSize(); slot++) {
-			ItemStack stack = player.getInventory().getItem(slot);
-			if (ItemUtils.isCompass(stack) && searchId.equals(stack.get(AdventurersCompass.SEARCH))) {
+		for (ItemStack stack : ItemUtils.allCompasses(player)) {
+			if (searchId.equals(stack.get(AdventurersCompass.SEARCH))) {
 				return stack;
 			}
-		}
-		ItemStack carried = player.containerMenu.getCarried();
-		if (ItemUtils.isCompass(carried) && searchId.equals(carried.get(AdventurersCompass.SEARCH))) {
-			return carried;
 		}
 		return ItemStack.EMPTY;
 	}
