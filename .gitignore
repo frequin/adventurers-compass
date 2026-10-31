@@ -10,6 +10,12 @@ ehthumbs.db
 # Fabric Loom
 /run
 /remappedSrc
+/logs
+
+# JVM crash and heap dumps
+hs_err_pid*.log
+replay_pid*.log
+*.hprof
 
 # IntelliJ IDEA
 /.idea
