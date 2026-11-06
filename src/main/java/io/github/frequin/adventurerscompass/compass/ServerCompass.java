@@ -79,6 +79,27 @@ public final class ServerCompass {
 		apply(player, stack, COMPASS.clearTarget(CompassStacks.read(stack)));
 	}
 
+	/** Removes one Instance from the Skipped of the compass the player holds. */
+	public static void removeSkipped(ServerPlayer player, ItemStack stack, InstanceKey instance) {
+		apply(player, stack, COMPASS.removeSkipped(CompassStacks.read(stack), instance));
+		sendInventory(player);
+	}
+
+	/** Clears the Skipped of the compass the player holds. */
+	public static void clearSkipped(ServerPlayer player, ItemStack stack) {
+		apply(player, stack, COMPASS.clearSkipped(CompassStacks.read(stack)));
+		sendInventory(player);
+	}
+
+	/**
+	 * Sends the changed compass now, for a screen that stays open: a singleplayer
+	 * world is paused behind it, and paused players don't tick, which is what
+	 * normally sends their inventory.
+	 */
+	private static void sendInventory(ServerPlayer player) {
+		player.containerMenu.broadcastChanges();
+	}
+
 	/** "Teleport" to the Target of the compass the player holds. */
 	public static void teleport(ServerPlayer player, ItemStack stack) {
 		Outcome outcome = COMPASS.teleport(CompassStacks.read(stack), teleportContext(player));

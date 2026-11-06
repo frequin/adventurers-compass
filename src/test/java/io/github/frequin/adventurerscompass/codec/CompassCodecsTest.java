@@ -2,6 +2,7 @@ package io.github.frequin.adventurerscompass.codec;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import java.util.List;
 import java.util.Set;
 
 import org.junit.jupiter.api.Test;
@@ -13,6 +14,8 @@ import io.github.frequin.adventurerscompass.domain.ChunkCoord;
 import io.github.frequin.adventurerscompass.domain.InstanceKey;
 import io.github.frequin.adventurerscompass.domain.compass.Target;
 import io.github.frequin.adventurerscompass.domain.search.SearchResult;
+import io.github.frequin.adventurerscompass.domain.visited.VisitedInstance;
+import io.github.frequin.adventurerscompass.domain.visited.VisitedSet;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 
@@ -42,6 +45,17 @@ class CompassCodecsTest {
 		ByteBuf buf = Unpooled.buffer();
 		CompassCodecs.SKIPPED_STREAM.encode(buf, skipped);
 		assertEquals(skipped, CompassCodecs.SKIPPED_STREAM.decode(buf));
+	}
+
+	@Test
+	void visitedKeepTheirDaysAndOrderBeingSavedAndCrossingTheNetwork() {
+		var visited = VisitedSet.of(List.of(new VisitedInstance(VILLAGE, 431), new VisitedInstance(FORTRESS, 12)));
+		var saved = CompassCodecs.VISITED.encodeStart(JsonOps.INSTANCE, visited).getOrThrow();
+		assertEquals(visited, CompassCodecs.VISITED.parse(JsonOps.INSTANCE, saved).getOrThrow());
+
+		ByteBuf buf = Unpooled.buffer();
+		CompassCodecs.VISITED_STREAM.encode(buf, visited);
+		assertEquals(visited, CompassCodecs.VISITED_STREAM.decode(buf));
 	}
 
 	@Test

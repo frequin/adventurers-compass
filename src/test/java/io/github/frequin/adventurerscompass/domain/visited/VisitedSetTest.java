@@ -18,8 +18,8 @@ class VisitedSetTest {
 
 	@Test
 	void markingAnInstanceIsNewOnlyTheFirstTime() {
-		var first = VisitedSet.empty().mark(PLAINS_VILLAGE);
-		var second = first.visited().mark(PLAINS_VILLAGE);
+		var first = VisitedSet.empty().mark(PLAINS_VILLAGE, 12);
+		var second = first.visited().mark(PLAINS_VILLAGE, 12);
 
 		assertTrue(first.isNew());
 		assertFalse(second.isNew());
@@ -28,21 +28,53 @@ class VisitedSetTest {
 
 	@Test
 	void anUnmarkedInstanceIsNoLongerVisitedAndCanBeMarkedAgain() {
-		var visited = VisitedSet.empty().mark(PLAINS_VILLAGE).visited().mark(DESERT_PYRAMID).visited();
+		var visited = VisitedSet.empty().mark(PLAINS_VILLAGE, 12).visited().mark(DESERT_PYRAMID, 40).visited();
 
 		var unmarked = visited.unmark(PLAINS_VILLAGE);
 
 		assertFalse(unmarked.contains(PLAINS_VILLAGE));
 		assertTrue(unmarked.contains(DESERT_PYRAMID));
-		assertTrue(unmarked.mark(PLAINS_VILLAGE).isNew());
+		assertTrue(unmarked.mark(PLAINS_VILLAGE, 12).isNew());
 	}
 
 	@Test
 	void listsVisitedInstancesInTheOrderTheyWereMarked() {
-		var visited = VisitedSet.empty().mark(DESERT_PYRAMID).visited().mark(PLAINS_VILLAGE).visited().mark(DESERT_PYRAMID).visited();
+		var visited = VisitedSet.empty().mark(DESERT_PYRAMID, 40).visited().mark(PLAINS_VILLAGE, 12).visited().mark(DESERT_PYRAMID, 40).visited();
 
 		assertEquals(List.of(DESERT_PYRAMID, PLAINS_VILLAGE), visited.list());
 		assertEquals(List.of(), VisitedSet.empty().list());
+	}
+
+	@Test
+	void anInstanceRemembersTheWorldDayItWasMarked() {
+		var visited = VisitedSet.empty().mark(DESERT_PYRAMID, 40).visited().mark(PLAINS_VILLAGE, 431).visited();
+
+		assertEquals(List.of(new VisitedInstance(DESERT_PYRAMID, 40), new VisitedInstance(PLAINS_VILLAGE, 431)), visited.instances());
+	}
+
+	@Test
+	void markingAVisitedInstanceAgainKeepsTheDayOfTheFirstMark() {
+		var visited = VisitedSet.empty().mark(PLAINS_VILLAGE, 12).visited().mark(PLAINS_VILLAGE, 99).visited();
+
+		assertEquals(List.of(new VisitedInstance(PLAINS_VILLAGE, 12)), visited.instances());
+	}
+
+	@Test
+	void anInstanceUnmarkedThenMarkedAgainTakesTheNewDay() {
+		var visited = VisitedSet.empty().mark(PLAINS_VILLAGE, 12).visited().unmark(PLAINS_VILLAGE).mark(PLAINS_VILLAGE, 99).visited();
+
+		assertEquals(List.of(new VisitedInstance(PLAINS_VILLAGE, 99)), visited.instances());
+	}
+
+	@Test
+	void clearingForgetsEveryInstanceAndTheyCanBeMarkedAgain() {
+		var visited = VisitedSet.empty().mark(PLAINS_VILLAGE, 12).visited().mark(DESERT_PYRAMID, 40).visited();
+
+		var cleared = visited.clear();
+
+		assertEquals(List.of(), cleared.list());
+		assertFalse(cleared.contains(PLAINS_VILLAGE));
+		assertTrue(cleared.mark(PLAINS_VILLAGE, 50).isNew());
 	}
 
 }

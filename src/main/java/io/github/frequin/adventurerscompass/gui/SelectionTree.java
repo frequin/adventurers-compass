@@ -2,7 +2,6 @@ package io.github.frequin.adventurerscompass.gui;
 
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -12,7 +11,6 @@ import io.github.frequin.adventurerscompass.domain.selection.Selection;
 import io.github.frequin.adventurerscompass.domain.selection.StructureState;
 import io.github.frequin.adventurerscompass.domain.selection.TreeEntry;
 import io.github.frequin.adventurerscompass.domain.selection.TreeFilter;
-import io.github.frequin.adventurerscompass.util.RenderUtils;
 import io.github.frequin.adventurerscompass.util.StructureUtils;
 
 import net.minecraft.client.Minecraft;
@@ -21,27 +19,27 @@ import net.minecraft.client.gui.components.ObjectSelectionList;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
-import net.minecraft.util.Mth;
 
 /**
  * The left part of the compass screen: the Groups of the Current dimension,
  * each with a three-state checkbox and, once expanded, its Structures of that
  * dimension. A Group with a single Structure there is shown as that Structure.
  */
-public class SelectionTree extends ObjectSelectionList<SelectionTree.Row> {
+public class SelectionTree extends TransparentList<SelectionTree.Row> {
 
 	private static final int ROW_HEIGHT = 14;
 	private static final int BOX = 9;
 	private static final int INDENT = 14;
 
 	private final AdventurersCompassScreen screen;
-	private final Set<String> expandedGroups = new HashSet<String>();
+	private final Set<String> expandedGroups;
 	private TreeFilter filter = TreeFilter.NONE;
 
-	public SelectionTree(AdventurersCompassScreen screen, Minecraft mc, int x, int y, int width, int height) {
-		super(mc, width, height, y, ROW_HEIGHT);
+	/** {@code expandedGroups} belongs to the screen, so it outlives this widget when the tabs change. */
+	public SelectionTree(AdventurersCompassScreen screen, Minecraft mc, int x, int y, int width, int height, Set<String> expandedGroups) {
+		super(mc, x, y, width, height, ROW_HEIGHT);
 		this.screen = screen;
-		setX(x);
+		this.expandedGroups = expandedGroups;
 	}
 
 	/** Narrows the tree to the search box's text or {@code @mod}; Groups are shown expanded while it is active. */
@@ -74,46 +72,6 @@ public class SelectionTree extends ObjectSelectionList<SelectionTree.Row> {
 	/** What the tree lists, the filter included. */
 	public List<TreeEntry> listed(Catalogue catalogue, String dimension) {
 		return filter.apply(catalogue.tree(dimension), catalogue, SelectionTree::name);
-	}
-
-	@Override
-	protected int scrollBarX() {
-		return getRowLeft() + getRowWidth();
-	}
-
-	@Override
-	public int getRowWidth() {
-		return getWidth() - 6;
-	}
-
-	@Override
-	public void extractWidgetRenderState(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTicks) {
-		enableScissor(guiGraphics);
-		guiGraphics.fill(getX(), getY(), getX() + getWidth(), getBottom(), RenderUtils.getBackgroundColor(true, false));
-		extractListItems(guiGraphics, mouseX, mouseY, partialTicks);
-		guiGraphics.disableScissor();
-		extractScrollbar(guiGraphics, mouseX, mouseY);
-	}
-
-	@Override
-	protected void extractSelection(GuiGraphicsExtractor guiGraphics, Row entry, int backgroundColor) {
-		// Rows are not selectable; the checkboxes carry the state
-	}
-
-	@Override
-	protected void extractScrollbar(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY) {
-		if (scrollable()) {
-			int left = scrollBarX();
-			int right = left + 6;
-			int height = (int) ((float) ((getBottom() - getY()) * (getBottom() - getY())) / (float) contentHeight());
-			height = Mth.clamp(height, 32, getBottom() - getY() - 8);
-			int top = (int) scrollAmount() * (getBottom() - getY() - height) / maxScrollAmount() + getY();
-			if (top < getY()) {
-				top = getY();
-			}
-			guiGraphics.fill(left, getY(), right, getBottom(), RenderUtils.getBackgroundColor(false, false));
-			guiGraphics.fill(left, top, right, top + height, RenderUtils.getBackgroundColor(true, true));
-		}
 	}
 
 	private boolean isExpanded(String groupId) {

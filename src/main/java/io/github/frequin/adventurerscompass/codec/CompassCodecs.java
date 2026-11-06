@@ -12,14 +12,16 @@ import io.github.frequin.adventurerscompass.domain.ChunkCoord;
 import io.github.frequin.adventurerscompass.domain.InstanceKey;
 import io.github.frequin.adventurerscompass.domain.compass.Target;
 import io.github.frequin.adventurerscompass.domain.search.SearchResult;
+import io.github.frequin.adventurerscompass.domain.visited.VisitedInstance;
+import io.github.frequin.adventurerscompass.domain.visited.VisitedSet;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 
-/** Minecraft codecs for the compass state: Instance keys, Target, Skipped, "nothing found". */
+/** Minecraft codecs for the compass state: Instance keys, Target, Skipped, Visited, "nothing found". */
 public final class CompassCodecs {
 
-	/** Saved form: {@code {dimension, structure, chunk_x, chunk_z}}. Also used by the Visited attachment. */
+	/** Saved form: {@code {dimension, structure, chunk_x, chunk_z}}. */
 	public static final Codec<InstanceKey> INSTANCE_KEY = RecordCodecBuilder.create(instance -> instance.group(
 			Codec.STRING.fieldOf("dimension").forGetter(InstanceKey::dimension),
 			Codec.STRING.fieldOf("structure").forGetter(InstanceKey::structureId),
@@ -55,6 +57,17 @@ public final class CompassCodecs {
 	public static final Codec<Set<InstanceKey>> SKIPPED = INSTANCE_KEY.listOf().xmap(Set::copyOf, CompassCodecs::sorted);
 
 	public static final StreamCodec<ByteBuf, Set<InstanceKey>> SKIPPED_STREAM = INSTANCE_KEY_STREAM.apply(ByteBufCodecs.list()).map(Set::copyOf, CompassCodecs::sorted);
+
+	/** Saved form of the Visited attachment: a list of {@code {instance: {...}, day}}, in the order they were marked. */
+	public static final Codec<VisitedSet> VISITED = RecordCodecBuilder.<VisitedInstance>create(instance -> instance.group(
+			INSTANCE_KEY.fieldOf("instance").forGetter(VisitedInstance::instance),
+			Codec.LONG.fieldOf("day").forGetter(VisitedInstance::day))
+			.apply(instance, VisitedInstance::new)).listOf().xmap(VisitedSet::of, VisitedSet::instances);
+
+	public static final StreamCodec<ByteBuf, VisitedSet> VISITED_STREAM = StreamCodec.composite(
+			INSTANCE_KEY_STREAM, VisitedInstance::instance,
+			ByteBufCodecs.VAR_LONG, VisitedInstance::day,
+			VisitedInstance::new).apply(ByteBufCodecs.list()).map(VisitedSet::of, VisitedSet::instances);
 
 	/** Saved form: {@code {dimension, radius, visited_ignored, skipped_ignored}}. */
 	public static final Codec<SearchResult.NothingFound> NOTHING_FOUND = RecordCodecBuilder.create(instance -> instance.group(

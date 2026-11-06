@@ -52,14 +52,14 @@ public final class TreeFilter {
 					if (!bySource && matchesName(group.groupId(), displayName)) {
 						kept.add(group);
 					} else {
-						List<String> members = group.structureIds().stream().filter(id -> matchesStructure(id, catalogue, displayName)).toList();
+						List<String> members = group.structureIds().stream().filter(id -> matches(id, catalogue, displayName)).toList();
 						if (!members.isEmpty()) {
 							kept.add(new TreeEntry.GroupEntry(group.groupId(), members));
 						}
 					}
 				}
 				case TreeEntry.StructureEntry structure -> {
-					if (matchesStructure(structure.structureId(), catalogue, displayName)) {
+					if (matches(structure.structureId(), catalogue, displayName)) {
 						kept.add(structure);
 					}
 				}
@@ -68,7 +68,8 @@ public final class TreeFilter {
 		return kept;
 	}
 
-	private boolean matchesStructure(String structureId, Catalogue catalogue, Function<String, String> displayName) {
+	/** Whether the filter keeps this Structure, its Group aside. Also filters the rows of the Visited and Skipped tabs. */
+	public boolean matches(String structureId, Catalogue catalogue, Function<String, String> displayName) {
 		if (bySource) {
 			String source = catalogue.entry(structureId).map(CatalogueEntry::source).orElse("");
 			return contains(source) || contains(namespace(structureId));

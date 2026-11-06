@@ -84,6 +84,18 @@ public final class Compass {
 		return new Outcome.Accepted(state.withTarget(null), List.of());
 	}
 
+	/** Removes one Instance from Skipped, and nothing else: a running search goes on and the Target stays. */
+	public Outcome removeSkipped(CompassState state, InstanceKey instance) {
+		Set<InstanceKey> skipped = new HashSet<>(state.skipped());
+		skipped.remove(instance);
+		return new Outcome.Accepted(state.withSkipped(skipped), List.of());
+	}
+
+	/** Empties Skipped, and nothing else: a running search goes on and the Target stays. */
+	public Outcome clearSkipped(CompassState state) {
+		return new Outcome.Accepted(state.withSkipped(Set.of()), List.of());
+	}
+
 	/**
 	 * The player changed dimension: cancels the search, keeps the Target and
 	 * Skipped, and forgets the last "nothing found", which was about the
