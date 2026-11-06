@@ -5,7 +5,6 @@ import io.github.frequin.adventurerscompass.domain.InstanceKey;
 import io.github.frequin.adventurerscompass.visited.PlayerVisited;
 import io.github.frequin.adventurerscompass.visited.VisitedDetection;
 
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.protocol.game.ClientboundSoundPacket;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
@@ -43,10 +42,14 @@ public final class CompassVisited {
 		ServerCompass.instanceVisited(player, instance);
 	}
 
-	/** The soft sound of a Target that became Visited, heard by this player only. */
+	/**
+	 * The soft sound of a Target that became Visited, heard by this player only.
+	 * Not the amethyst chime: vanilla defines it at volume 0.2 on a very quiet
+	 * recording, and the client caps the gain at 1, so no packet volume makes it heard.
+	 */
 	static void playArrivalSound(ServerPlayer player) {
 		if (AdventurersCompassConfig.targetVisitedSound) {
-			player.connection.send(new ClientboundSoundPacket(BuiltInRegistries.SOUND_EVENT.wrapAsHolder(SoundEvents.AMETHYST_BLOCK_CHIME), SoundSource.PLAYERS, player.getX(), player.getY(), player.getZ(), 1.0F, 1.0F, player.getRandom().nextLong()));
+			player.connection.send(new ClientboundSoundPacket(SoundEvents.NOTE_BLOCK_CHIME, SoundSource.PLAYERS, player.getX(), player.getY(), player.getZ(), 1.0F, 1.0F, player.getRandom().nextLong()));
 		}
 	}
 
