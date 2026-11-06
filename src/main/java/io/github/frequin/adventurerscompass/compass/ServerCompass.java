@@ -164,7 +164,7 @@ public final class ServerCompass {
 	}
 
 	/** A "nothing found" saved with the player does not outlive their session: it is gone before the client gets their inventory. */
-	public static void playerJoined(ServerPlayer player) {
+	private static void playerJoined(ServerPlayer player) {
 		for (ItemStack stack : ItemUtils.allCompasses(player)) {
 			tickNothingFound(stack, false);
 		}
