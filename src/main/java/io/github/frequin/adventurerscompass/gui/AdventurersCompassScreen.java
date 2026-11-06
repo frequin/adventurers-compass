@@ -1,5 +1,10 @@
 package io.github.frequin.adventurerscompass.gui;
 
+import static io.github.frequin.adventurerscompass.gui.ScreenLayout.BUTTON_HEIGHT;
+import static io.github.frequin.adventurerscompass.gui.ScreenLayout.GAP;
+import static io.github.frequin.adventurerscompass.gui.ScreenLayout.MARGIN;
+import static io.github.frequin.adventurerscompass.gui.ScreenLayout.SMALL_BUTTON_PADDING;
+
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -44,8 +49,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 
 /**
- * The compass screen, variant E of the tabs prototype: three tabs across the
- * top. The Search tab holds the search box, the Selection tree of the Current
+ * The compass screen: three tabs across the top. The Search tab holds the search box, the Selection tree of the Current
  * dimension, "Select all", the count of Selection elements unsearchable here and the
  * count of Structures of other dimensions on the left; the search actions and
  * "Clear" on the right. The Visited and Skipped tabs hold a full-width list with
@@ -55,18 +59,15 @@ import net.minecraft.world.item.ItemStack;
  */
 public class AdventurersCompassScreen extends Screen {
 
-	private static final int MARGIN = ScreenLayout.MARGIN;
 	private static final int TABS_TOP = 8;
 	private static final int TABS_HEIGHT = 18;
 	private static final int TREE_TOP = 30;
 	private static final int FILTER_HEIGHT = 16;
-	private static final int BUTTON_HEIGHT = 20;
-	private static final int GAP = ScreenLayout.GAP;
 	/** Below the tree: the "Select all" row, then the line counting other dimensions. */
 	private static final int FOOTER_HEIGHT = 36;
 	/** Below the list of the Visited and Skipped tabs: the Target and "Done". */
 	private static final int LIST_FOOTER_HEIGHT = 16;
-	private static final int SMALL_BUTTON_PADDING = ScreenLayout.SMALL_BUTTON_PADDING;
+	private static final Component DONE = Component.translatable("gui.done");
 
 	private enum Tab {
 		SEARCH, VISITED, SKIPPED
@@ -197,9 +198,7 @@ public class AdventurersCompassScreen extends Screen {
 		}));
 
 		searchPanel.init(this::addRenderableWidget, rightX, TREE_TOP, rightWidth);
-		addRenderableWidget(new TransparentButton(rightX, doneTop, rightWidth, BUTTON_HEIGHT, Component.translatable("gui.done"), (onPress) -> {
-			minecraft.gui.setScreen(null);
-		}));
+		addDoneButton(rightX, doneTop, rightWidth, BUTTON_HEIGHT);
 	}
 
 	private void initListTab(String filterText) {
@@ -224,11 +223,14 @@ public class AdventurersCompassScreen extends Screen {
 		Component crossTooltip = Component.translatable(tab == Tab.VISITED ? "string.adventurerscompass.unmarkVisited" : "string.adventurerscompass.removeSkipped");
 		instanceList = addRenderableWidget(new InstanceList(minecraft, MARGIN, listTop, width - 2 * MARGIN, footerTop - 4 - listTop, crossTooltip, this::crossClicked));
 
-		Component done = Component.translatable("gui.done");
-		int doneWidth = font.width(done) + 2 * SMALL_BUTTON_PADDING;
+		int doneWidth = font.width(DONE) + 2 * SMALL_BUTTON_PADDING;
 		int doneX = width - MARGIN - doneWidth;
 		footerTextWidth = doneX - GAP - MARGIN;
-		addRenderableWidget(new TransparentButton(doneX, footerTop, doneWidth, LIST_FOOTER_HEIGHT, done, (onPress) -> {
+		addDoneButton(doneX, footerTop, doneWidth, LIST_FOOTER_HEIGHT);
+	}
+
+	private void addDoneButton(int x, int y, int buttonWidth, int buttonHeight) {
+		addRenderableWidget(new TransparentButton(x, y, buttonWidth, buttonHeight, DONE, (onPress) -> {
 			minecraft.gui.setScreen(null);
 		}));
 	}
@@ -305,7 +307,7 @@ public class AdventurersCompassScreen extends Screen {
 
 	@Override
 	public boolean keyPressed(KeyEvent event) {
-		// Prototype variant A: Enter in the empty search box searches the Selection
+		// Enter in the empty search box searches the Selection
 		if (tab == Tab.SEARCH && event.isConfirmation() && filterBox.isFocused() && filterBox.getValue().isEmpty() && searchPanel.searchFromKeyboard()) {
 			return true;
 		}
@@ -337,7 +339,7 @@ public class AdventurersCompassScreen extends Screen {
 
 	private Component targetWhere(Target target) {
 		if (target.dimension().equals(CompassTexts.currentDimension(player))) {
-			return Component.translatable("string.adventurerscompass.visitedDistance", CompassTexts.distance(target, player));
+			return Component.translatable("string.adventurerscompass.distance", CompassTexts.distance(target, player));
 		}
 		return CompassTexts.dimensionName(target.dimension());
 	}

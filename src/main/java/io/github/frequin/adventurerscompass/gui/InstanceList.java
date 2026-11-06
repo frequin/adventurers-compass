@@ -40,7 +40,7 @@ public class InstanceList extends TransparentList<InstanceList.Row> {
 
 		@Override
 		public String distance(int blocks) {
-			return Component.translatable("string.adventurerscompass.visitedDistance", blocks).getString();
+			return Component.translatable("string.adventurerscompass.distance", blocks).getString();
 		}
 
 		@Override

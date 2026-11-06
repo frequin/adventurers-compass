@@ -53,7 +53,7 @@
     "string.adventurerscompass.visitedList": "Visitées (%s)",
     "string.adventurerscompass.noVisited": "Aucune structure visitée pour l'instant",
     "string.adventurerscompass.unmarkVisited": "Cliquer pour démarquer : elle redevient cherchable",
-    "string.adventurerscompass.visitedDistance": "%s m",
+    "string.adventurerscompass.distance": "%s m",
 
     "_comment": "STRINGS - TABS",
     "string.adventurerscompass.tabSearch": "Recherche",
