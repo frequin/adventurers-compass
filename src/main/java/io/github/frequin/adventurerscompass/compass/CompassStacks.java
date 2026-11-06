@@ -11,7 +11,7 @@ import net.minecraft.world.item.ItemStack;
 /**
  * Reads and writes the domain {@link CompassState} on a compass item, one
  * component per field: {@code search}, {@code target}, {@code skipped},
- * {@code nothing_found}, {@code damage} (wear). An absent component is an empty field. Used on both
+ * {@code nothing_found}, {@code nothing_found_at}, {@code damage} (wear). An absent component is an empty field. Used on both
  * sides (the HUD and the needle read it too).
  */
 public final class CompassStacks {
@@ -25,7 +25,8 @@ public final class CompassStacks {
 				stack.get(AdventurersCompass.TARGET),
 				stack.getOrDefault(AdventurersCompass.SKIPPED, Set.of()),
 				stack.get(AdventurersCompass.NOTHING_FOUND),
-				stack.getOrDefault(AdventurersCompass.DAMAGE, 0));
+				stack.getOrDefault(AdventurersCompass.DAMAGE, 0),
+				stack.get(AdventurersCompass.NOTHING_FOUND_AT));
 	}
 
 	public static void write(ItemStack stack, CompassState state) {
@@ -33,6 +34,7 @@ public final class CompassStacks {
 		setOrRemove(stack, AdventurersCompass.TARGET, state.target());
 		setOrRemove(stack, AdventurersCompass.SKIPPED, state.skipped().isEmpty() ? null : state.skipped());
 		setOrRemove(stack, AdventurersCompass.NOTHING_FOUND, state.nothingFound());
+		setOrRemove(stack, AdventurersCompass.NOTHING_FOUND_AT, state.nothingFoundAt());
 		setOrRemove(stack, AdventurersCompass.DAMAGE, state.wear() == 0 ? null : state.wear());
 	}
 

@@ -7,6 +7,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
+import io.github.frequin.adventurerscompass.domain.Clock;
 import io.github.frequin.adventurerscompass.domain.InstanceKey;
 import io.github.frequin.adventurerscompass.domain.search.SearchRequest;
 import io.github.frequin.adventurerscompass.domain.search.SearchResult;
@@ -17,7 +18,11 @@ public final class Compass {
 	/** The rules every compass applies before a search starts. */
 	public static final List<LaunchRule> DEFAULT_RULES = List.of(LaunchRule.SOMETHING_SEARCHABLE, LaunchRule.NOT_BROKEN, LaunchRule.ENOUGH_XP);
 
+	/** How long a "nothing found" shows before the HUD goes back to the Target. */
+	public static final long NOTHING_FOUND_NANOS = 5_000_000_000L;
+
 	private final List<LaunchRule> rules;
+	private final Clock clock;
 
 	public Compass() {
 		this(DEFAULT_RULES);
@@ -25,7 +30,13 @@ public final class Compass {
 
 	/** A compass with these launch rules, checked in order before "Search" and "Pass". */
 	public Compass(List<LaunchRule> rules) {
+		this(rules, Clock.SYSTEM);
+	}
+
+	/** A compass with these launch rules, reading the time of a "nothing found" from {@code clock}. */
+	public Compass(List<LaunchRule> rules, Clock clock) {
 		this.rules = List.copyOf(rules);
+		this.clock = clock;
 	}
 
 	/** "Search": clears Skipped and searches the nearest Instance of the Selection here. */
@@ -121,10 +132,30 @@ public final class Compass {
 		}
 		return switch (result) {
 			case SearchResult.Found found -> state.withSearch(null).withTarget(new Target(found.instance(), found.pos())).withNothingFound(null).withWear(worn(state.wear(), wear));
-			// The Target is kept (a detour costs nothing); the status shows "nothing found" until the next change
-			case SearchResult.NothingFound nothing -> state.withSearch(null).withNothingFound(nothing);
+			// The Target is kept (a detour costs nothing); the status shows "nothing found" until it expires or the next change
+			case SearchResult.NothingFound nothing -> state.withSearch(null).withNothingFound(nothing, clock.nanoTime());
 			case SearchResult.Cancelled cancelled -> state.withSearch(null);
 		};
+	}
+
+	/**
+	 * The compass ticked in an inventory: a "nothing found" past its time, or on
+	 * a compass out of the hand, is forgotten and does not come back.
+	 */
+	public CompassState tick(CompassState state, boolean held) {
+		if (state.nothingFound() == null) {
+			return state;
+		}
+		return held && isShowing(state.nothingFoundAt()) ? state : state.withNothingFound(null);
+	}
+
+	/** A time from a previous run of the game means nothing to this clock: it reads as over, whichever side it falls. */
+	private boolean isShowing(Long shownAt) {
+		if (shownAt == null) {
+			return false;
+		}
+		long elapsed = clock.nanoTime() - shownAt;
+		return elapsed >= 0 && elapsed < NOTHING_FOUND_NANOS;
 	}
 
 	/** Repair (crafting with a compass): resets wear and keeps the Target, Skipped and any running search. */

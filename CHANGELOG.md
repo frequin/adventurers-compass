@@ -7,6 +7,7 @@
 - Pass: skips the Target for now and searches again. Skipped Instances are cleared by a new Search or a Selection change
 - The Target keeps its dimension: in another dimension the needle spins and the HUD says so; back in its dimension it points again with no new search
 - One-line HUD: "Structure · distance" or the search state, with an optional coordinates line
+- The "nothing found" HUD message lasts 5 seconds, then the previous Target is back. It also goes for good when the compass leaves the hand or the player disconnects
 - XP is paid only when a Target is found, at the found Structure's cost times the Current dimension's multiplier. Cancelled searches and searches that find nothing are free
 - Wear: each found Target (Pass included) wears the compass. Crafting a worn compass with a compass repairs it and keeps its Selection, Target and Skipped
 - Searches are spread over server ticks (about 5 ms per tick shared between players), one search per player, so dedicated servers keep their TPS
