@@ -13,4 +13,9 @@ public record ChunkCoord(int x, int z) {
 		return new BlockXZ(x << 4, z << 4);
 	}
 
+	/** The middle block of this chunk. */
+	public BlockXZ center() {
+		return new BlockXZ((x << 4) + 8, (z << 4) + 8);
+	}
+
 }

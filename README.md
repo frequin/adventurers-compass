@@ -5,7 +5,7 @@ Adventurer's Compass is a Minecraft (Fabric) mod for nomadic players: a compass 
 ## Features
 
 - **Selection**: tick several structures and groups (all villages, an outpost, a modded tower) in a tree screen. A single search finds the nearest one of any of them in your current dimension. Every registered structure works, from mods and datapacks too.
-- **Visited**: a structure becomes Visited as soon as you walk into one of its pieces, or with "Mark Visited". Searches skip Visited structures. Your Visited list is per player and per world, survives death, and you can unmark entries one by one.
+- **Visited**: a structure becomes Visited as soon as you walk into one of its pieces, or with "Mark Visited". Searches skip Visited structures. Your Visited list is per player and per world, survives death, and you can unmark entries one by one or all at once in its tab of the screen.
 - **Pass**: skip the current Target and search for the next one.
 - **HUD**: one line, "Plains Village · 342 m", and optionally the coordinates. The needle spins while searching and when the Target is in another dimension.
 - **Cost and wear**: a found Target costs XP (5 levels in the Overworld, 10 elsewhere, by default) and wears the compass (3 finds by default). Crafting a worn compass with a compass repairs it without losing its Selection or Target. Creative players pay nothing.

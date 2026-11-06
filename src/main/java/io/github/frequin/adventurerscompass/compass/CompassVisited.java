@@ -12,7 +12,7 @@ import net.minecraft.sounds.SoundSource;
 
 /**
  * The server side of the Visited rules of the compass: "Mark Visited",
- * "Unmark", and what happens when an Instance becomes Visited (the action-bar
+ * "Unmark", "Unmark all", and what happens when an Instance becomes Visited (the action-bar
  * message, and the sound when it is the Target of a compass the player carries).
  */
 public final class CompassVisited {
@@ -30,6 +30,11 @@ public final class CompassVisited {
 	/** Makes the Instance searchable again for the player. */
 	public static void unmark(ServerPlayer player, InstanceKey instance) {
 		PlayerVisited.unmark(player, instance);
+	}
+
+	/** Makes every Visited Instance searchable again for the player. */
+	public static void clear(ServerPlayer player) {
+		PlayerVisited.clear(player);
 	}
 
 	/**

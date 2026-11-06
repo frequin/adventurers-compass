@@ -2,87 +2,99 @@ package io.github.frequin.adventurerscompass.domain.visited;
 
 import java.util.Collection;
 import java.util.Collections;
-import java.util.LinkedHashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Set;
 
 import io.github.frequin.adventurerscompass.domain.InstanceKey;
 
 /**
- * The Instances one player has Visited in one world. Immutable: every change
- * returns a new set, which suits a value stored in a player data attachment.
- * Keys keep the order they were marked in.
+ * The Instances one player has Visited in one world, each with the world day it
+ * was marked on. Immutable: every change returns a new set, which suits a value
+ * stored in a player data attachment. Instances keep the order they were marked in.
  */
 public final class VisitedSet {
 
-	private static final VisitedSet EMPTY = new VisitedSet(new LinkedHashSet<>());
+	private static final VisitedSet EMPTY = new VisitedSet(new LinkedHashMap<>());
 
-	private final Set<InstanceKey> keys;
+	private final LinkedHashMap<InstanceKey, Long> days;
 
-	private VisitedSet(LinkedHashSet<InstanceKey> keys) {
-		this.keys = Collections.unmodifiableSet(keys);
+	private VisitedSet(LinkedHashMap<InstanceKey, Long> days) {
+		this.days = days;
 	}
 
 	public static VisitedSet empty() {
 		return EMPTY;
 	}
 
-	/** The set holding these keys, in this order (duplicates are dropped). */
-	public static VisitedSet of(Collection<InstanceKey> keys) {
-		return keys.isEmpty() ? EMPTY : new VisitedSet(new LinkedHashSet<>(keys));
+	/** The set holding these Instances, in this order (for a repeated key, the first day is kept). */
+	public static VisitedSet of(Collection<VisitedInstance> instances) {
+		var days = new LinkedHashMap<InstanceKey, Long>();
+		instances.forEach(visited -> days.putIfAbsent(visited.instance(), visited.day()));
+		return days.isEmpty() ? EMPTY : new VisitedSet(days);
 	}
 
-	/** Marks an Instance Visited. {@link Marked#isNew()} is false if it already was. */
-	public Marked mark(InstanceKey key) {
-		if (keys.contains(key)) {
+	/** Marks an Instance Visited on this world day. {@link Marked#isNew()} is false if it already was, and it keeps its day. */
+	public Marked mark(InstanceKey key, long day) {
+		if (days.containsKey(key)) {
 			return new Marked(this, false);
 		}
-		var marked = new LinkedHashSet<>(keys);
-		marked.add(key);
+		var marked = new LinkedHashMap<>(days);
+		marked.put(key, day);
 		return new Marked(new VisitedSet(marked), true);
 	}
 
-	/** The result of {@link #mark(InstanceKey)}: the new set and whether the Instance was newly Visited. */
+	/** The result of {@link #mark(InstanceKey, long)}: the new set and whether the Instance was newly Visited. */
 	public record Marked(VisitedSet visited, boolean isNew) {
 	}
 
 	/** Unmarks an Instance, so searches can find it again. */
 	public VisitedSet unmark(InstanceKey key) {
-		if (!keys.contains(key)) {
+		if (!days.containsKey(key)) {
 			return this;
 		}
-		var unmarked = new LinkedHashSet<>(keys);
+		var unmarked = new LinkedHashMap<>(days);
 		unmarked.remove(key);
 		return unmarked.isEmpty() ? EMPTY : new VisitedSet(unmarked);
 	}
 
+	/** Unmarks every Instance. */
+	public VisitedSet clear() {
+		return EMPTY;
+	}
+
 	public boolean contains(InstanceKey key) {
-		return keys.contains(key);
+		return days.containsKey(key);
 	}
 
 	/** The Visited Instances, in the order they were marked. */
 	public List<InstanceKey> list() {
-		return List.copyOf(keys);
+		return List.copyOf(days.keySet());
+	}
+
+	/** The Visited Instances with their days, in the order they were marked. */
+	public List<VisitedInstance> instances() {
+		return days.entrySet().stream().map(entry -> new VisitedInstance(entry.getKey(), entry.getValue())).toList();
 	}
 
 	/** The Visited Instances as a set, for a {@code SearchRequest}. */
 	public Set<InstanceKey> asSet() {
-		return keys;
+		return Collections.unmodifiableSet(days.keySet());
 	}
 
 	@Override
 	public boolean equals(Object other) {
-		return other instanceof VisitedSet that && list().equals(that.list());
+		return other instanceof VisitedSet that && instances().equals(that.instances());
 	}
 
 	@Override
 	public int hashCode() {
-		return keys.hashCode();
+		return days.hashCode();
 	}
 
 	@Override
 	public String toString() {
-		return "VisitedSet" + keys;
+		return "VisitedSet" + days;
 	}
 
 }

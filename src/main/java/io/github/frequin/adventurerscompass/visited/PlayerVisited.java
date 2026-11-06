@@ -4,15 +4,11 @@ import io.github.frequin.adventurerscompass.AdventurersCompass;
 import io.github.frequin.adventurerscompass.codec.CompassCodecs;
 import io.github.frequin.adventurerscompass.domain.InstanceKey;
 import io.github.frequin.adventurerscompass.domain.visited.VisitedSet;
-import com.mojang.serialization.Codec;
-
-import io.netty.buffer.ByteBuf;
+import io.github.frequin.adventurerscompass.util.LevelUtils;
 
 import net.fabricmc.fabric.api.attachment.v1.AttachmentRegistry;
 import net.fabricmc.fabric.api.attachment.v1.AttachmentSyncPredicate;
 import net.fabricmc.fabric.api.attachment.v1.AttachmentType;
-import net.minecraft.network.codec.ByteBufCodecs;
-import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 
@@ -23,14 +19,10 @@ import net.minecraft.server.level.ServerPlayer;
  */
 public final class PlayerVisited {
 
-	static final Codec<VisitedSet> CODEC = CompassCodecs.INSTANCE_KEY.listOf().xmap(VisitedSet::of, VisitedSet::list);
-
-	static final StreamCodec<ByteBuf, VisitedSet> STREAM_CODEC = CompassCodecs.INSTANCE_KEY_STREAM.apply(ByteBufCodecs.list()).map(VisitedSet::of, VisitedSet::list);
-
-	/** Synced to the player it belongs to only, for the Visited list of the screen and the HUD. */
+	/** Synced to the player it belongs to only, for the Visited tab of the screen and the HUD. */
 	public static final AttachmentType<VisitedSet> VISITED = AttachmentRegistry.create(
 			Identifier.fromNamespaceAndPath(AdventurersCompass.MODID, "visited"),
-			builder -> builder.persistent(CODEC).initializer(VisitedSet::empty).copyOnDeath().syncWith(STREAM_CODEC, AttachmentSyncPredicate.targetOnly()));
+			builder -> builder.persistent(CompassCodecs.VISITED).initializer(VisitedSet::empty).copyOnDeath().syncWith(CompassCodecs.VISITED_STREAM, AttachmentSyncPredicate.targetOnly()));
 
 	private PlayerVisited() {
 	}
@@ -43,9 +35,9 @@ public final class PlayerVisited {
 		return player.getAttachedOrElse(VISITED, VisitedSet.empty());
 	}
 
-	/** Marks an Instance Visited for this player; true if it was not Visited yet. */
+	/** Marks an Instance Visited for this player, on today's world day; true if it was not Visited yet. */
 	public static boolean mark(ServerPlayer player, InstanceKey key) {
-		VisitedSet.Marked marked = get(player).mark(key);
+		VisitedSet.Marked marked = get(player).mark(key, LevelUtils.worldDay(player.level()));
 		if (marked.isNew()) {
 			player.setAttached(VISITED, marked.visited());
 		}
@@ -57,6 +49,10 @@ public final class PlayerVisited {
 		if (visited.contains(key)) {
 			player.setAttached(VISITED, visited.unmark(key));
 		}
+	}
+
+	public static void clear(ServerPlayer player) {
+		player.setAttached(VISITED, get(player).clear());
 	}
 
 }
