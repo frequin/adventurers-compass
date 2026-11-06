@@ -9,6 +9,7 @@ import java.util.Set;
 
 import org.junit.jupiter.api.Test;
 
+import io.github.frequin.adventurerscompass.domain.selection.UnsearchableElement.Kind;
 import io.github.frequin.adventurerscompass.domain.selection.UnsearchableElement.Reason;
 
 class SelectionUnsearchableTest {
@@ -53,8 +54,8 @@ class SelectionUnsearchableTest {
 		Selection selection = Selection.EMPTY.tickGroup(VILLAGES, CATALOGUE, OVERWORLD).tickStructure(PORTAL).tickStructure(FORTRESS);
 
 		assertEquals(List.of(
-				new UnsearchableElement(VILLAGES, Reason.ABSENT_FROM_DIMENSION),
-				new UnsearchableElement(PORTAL, Reason.ABSENT_FROM_DIMENSION)), selection.unsearchable(CATALOGUE, NETHER));
+				new UnsearchableElement(VILLAGES, Kind.GROUP, Reason.ABSENT_FROM_DIMENSION),
+				new UnsearchableElement(PORTAL, Kind.STRUCTURE, Reason.ABSENT_FROM_DIMENSION)), selection.unsearchable(CATALOGUE, NETHER));
 		assertEquals(Set.of(FORTRESS), selection.resolve(CATALOGUE, NETHER));
 	}
 
@@ -101,12 +102,21 @@ class SelectionUnsearchableTest {
 	}
 
 	@Test
+	void aGroupAndAStructureSharingAnIdEachKeepTheirKind() {
+		Selection selection = new Selection(Set.of("towers:tower"), Set.of("towers:tower"));
+
+		assertEquals(List.of(
+				new UnsearchableElement("towers:tower", Kind.GROUP, Reason.ABSENT_FROM_DIMENSION),
+				new UnsearchableElement("towers:tower", Kind.STRUCTURE, Reason.ABSENT_FROM_DIMENSION)), selection.unsearchable(CATALOGUE, OVERWORLD));
+	}
+
+	@Test
 	void anElementMissingFromTheCatalogueIsUnsearchable() {
 		Selection selection = new Selection(Set.of("othermod:gone"), Set.of("othermod:gone_group"));
 
 		assertEquals(List.of(
-				new UnsearchableElement("othermod:gone_group", Reason.ABSENT_FROM_DIMENSION),
-				new UnsearchableElement("othermod:gone", Reason.ABSENT_FROM_DIMENSION)), selection.unsearchable(CATALOGUE, OVERWORLD));
+				new UnsearchableElement("othermod:gone_group", Kind.GROUP, Reason.ABSENT_FROM_DIMENSION),
+				new UnsearchableElement("othermod:gone", Kind.STRUCTURE, Reason.ABSENT_FROM_DIMENSION)), selection.unsearchable(CATALOGUE, OVERWORLD));
 	}
 
 }

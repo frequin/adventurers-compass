@@ -368,8 +368,11 @@ public class AdventurersCompassScreen extends Screen {
 		return lines;
 	}
 
-	private String unsearchableName(UnsearchableElement element) {
-		return selection.groups().contains(element.id()) ? StructureUtils.getGroupName(Identifier.parse(element.id())) : structureName(element.id());
+	private static String unsearchableName(UnsearchableElement element) {
+		return switch (element.kind()) {
+			case GROUP -> StructureUtils.getGroupName(Identifier.parse(element.id()));
+			case STRUCTURE -> structureName(element.id());
+		};
 	}
 
 	private static String structureName(String id) {

@@ -6,6 +6,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
 
+import io.github.frequin.adventurerscompass.domain.selection.UnsearchableElement.Kind;
 import io.github.frequin.adventurerscompass.domain.selection.UnsearchableElement.Reason;
 
 /**
@@ -158,10 +159,10 @@ public record Selection(Set<String> structures, Set<String> groups) {
 	public List<UnsearchableElement> unsearchable(Catalogue catalogue, String dimension) {
 		List<UnsearchableElement> unsearchable = new ArrayList<>();
 		for (String groupId : new TreeSet<>(groups)) {
-			unsearchableGroupReason(groupId, catalogue, dimension).ifPresent(reason -> unsearchable.add(new UnsearchableElement(groupId, reason)));
+			unsearchableGroupReason(groupId, catalogue, dimension).ifPresent(reason -> unsearchable.add(new UnsearchableElement(groupId, Kind.GROUP, reason)));
 		}
 		for (String structureId : new TreeSet<>(structures)) {
-			unsearchableStructureReason(structureId, catalogue, dimension).ifPresent(reason -> unsearchable.add(new UnsearchableElement(structureId, reason)));
+			unsearchableStructureReason(structureId, catalogue, dimension).ifPresent(reason -> unsearchable.add(new UnsearchableElement(structureId, Kind.STRUCTURE, reason)));
 		}
 		return unsearchable;
 	}

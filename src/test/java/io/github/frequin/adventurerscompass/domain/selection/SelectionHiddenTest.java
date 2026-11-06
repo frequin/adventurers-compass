@@ -7,6 +7,7 @@ import java.util.Set;
 
 import org.junit.jupiter.api.Test;
 
+import io.github.frequin.adventurerscompass.domain.selection.UnsearchableElement.Kind;
 import io.github.frequin.adventurerscompass.domain.selection.UnsearchableElement.Reason;
 
 class SelectionHiddenTest {
@@ -74,7 +75,7 @@ class SelectionHiddenTest {
 	void aStructureHiddenAfterBeingSelectedStaysInTheSelectionAndIsUnsearchable() {
 		Selection selection = Selection.EMPTY.tickStructure(STRONGHOLD).tickStructure(OUTPOST);
 
-		assertEquals(List.of(new UnsearchableElement(STRONGHOLD, Reason.HIDDEN)), selection.unsearchable(CATALOGUE, OVERWORLD));
+		assertEquals(List.of(new UnsearchableElement(STRONGHOLD, Kind.STRUCTURE, Reason.HIDDEN)), selection.unsearchable(CATALOGUE, OVERWORLD));
 		assertEquals(Set.of(STRONGHOLD, OUTPOST), selection.structures());
 	}
 
@@ -82,7 +83,7 @@ class SelectionHiddenTest {
 	void aHiddenStructureIsUnsearchableAsHiddenEvenOutsideItsDimension() {
 		Selection selection = Selection.EMPTY.tickStructure(STRONGHOLD);
 
-		assertEquals(List.of(new UnsearchableElement(STRONGHOLD, Reason.HIDDEN)), selection.unsearchable(CATALOGUE, NETHER));
+		assertEquals(List.of(new UnsearchableElement(STRONGHOLD, Kind.STRUCTURE, Reason.HIDDEN)), selection.unsearchable(CATALOGUE, NETHER));
 	}
 
 	@Test
@@ -96,7 +97,7 @@ class SelectionHiddenTest {
 	void aHiddenStructureTickedOneByOneStaysCountedAndOutlivesItsGroup() {
 		Selection ticked = Selection.EMPTY.tickStructure(DESERT).tickGroup(VILLAGES, CATALOGUE, OVERWORLD);
 
-		assertEquals(List.of(new UnsearchableElement(DESERT, Reason.HIDDEN)), ticked.unsearchable(CATALOGUE, OVERWORLD));
+		assertEquals(List.of(new UnsearchableElement(DESERT, Kind.STRUCTURE, Reason.HIDDEN)), ticked.unsearchable(CATALOGUE, OVERWORLD));
 		assertEquals(new Selection(Set.of(DESERT), Set.of()), ticked.untickGroup(VILLAGES));
 	}
 
@@ -104,7 +105,7 @@ class SelectionHiddenTest {
 	void aGroupWhoseMembersAreAllHiddenIsUnsearchableAsHidden() {
 		Selection selection = Selection.EMPTY.tickGroup(STRONGHOLDS, CATALOGUE, OVERWORLD);
 
-		assertEquals(List.of(new UnsearchableElement(STRONGHOLDS, Reason.HIDDEN)), selection.unsearchable(CATALOGUE, OVERWORLD));
+		assertEquals(List.of(new UnsearchableElement(STRONGHOLDS, Kind.GROUP, Reason.HIDDEN)), selection.unsearchable(CATALOGUE, OVERWORLD));
 		assertEquals(false, selection.canSearchIn(CATALOGUE, OVERWORLD));
 	}
 
