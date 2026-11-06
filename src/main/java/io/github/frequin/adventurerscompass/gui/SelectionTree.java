@@ -11,6 +11,7 @@ import io.github.frequin.adventurerscompass.domain.selection.Selection;
 import io.github.frequin.adventurerscompass.domain.selection.StructureState;
 import io.github.frequin.adventurerscompass.domain.selection.TreeEntry;
 import io.github.frequin.adventurerscompass.domain.selection.TreeFilter;
+import io.github.frequin.adventurerscompass.domain.selection.TreeNames;
 import io.github.frequin.adventurerscompass.util.StructureUtils;
 
 import net.minecraft.client.Minecraft;
@@ -30,6 +31,20 @@ public class SelectionTree extends TransparentList<SelectionTree.Row> {
 	private static final int ROW_HEIGHT = 14;
 	private static final int BOX = 9;
 	private static final int INDENT = 14;
+
+	private static final TreeNames NAMES = new TreeNames() {
+
+		@Override
+		public String structure(String structureId) {
+			return name(structureId);
+		}
+
+		@Override
+		public String group(String groupId) {
+			return groupName(groupId);
+		}
+
+	};
 
 	private final AdventurersCompassScreen screen;
 	private final Set<String> expandedGroups;
@@ -71,7 +86,7 @@ public class SelectionTree extends TransparentList<SelectionTree.Row> {
 
 	/** What the tree lists, the filter included. */
 	public List<TreeEntry> listed(Catalogue catalogue, String dimension) {
-		return filter.apply(catalogue.tree(dimension), catalogue, SelectionTree::name, SelectionTree::groupName);
+		return filter.apply(catalogue.tree(dimension), catalogue, NAMES);
 	}
 
 	private boolean isExpanded(String groupId) {
