@@ -21,7 +21,7 @@ Server (`common`):
 |---|---|---|
 | `allowTeleport` | `false` | Ops and creative players can teleport to the Target (same dimension only) |
 | `displayCoordinates` | `true` | Show the Target's X and Z on the HUD |
-| `maxRadius` | `1000` | Search radius in blocks |
+| `maxRadius` | `2500` | Search radius in blocks, about half a day's walk |
 | `compassDurability` | `3` | Targets found before the compass breaks; `0` disables wear |
 | `defaultXpLevel` | `5` | Levels a Structure costs, before the dimension multiplier |
 | `perStructureXpLevels` | `{}` | Per-structure levels, by id with `*` and `?` wildcards; `0` is free |
@@ -36,7 +36,7 @@ Client (`client`): `hudEnabled`, `displayWithChatOpen`, `translateStructureNames
 
 ### Coming from Explorer's Compass
 
-Adventurer's Compass installs alongside Explorer's Compass and shares nothing with it. Its config is not compatible and nothing is migrated: the defaults are nomadic (radius 1000, no teleport, XP cost and wear). `structureBlacklist` became `hiddenStructures`, and `maxNextSearches` and `maxSamples` are gone. If you used an earlier build of this mod, delete `config/adventurerscompass.json` to get the new defaults; old compasses lose their search data.
+Adventurer's Compass installs alongside Explorer's Compass and shares nothing with it. Its config is not compatible and nothing is migrated: the defaults are nomadic (radius 2500, no teleport, XP cost and wear). `structureBlacklist` became `hiddenStructures`, and `maxNextSearches` and `maxSamples` are gone. If you used an earlier build of this mod, delete `config/adventurerscompass.json` to get the new defaults; old compasses lose their search data.
 
 ## Credits
 
