@@ -263,7 +263,7 @@ class CompassTest {
 
 		var after = compass.searchEnded(searching, id, nothing);
 
-		assertEquals(nothing, after.nothingFound());
+		assertEquals(nothing, after.nothingFound().result());
 		assertEquals(target.target(), after.target());
 		assertEquals(Status.NOTHING_FOUND, after.status(OVERWORLD));
 	}
@@ -297,7 +297,7 @@ class CompassTest {
 	@Test
 	void theNextSearchForgetsNothingFound() {
 		var id = UUID.randomUUID();
-		var nothing = CompassState.EMPTY.withNothingFound(new SearchResult.NothingFound(OVERWORLD, 1000, 0, 0));
+		var nothing = CompassState.EMPTY.withNothingFound(new NothingFoundMessage(new SearchResult.NothingFound(OVERWORLD, 1000, 0, 0), null));
 
 		var searching = accepted(compass.search(nothing, overworld(), id)).state();
 		var cancelled = accepted(compass.cancel(searching)).state();
@@ -325,7 +325,7 @@ class CompassTest {
 		var result = runToEnd(new NearestFirstSearch<>(world, request, new FakeClock()));
 		var after = compass.searchEnded(passing.state(), id, result);
 
-		assertEquals(new SearchResult.NothingFound(OVERWORLD, 1000, 0, 1), after.nothingFound());
+		assertEquals(new SearchResult.NothingFound(OVERWORLD, 1000, 0, 1), after.nothingFound().result());
 	}
 
 	private static final XpCosts NOMAD_COSTS = new XpCosts(5, Map.of("minecraft:stronghold", 10), 2, Map.of(OVERWORLD, 1.0));
