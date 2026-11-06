@@ -55,18 +55,18 @@ import net.minecraft.world.item.ItemStack;
  */
 public class AdventurersCompassScreen extends Screen {
 
-	private static final int MARGIN = 10;
+	private static final int MARGIN = ScreenLayout.MARGIN;
 	private static final int TABS_TOP = 8;
 	private static final int TABS_HEIGHT = 18;
 	private static final int TREE_TOP = 30;
 	private static final int FILTER_HEIGHT = 16;
 	private static final int BUTTON_HEIGHT = 20;
-	private static final int GAP = 5;
+	private static final int GAP = ScreenLayout.GAP;
 	/** Below the tree: the "Select all" row, then the line counting other dimensions. */
 	private static final int FOOTER_HEIGHT = 36;
 	/** Below the list of the Visited and Skipped tabs: the Target and "Done". */
 	private static final int LIST_FOOTER_HEIGHT = 16;
-	private static final int SMALL_BUTTON_PADDING = 12;
+	private static final int SMALL_BUTTON_PADDING = ScreenLayout.SMALL_BUTTON_PADDING;
 
 	private enum Tab {
 		SEARCH, VISITED, SKIPPED
@@ -93,6 +93,7 @@ public class AdventurersCompassScreen extends Screen {
 	private Button sortButton;
 	private Button clearAllButton;
 	private int footerTextWidth;
+	private boolean laidOutForTeleport;
 
 	public AdventurersCompassScreen(Player player, ItemStack stack, AdventurersCompassItem adventurersCompass) {
 		super(Component.translatable("string.adventurerscompass.composeSelection"));
@@ -139,7 +140,7 @@ public class AdventurersCompassScreen extends Screen {
 
 	private void addTabs() {
 		tabButtons.clear();
-		int tabWidth = (width - 2 * MARGIN - 2 * GAP) / 3;
+		int tabWidth = ScreenLayout.tabWidth(width);
 		for (Tab each : Tab.values()) {
 			int x = MARGIN + each.ordinal() * (tabWidth + GAP);
 			tabButtons.add(addRenderableWidget(new TabButton(x, TABS_TOP, tabWidth, TABS_HEIGHT, tabLabel(each), each == tab, (onPress) -> {
@@ -166,9 +167,10 @@ public class AdventurersCompassScreen extends Screen {
 	}
 
 	private void initSearchTab(String filterText) {
+		laidOutForTeleport = AdventurersCompass.canTeleport;
 		int split = leftColumnRight();
 		int rightX = split + MARGIN;
-		int rightWidth = width - rightX - MARGIN;
+		int rightWidth = ScreenLayout.rightColumnWidth(width);
 
 		filterBox = addRenderableWidget(new TransparentEditBox(font, MARGIN, TREE_TOP, split - MARGIN, FILTER_HEIGHT, Component.translatable("string.adventurerscompass.filterHint").withColor(0xff808080)));
 		filterBox.setValue(filterText);
@@ -188,7 +190,7 @@ public class AdventurersCompassScreen extends Screen {
 		ignoredY = treeBottom + 9;
 
 		// The right column stacks from the top, so "Done" can only be pushed down, never over it
-		int clearTop = TREE_TOP + SearchPanel.HEIGHT + GAP;
+		int clearTop = TREE_TOP + SearchPanel.height(AdventurersCompass.canTeleport) + GAP;
 		int doneTop = Math.max(height - 30, clearTop + BUTTON_HEIGHT + GAP);
 		clearButton = addRenderableWidget(new TransparentButton(rightX, clearTop, rightWidth, BUTTON_HEIGHT, Component.translatable("string.adventurerscompass.clearSelection"), (onPress) -> {
 			updateSelection(selection.clear());
@@ -289,10 +291,13 @@ public class AdventurersCompassScreen extends Screen {
 		if (AdventurersCompass.synced) {
 			catalogue = AdventurersCompass.catalogue;
 			dimension = AdventurersCompass.currentDimension;
-			if (tab == Tab.SEARCH) {
+			AdventurersCompass.synced = false;
+			if (tab == Tab.SEARCH && laidOutForTeleport != AdventurersCompass.canTeleport) {
+				// "Teleport" takes or gives back a row of the right column
+				rebuildWidgets();
+			} else if (tab == Tab.SEARCH) {
 				tree.refresh(catalogue, dimension);
 			}
-			AdventurersCompass.synced = false;
 		}
 		// Levels, Visited and Skipped can change while the screen is open: re-read them every tick
 		updateButtons();
@@ -351,16 +356,20 @@ public class AdventurersCompassScreen extends Screen {
 		}
 	}
 
-	private static List<Component> ignoredTooltip(List<IgnoredElement> ignored) {
+	private List<Component> ignoredTooltip(List<IgnoredElement> ignored) {
 		List<Component> lines = new ArrayList<>();
 		for (IgnoredElement.Reason reason : IgnoredElement.Reason.values()) {
 			List<IgnoredElement> elements = ignored.stream().filter(element -> element.reason() == reason).toList();
 			if (!elements.isEmpty()) {
 				lines.add(Component.translatable(reason == IgnoredElement.Reason.HIDDEN ? "string.adventurerscompass.ignoredHidden" : "string.adventurerscompass.ignoredAbsent").withColor(0xffaaaaaa));
-				elements.forEach(element -> lines.add(Component.literal(structureName(element.id()))));
+				elements.forEach(element -> lines.add(Component.literal(ignoredName(element))));
 			}
 		}
 		return lines;
+	}
+
+	private String ignoredName(IgnoredElement element) {
+		return selection.groups().contains(element.id()) ? StructureUtils.getGroupName(Identifier.parse(element.id())) : structureName(element.id());
 	}
 
 	private static String structureName(String id) {
@@ -368,7 +377,7 @@ public class AdventurersCompassScreen extends Screen {
 	}
 
 	private int leftColumnRight() {
-		return width * 3 / 5;
+		return ScreenLayout.leftColumnRight(width);
 	}
 
 	/** The Selection with everything the tree lists ticked. */

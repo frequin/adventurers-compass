@@ -44,7 +44,7 @@ class SelectionTickAllTest {
 
 	@Test
 	void aFilterThatKeepsPartOfAGroupTicksOnlyTheStructuresItLists() {
-		List<TreeEntry> listed = TreeFilter.of("desert").apply(CATALOGUE.tree(OVERWORLD), CATALOGUE, id -> id);
+		List<TreeEntry> listed = TreeFilter.of("desert").apply(CATALOGUE.tree(OVERWORLD), CATALOGUE, id -> id, id -> id);
 
 		Selection selection = Selection.EMPTY.tickAll(listed, CATALOGUE, OVERWORLD);
 
@@ -53,7 +53,7 @@ class SelectionTickAllTest {
 
 	@Test
 	void aFilterThatKeepsAWholeGroupTicksTheGroup() {
-		List<TreeEntry> listed = TreeFilter.of("villages").apply(CATALOGUE.tree(OVERWORLD), CATALOGUE, id -> id);
+		List<TreeEntry> listed = TreeFilter.of("villages").apply(CATALOGUE.tree(OVERWORLD), CATALOGUE, id -> id, id -> id);
 
 		Selection selection = Selection.EMPTY.tickAll(listed, CATALOGUE, OVERWORLD);
 
@@ -62,7 +62,7 @@ class SelectionTickAllTest {
 
 	@Test
 	void whatTheFilterLeavesOutStaysAsItWas() {
-		List<TreeEntry> listed = TreeFilter.of("desert").apply(CATALOGUE.tree(OVERWORLD), CATALOGUE, id -> id);
+		List<TreeEntry> listed = TreeFilter.of("desert").apply(CATALOGUE.tree(OVERWORLD), CATALOGUE, id -> id, id -> id);
 
 		Selection selection = Selection.EMPTY.tickStructure(OUTPOST).tickAll(listed, CATALOGUE, OVERWORLD);
 
@@ -71,7 +71,7 @@ class SelectionTickAllTest {
 
 	@Test
 	void aStructureAlreadyCoveredByItsTickedGroupIsNotTickedAgain() {
-		List<TreeEntry> listed = TreeFilter.of("desert").apply(CATALOGUE.tree(OVERWORLD), CATALOGUE, id -> id);
+		List<TreeEntry> listed = TreeFilter.of("desert").apply(CATALOGUE.tree(OVERWORLD), CATALOGUE, id -> id, id -> id);
 		Selection ticked = Selection.EMPTY.tickGroup(VILLAGES, CATALOGUE);
 
 		assertEquals(ticked, ticked.tickAll(listed, CATALOGUE, OVERWORLD));

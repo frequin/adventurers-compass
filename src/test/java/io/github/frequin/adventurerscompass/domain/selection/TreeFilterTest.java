@@ -41,7 +41,17 @@ class TreeFilterTest {
 	private static final Function<String, String> NAME = id -> NAMES.getOrDefault(id, id);
 
 	private static List<TreeEntry> filter(String query) {
-		return TreeFilter.of(query).apply(CATALOGUE.tree(OVERWORLD), CATALOGUE, NAME);
+		return TreeFilter.of(query).apply(CATALOGUE.tree(OVERWORLD), CATALOGUE, NAME, NAME);
+	}
+
+	@Test
+	void aGroupMatchesByItsGroupNameNotAStructureNameOfTheSameId() {
+		Function<String, String> structureName = id -> "Unrelated";
+		Function<String, String> groupName = id -> id.equals(VILLAGES) ? "Hameaux" : "Autre";
+
+		List<TreeEntry> kept = TreeFilter.of("hameaux").apply(CATALOGUE.tree(OVERWORLD), CATALOGUE, structureName, groupName);
+
+		assertEquals(List.of(new TreeEntry.GroupEntry(VILLAGES, List.of(PLAINS, DESERT))), kept);
 	}
 
 	@Test

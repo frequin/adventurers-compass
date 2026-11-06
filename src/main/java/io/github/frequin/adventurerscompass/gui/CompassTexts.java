@@ -2,9 +2,9 @@ package io.github.frequin.adventurerscompass.gui;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 
 import io.github.frequin.adventurerscompass.domain.BlockXZ;
+import io.github.frequin.adventurerscompass.domain.ReadableName;
 import io.github.frequin.adventurerscompass.domain.compass.CompassState;
 import io.github.frequin.adventurerscompass.domain.compass.Status;
 import io.github.frequin.adventurerscompass.domain.compass.Target;
@@ -61,7 +61,7 @@ public final class CompassTexts {
 	/** {@code dimension.<namespace>.<path>}, else the path in title case ("the_nether" gives "The Nether"). */
 	public static Component dimensionName(String dimension) {
 		Identifier id = Identifier.parse(dimension);
-		return Component.translatableWithFallback("dimension." + id.getNamespace() + "." + id.getPath(), titleCase(id.getPath()));
+		return Component.translatableWithFallback("dimension." + id.getNamespace() + "." + id.getPath(), ReadableName.of(dimension));
 	}
 
 	/** Horizontal distance in whole blocks. */
@@ -77,19 +77,6 @@ public final class CompassTexts {
 
 	public static String currentDimension(Player player) {
 		return LevelUtils.dimensionId(player.level());
-	}
-
-	private static String titleCase(String path) {
-		StringBuilder name = new StringBuilder();
-		for (String word : path.split("[_/]")) {
-			if (!word.isEmpty()) {
-				if (!name.isEmpty()) {
-					name.append(' ');
-				}
-				name.append(word.substring(0, 1).toUpperCase(Locale.ROOT)).append(word.substring(1));
-			}
-		}
-		return name.toString();
 	}
 
 }
