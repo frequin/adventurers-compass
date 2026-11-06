@@ -78,13 +78,13 @@ class CompassSkippedTest {
 	@Test
 	void neitherCommandTouchesTheRunningSearchTheTargetTheWearOrTheLastNothingFound() {
 		var search = UUID.randomUUID();
-		var state = new CompassState(search, TARGET, Set.of(FIRST, SECOND), NOTHING, 2);
+		var state = new CompassState(search, TARGET, Set.of(FIRST, SECOND), NOTHING, 2, 7L);
 
 		var removed = accepted(compass.removeSkipped(state, FIRST));
 		var cleared = accepted(compass.clearSkipped(state));
 
-		assertEquals(new CompassState(search, TARGET, Set.of(SECOND), NOTHING, 2), removed.state());
-		assertEquals(new CompassState(search, TARGET, Set.of(), NOTHING, 2), cleared.state());
+		assertEquals(new CompassState(search, TARGET, Set.of(SECOND), NOTHING, 2, 7L), removed.state());
+		assertEquals(new CompassState(search, TARGET, Set.of(), NOTHING, 2, 7L), cleared.state());
 		assertEquals(List.of(), removed.effects());
 		assertEquals(List.of(), cleared.effects());
 	}
