@@ -81,7 +81,7 @@ public class VisitedDetectionGameTests {
 		PlayerVisited.unmark(player, village);
 		VisitedDetection.poll(player);
 		VisitedDetection.poll(player);
-		helper.assertValueEqual(soundsSent(channel), List.of("minecraft:block.note_block.chime at 1.0"), "sounds for the Target");
+		helper.assertValueEqual(soundsSent(channel), List.of("minecraft:block.note_block.chime at 0.5"), "sounds for the Target");
 
 		PlayerVisited.unmark(player, village);
 		AdventurersCompassConfig.targetVisitedSound = false;

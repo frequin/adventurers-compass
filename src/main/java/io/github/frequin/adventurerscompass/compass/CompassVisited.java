@@ -54,7 +54,7 @@ public final class CompassVisited {
 	 */
 	static void playArrivalSound(ServerPlayer player) {
 		if (AdventurersCompassConfig.targetVisitedSound) {
-			player.connection.send(new ClientboundSoundPacket(SoundEvents.NOTE_BLOCK_CHIME, SoundSource.PLAYERS, player.getX(), player.getY(), player.getZ(), 1.0F, 1.0F, player.getRandom().nextLong()));
+			player.connection.send(new ClientboundSoundPacket(SoundEvents.NOTE_BLOCK_CHIME, SoundSource.PLAYERS, player.getX(), player.getY(), player.getZ(), 0.5F, 1.0F, player.getRandom().nextLong()));
 		}
 	}
 
