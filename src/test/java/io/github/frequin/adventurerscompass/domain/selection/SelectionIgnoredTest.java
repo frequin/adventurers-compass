@@ -9,9 +9,9 @@ import java.util.Set;
 
 import org.junit.jupiter.api.Test;
 
-import io.github.frequin.adventurerscompass.domain.selection.Chip.Kind;
+import io.github.frequin.adventurerscompass.domain.selection.IgnoredElement.Reason;
 
-class SelectionChipsTest {
+class SelectionIgnoredTest {
 
 	private static final String OVERWORLD = "minecraft:overworld";
 	private static final String NETHER = "minecraft:the_nether";
@@ -37,47 +37,44 @@ class SelectionChipsTest {
 			new CatalogueEntry(PORTAL_NETHER, RUINED_PORTALS, Set.of(NETHER), "Minecraft")));
 
 	@Test
-	void anEmptySelectionHasNoChips() {
-		assertEquals(List.of(), Selection.EMPTY.chips(CATALOGUE, OVERWORLD));
+	void anEmptySelectionIgnoresNothing() {
+		assertEquals(List.of(), Selection.EMPTY.ignored(CATALOGUE, OVERWORLD));
 	}
 
 	@Test
-	void eachGroupAndStructureOfTheSelectionIsAChipGroupsFirst() {
+	void aSelectionThatGeneratesHereIgnoresNothing() {
 		Selection selection = Selection.EMPTY.tickStructure(PORTAL).tickGroup(VILLAGES, CATALOGUE);
 
-		assertEquals(List.of(
-				new Chip(Kind.GROUP, VILLAGES, ChipState.ACTIVE),
-				new Chip(Kind.STRUCTURE, PORTAL, ChipState.ACTIVE)), selection.chips(CATALOGUE, OVERWORLD));
+		assertEquals(List.of(), selection.ignored(CATALOGUE, OVERWORLD));
 	}
 
 	@Test
-	void afterATripToTheNetherOverworldElementsAreGreyedAndTheRestStaysActive() {
+	void afterATripToTheNetherOverworldElementsAreIgnoredGroupsFirstAndTheRestIsSearched() {
 		Selection selection = Selection.EMPTY.tickGroup(VILLAGES, CATALOGUE).tickStructure(PORTAL).tickStructure(FORTRESS);
 
 		assertEquals(List.of(
-				new Chip(Kind.GROUP, VILLAGES, ChipState.ABSENT_FROM_DIMENSION),
-				new Chip(Kind.STRUCTURE, FORTRESS, ChipState.ACTIVE),
-				new Chip(Kind.STRUCTURE, PORTAL, ChipState.ABSENT_FROM_DIMENSION)), selection.chips(CATALOGUE, NETHER));
+				new IgnoredElement(VILLAGES, Reason.ABSENT_FROM_DIMENSION),
+				new IgnoredElement(PORTAL, Reason.ABSENT_FROM_DIMENSION)), selection.ignored(CATALOGUE, NETHER));
 		assertEquals(Set.of(FORTRESS), selection.resolve(CATALOGUE, NETHER));
 	}
 
 	@Test
-	void aGroupSpanningDimensionsIsActiveWhereverOneOfItsStructuresGenerates() {
-		Selection selection = Selection.EMPTY.tickGroup(RUINED_PORTALS, CATALOGUE);
+	void aRoundTripBetweenDimensionsLeavesTheSelectionWhole() {
+		Selection selection = Selection.EMPTY.tickGroup(VILLAGES, CATALOGUE).tickStructure(FORTRESS);
 
-		assertEquals(List.of(new Chip(Kind.GROUP, RUINED_PORTALS, ChipState.ACTIVE)), selection.chips(CATALOGUE, NETHER));
-		assertEquals(List.of(new Chip(Kind.GROUP, RUINED_PORTALS, ChipState.ACTIVE)), selection.chips(CATALOGUE, OVERWORLD));
+		assertEquals(1, selection.ignored(CATALOGUE, NETHER).size());
+		assertEquals(1, selection.ignored(CATALOGUE, OVERWORLD).size());
+		assertEquals(Set.of(PLAINS, DESERT), selection.resolve(CATALOGUE, OVERWORLD));
+		assertEquals(Set.of(FORTRESS), selection.resolve(CATALOGUE, NETHER));
+		assertEquals(new Selection(Set.of(FORTRESS), Set.of(VILLAGES)), selection);
 	}
 
 	@Test
-	void removingAChipTakesOnlyThatElementOutOfTheSelection() {
-		Selection selection = Selection.EMPTY.tickGroup(VILLAGES, CATALOGUE).tickStructure(PORTAL).tickStructure(FORTRESS);
+	void aGroupSpanningDimensionsIsNotIgnoredWhereOneOfItsStructuresGenerates() {
+		Selection selection = Selection.EMPTY.tickGroup(RUINED_PORTALS, CATALOGUE);
 
-		Selection withoutVillages = selection.remove(new Chip(Kind.GROUP, VILLAGES, ChipState.ACTIVE));
-		Selection withoutPortal = selection.remove(new Chip(Kind.STRUCTURE, PORTAL, ChipState.ABSENT_FROM_DIMENSION));
-
-		assertEquals(new Selection(Set.of(PORTAL, FORTRESS), Set.of()), withoutVillages);
-		assertEquals(new Selection(Set.of(FORTRESS), Set.of(VILLAGES)), withoutPortal);
+		assertEquals(List.of(), selection.ignored(CATALOGUE, NETHER));
+		assertEquals(List.of(), selection.ignored(CATALOGUE, OVERWORLD));
 	}
 
 	@Test
@@ -97,19 +94,19 @@ class SelectionChipsTest {
 	}
 
 	@Test
-	void oneActiveChipIsEnoughToSearch() {
+	void oneElementNotIgnoredIsEnoughToSearch() {
 		Selection selection = Selection.EMPTY.tickGroup(VILLAGES, CATALOGUE).tickStructure(BASTION);
 
 		assertTrue(selection.canSearchIn(CATALOGUE, NETHER));
 	}
 
 	@Test
-	void anElementMissingFromTheCatalogueIsGreyed() {
+	void anElementMissingFromTheCatalogueIsIgnored() {
 		Selection selection = new Selection(Set.of("othermod:gone"), Set.of("othermod:gone_group"));
 
 		assertEquals(List.of(
-				new Chip(Kind.GROUP, "othermod:gone_group", ChipState.ABSENT_FROM_DIMENSION),
-				new Chip(Kind.STRUCTURE, "othermod:gone", ChipState.ABSENT_FROM_DIMENSION)), selection.chips(CATALOGUE, OVERWORLD));
+				new IgnoredElement("othermod:gone_group", Reason.ABSENT_FROM_DIMENSION),
+				new IgnoredElement("othermod:gone", Reason.ABSENT_FROM_DIMENSION)), selection.ignored(CATALOGUE, OVERWORLD));
 	}
 
 }

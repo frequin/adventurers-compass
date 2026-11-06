@@ -9,8 +9,6 @@
     "string.adventurerscompass.teleport": "Işınlan",
 
     "_comment": "STRINGS - GUI",
-    "string.adventurerscompass.structure": "Yapı",
-    "string.adventurerscompass.group": "Grup",
 
     "_comment": "STRINGS - STRUCTURES",
     "structure.minecraft.bastion_remnant": "Burç Kalıntısı",

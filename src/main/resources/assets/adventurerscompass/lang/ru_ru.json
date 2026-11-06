@@ -9,8 +9,6 @@
     "string.adventurerscompass.teleport": "Телепортироваться",
 
     "_comment": "STRINGS - GUI",
-    "string.adventurerscompass.structure": "Структура",
-    "string.adventurerscompass.group": "Группа",
 
     "_comment": "STRINGS - STRUCTURES",
     "structure.minecraft.bastion_remnant": "Развалины бастиона",

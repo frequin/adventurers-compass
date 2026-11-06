@@ -9,8 +9,6 @@
     "string.adventurerscompass.teleport": "순간이동",
 
     "_comment": "STRINGS - GUI",
-    "string.adventurerscompass.structure": "구조물",
-    "string.adventurerscompass.group": "그룹",
 
     "_comment": "STRINGS - STRUCTURES",
     "structure.minecraft.bastion_remnant": "보루 잔해",
