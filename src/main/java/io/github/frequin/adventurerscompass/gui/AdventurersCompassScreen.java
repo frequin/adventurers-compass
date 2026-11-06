@@ -9,6 +9,8 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.function.Consumer;
+import java.util.function.IntSupplier;
 
 import io.github.frequin.adventurerscompass.AdventurersCompass;
 import io.github.frequin.adventurerscompass.compass.CompassStacks;
@@ -49,13 +51,14 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 
 /**
- * The compass screen: three tabs across the top. The Search tab holds the search box, the Selection tree of the Current
- * dimension, "Select all", the count of Selection elements unsearchable here and the
- * count of Structures of other dimensions on the left; the search actions and
- * "Clear" on the right. The Visited and Skipped tabs hold a full-width list with
- * a filter, a sort button and a button that clears the whole list, over a footer
- * with the Target and "Done". Every change to the Selection is sent to the
- * server, which stores it on the compass.
+ * The compass screen: three tabs across the top. The Search tab holds the
+ * search box, the Selection tree of the Current dimension, "Select all", the
+ * count of Selection elements unsearchable here and the count of Structures of
+ * other dimensions on the left; the search actions and "Clear" on the right.
+ * The Visited and Skipped tabs hold a full-width list with a filter, a sort
+ * button and a button that clears the whole list, over a footer with the Target
+ * and "Done". Every change to the Selection is sent to the server, which stores
+ * it on the compass.
  */
 public class AdventurersCompassScreen extends Screen {
 
@@ -73,14 +76,49 @@ public class AdventurersCompassScreen extends Screen {
 		SEARCH, VISITED, SKIPPED
 	}
 
+	/** The rows of a list tab, filtered and sorted. */
+	private interface RowSource {
+		List<InstanceRow> rows(InstanceRows rows, TreeFilter filter, InstanceSort sort);
+	}
+
+	/** What the Visited and Skipped tabs do differently; the rest of a list tab is shared. Each keeps its sort. */
+	private static final class ListTab {
+
+		private final List<InstanceSort> orders;
+		private final String crossTooltip;
+		private final String clearAllLabel;
+		/** Also the start of the keys of its warning and its action. */
+		private final String confirmClearAll;
+		private final String emptyMessage;
+		private final IntSupplier size;
+		private final RowSource source;
+		private final Consumer<InstanceKey> removeOne;
+		private final Runnable removeAll;
+		private InstanceSort sort;
+
+		ListTab(List<InstanceSort> orders, String crossTooltip, String clearAllLabel, String confirmClearAll, String emptyMessage, IntSupplier size, RowSource source, Consumer<InstanceKey> removeOne, Runnable removeAll) {
+			this.orders = orders;
+			this.crossTooltip = crossTooltip;
+			this.clearAllLabel = clearAllLabel;
+			this.confirmClearAll = confirmClearAll;
+			this.emptyMessage = emptyMessage;
+			this.size = size;
+			this.source = source;
+			this.removeOne = removeOne;
+			this.removeAll = removeAll;
+			this.sort = orders.getFirst();
+		}
+
+	}
+
 	private final Player player;
 	private final SearchPanel searchPanel;
 	/** Kept here so that the tree stays open as it was when the player comes back to its tab. */
 	private final Set<String> expandedGroups = new HashSet<String>();
 	private final List<Button> tabButtons = new ArrayList<Button>();
 	private Tab tab = Tab.SEARCH;
-	private InstanceSort visitedSort = InstanceSort.VISITED_ORDERS.getFirst();
-	private InstanceSort skippedSort = InstanceSort.SKIPPED_ORDERS.getFirst();
+	private final ListTab visitedTab;
+	private final ListTab skippedTab;
 	private Selection selection;
 	private Catalogue catalogue;
 	private String dimension;
@@ -104,6 +142,18 @@ public class AdventurersCompassScreen extends Screen {
 		// Last known catalogue until the SyncPacket sent on opening arrives
 		this.catalogue = AdventurersCompass.catalogue;
 		this.dimension = AdventurersCompass.currentDimension;
+		this.visitedTab = new ListTab(InstanceSort.VISITED_ORDERS,
+				"string.adventurerscompass.unmarkVisited", "string.adventurerscompass.unmarkAll", "string.adventurerscompass.confirmUnmarkAll", "string.adventurerscompass.noVisited",
+				this::visitedCount,
+				(rows, filter, sort) -> rows.visited(CompassTexts.visited(player), filter, sort),
+				instance -> ClientPlayNetworking.send(new UnmarkVisitedPacket(instance)),
+				() -> ClientPlayNetworking.send(new ClearVisitedPacket()));
+		this.skippedTab = new ListTab(InstanceSort.SKIPPED_ORDERS,
+				"string.adventurerscompass.removeSkipped", "string.adventurerscompass.removeAll", "string.adventurerscompass.confirmRemoveAll", "string.adventurerscompass.noSkipped",
+				() -> skipped().size(),
+				(rows, filter, sort) -> rows.skipped(skipped(), filter, sort),
+				instance -> ClientPlayNetworking.send(new RemoveSkippedPacket(instance)),
+				() -> ClientPlayNetworking.send(new ClearSkippedPacket()));
 	}
 
 	public Selection selection() {
@@ -210,8 +260,9 @@ public class AdventurersCompassScreen extends Screen {
 		});
 		setInitialFocus(filterBox);
 
-		int sortWidth = sortOrders().stream().mapToInt(order -> font.width(sortLabel(order))).max().orElse(0) + SMALL_BUTTON_PADDING;
-		sortButton = addRenderableWidget(new TransparentButton(0, TREE_TOP, sortWidth, FILTER_HEIGHT, sortLabel(sort()), (onPress) -> {
+		ListTab list = listTab();
+		int sortWidth = list.orders.stream().mapToInt(order -> font.width(sortLabel(order))).max().orElse(0) + SMALL_BUTTON_PADDING;
+		sortButton = addRenderableWidget(new TransparentButton(0, TREE_TOP, sortWidth, FILTER_HEIGHT, sortLabel(list.sort), (onPress) -> {
 			cycleSort();
 		}));
 		clearAllButton = addRenderableWidget(new TransparentButton(0, TREE_TOP, 0, FILTER_HEIGHT, Component.empty(), (onPress) -> {
@@ -220,8 +271,7 @@ public class AdventurersCompassScreen extends Screen {
 
 		int listTop = TREE_TOP + FILTER_HEIGHT + 4;
 		int footerTop = height - MARGIN - LIST_FOOTER_HEIGHT;
-		Component crossTooltip = Component.translatable(tab == Tab.VISITED ? "string.adventurerscompass.unmarkVisited" : "string.adventurerscompass.removeSkipped");
-		instanceList = addRenderableWidget(new InstanceList(minecraft, MARGIN, listTop, width - 2 * MARGIN, footerTop - 4 - listTop, crossTooltip, this::crossClicked));
+		instanceList = addRenderableWidget(new InstanceList(minecraft, MARGIN, listTop, width - 2 * MARGIN, footerTop - 4 - listTop, Component.translatable(list.crossTooltip), list.removeOne));
 
 		int doneWidth = font.width(DONE) + 2 * SMALL_BUTTON_PADDING;
 		int doneX = width - MARGIN - doneWidth;
@@ -235,30 +285,15 @@ public class AdventurersCompassScreen extends Screen {
 		}));
 	}
 
-	private void crossClicked(InstanceKey instance) {
-		if (tab == Tab.VISITED) {
-			ClientPlayNetworking.send(new UnmarkVisitedPacket(instance));
-		} else {
-			ClientPlayNetworking.send(new RemoveSkippedPacket(instance));
-		}
-	}
-
-	private List<InstanceSort> sortOrders() {
-		return tab == Tab.VISITED ? InstanceSort.VISITED_ORDERS : InstanceSort.SKIPPED_ORDERS;
-	}
-
-	private InstanceSort sort() {
-		return tab == Tab.VISITED ? visitedSort : skippedSort;
+	/** The open list tab; only call on one. */
+	private ListTab listTab() {
+		return tab == Tab.VISITED ? visitedTab : skippedTab;
 	}
 
 	private void cycleSort() {
-		InstanceSort next = sort().next(sortOrders());
-		if (tab == Tab.VISITED) {
-			visitedSort = next;
-		} else {
-			skippedSort = next;
-		}
-		sortButton.setMessage(sortLabel(next));
+		ListTab list = listTab();
+		list.sort = list.sort.next(list.orders);
+		sortButton.setMessage(sortLabel(list.sort));
 		refreshRows();
 		instanceList.setScrollAmount(0);
 	}
@@ -273,16 +308,13 @@ public class AdventurersCompassScreen extends Screen {
 
 	/** Asks before clearing the whole list, filter or not. Both answers come back to this screen, on this tab. */
 	private void confirmClearAll() {
-		boolean visitedTab = tab == Tab.VISITED;
-		int count = rowCount();
-		Component question = Component.translatable(visitedTab ? "string.adventurerscompass.confirmUnmarkAll" : "string.adventurerscompass.confirmRemoveAll", count);
-		Component warning = Component.translatable(visitedTab ? "string.adventurerscompass.confirmUnmarkAllWarning" : "string.adventurerscompass.confirmRemoveAllWarning");
-		Component action = Component.translatable(visitedTab ? "string.adventurerscompass.confirmUnmarkAllAction" : "string.adventurerscompass.confirmRemoveAllAction").withStyle(ChatFormatting.RED);
+		ListTab list = listTab();
+		Component question = Component.translatable(list.confirmClearAll, list.size.getAsInt());
+		Component warning = Component.translatable(list.confirmClearAll + "Warning");
+		Component action = Component.translatable(list.confirmClearAll + "Action").withStyle(ChatFormatting.RED);
 		minecraft.gui.setScreen(new ConfirmScreen(confirmed -> {
-			if (confirmed && visitedTab) {
-				ClientPlayNetworking.send(new ClearVisitedPacket());
-			} else if (confirmed) {
-				ClientPlayNetworking.send(new ClearSkippedPacket());
+			if (confirmed) {
+				list.removeAll.run();
 			}
 			minecraft.gui.setScreen(this);
 		}, question, warning, action, CommonComponents.GUI_CANCEL));
@@ -402,11 +434,6 @@ public class AdventurersCompassScreen extends Screen {
 		return CompassTexts.visited(player).asSet().size();
 	}
 
-	/** How many Instances the open list holds, whatever its filter shows. */
-	private int rowCount() {
-		return tab == Tab.VISITED ? visitedCount() : skipped().size();
-	}
-
 	private void updateButtons() {
 		for (Tab each : Tab.values()) {
 			tabButtons.get(each.ordinal()).setMessage(tabLabel(each));
@@ -421,8 +448,9 @@ public class AdventurersCompassScreen extends Screen {
 
 	/** The bar of the list tabs: the filter takes what the sort button and "clear all", whose count changes, leave. */
 	private void updateListBar() {
-		int count = rowCount();
-		Component label = Component.translatable(tab == Tab.VISITED ? "string.adventurerscompass.unmarkAll" : "string.adventurerscompass.removeAll", count);
+		ListTab list = listTab();
+		int count = list.size.getAsInt();
+		Component label = Component.translatable(list.clearAllLabel, count);
 		clearAllButton.setMessage(label);
 		clearAllButton.active = count > 0;
 		clearAllButton.setWidth(font.width(label) + SMALL_BUTTON_PADDING);
@@ -434,16 +462,10 @@ public class AdventurersCompassScreen extends Screen {
 	private void refreshRows() {
 		BlockPos pos = player.blockPosition();
 		InstanceRows rows = new InstanceRows(CompassTexts.currentDimension(player), new BlockXZ(pos.getX(), pos.getZ()), catalogue, AdventurersCompassScreen::structureName);
-		TreeFilter filter = TreeFilter.of(filterBox.getValue());
-		List<InstanceRow> shown = tab == Tab.VISITED ? rows.visited(CompassTexts.visited(player), filter, visitedSort) : rows.skipped(skipped(), filter, skippedSort);
-		instanceList.setRows(shown, Component.translatable(emptyMessage()));
-	}
-
-	private String emptyMessage() {
-		if (rowCount() > 0) {
-			return "string.adventurerscompass.noRows";
-		}
-		return tab == Tab.VISITED ? "string.adventurerscompass.noVisited" : "string.adventurerscompass.noSkipped";
+		ListTab list = listTab();
+		List<InstanceRow> shown = list.source.rows(rows, TreeFilter.of(filterBox.getValue()), list.sort);
+		// The count ignores the filter: an empty list and a filter that keeps nothing read differently
+		instanceList.setRows(shown, Component.translatable(list.size.getAsInt() > 0 ? "string.adventurerscompass.noRows" : list.emptyMessage));
 	}
 
 	private void updateSearchButtons() {
