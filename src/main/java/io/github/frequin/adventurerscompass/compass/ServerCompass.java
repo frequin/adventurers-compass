@@ -74,6 +74,11 @@ public final class ServerCompass {
 		apply(player, stack, COMPASS.markVisited(CompassStacks.read(stack)));
 	}
 
+	/** "Clear Target" with the compass the player holds. */
+	public static void clearTarget(ServerPlayer player, ItemStack stack) {
+		apply(player, stack, COMPASS.clearTarget(CompassStacks.read(stack)));
+	}
+
 	/** "Teleport" to the Target of the compass the player holds. */
 	public static void teleport(ServerPlayer player, ItemStack stack) {
 		Outcome outcome = COMPASS.teleport(CompassStacks.read(stack), teleportContext(player));
@@ -88,7 +93,7 @@ public final class ServerCompass {
 		return new TeleportContext(LevelUtils.dimensionId(player.level()),AdventurersCompassConfig.allowTeleport, PlayerUtils.isOperator(player.level().getServer(), player), player.isCreative());
 	}
 
-	/** Stores a new Selection on the compass; a real change cancels the search and clears the Target and Skipped. */
+	/** Stores a new Selection on the compass; a real change cancels the search, keeps the Target and clears Skipped. */
 	public static void selectionChanged(ServerPlayer player, ItemStack stack, Selection selection) {
 		if (selection.equals(stack.getOrDefault(AdventurersCompass.SELECTION, Selection.EMPTY))) {
 			return;

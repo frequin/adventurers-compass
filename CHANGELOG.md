@@ -5,6 +5,7 @@
 - Nomad mode: the compass holds a Selection of several Structures and Groups, composed in a tree screen (text and `@mod` filter, removable chips, Clear). Search finds the nearest Instance of the whole Selection in the Current dimension
 - Visited: an Instance becomes Visited when you stand in one of its pieces, or with "Mark Visited" on the Target. Searches skip Visited Instances. Visited is held per player and per world, kept on death, listed in the screen and can be unmarked one by one
 - Pass: skips the Target for now and searches again. Skipped Instances are cleared by a new Search or a Selection change
+- Changing the Selection cancels a running search and keeps the Target. "Clear Target" in the screen removes the Target for free, without wear, even on a broken compass, and leaves the Selection, Skipped and a running search alone
 - The Target keeps its dimension: in another dimension the needle spins and the HUD says so; back in its dimension it points again with no new search
 - One-line HUD: "Structure · distance" or the search state, with an optional coordinates line
 - XP is paid only when a Target is found, at the found Structure's cost times the Current dimension's multiplier. Cancelled searches and searches that find nothing are free
