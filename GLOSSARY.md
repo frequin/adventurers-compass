@@ -37,7 +37,7 @@ The state of an Instance a player has stood inside, or has marked by hand as the
 _Avoid_: Explored, discovered, done
 
 **Skipped**:
-The state of an Instance a player chose to pass over without visiting it; held by one compass and cleared when a fresh search starts or the Selection changes.
+The state of an Instance a player chose to pass over without visiting it; held by one compass and cleared when a fresh search starts, when the Selection changes, or by hand.
 _Avoid_: Ignored, excluded, Visited (when the player has not been there)
 
 **Current dimension**:
