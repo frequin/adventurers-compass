@@ -36,7 +36,7 @@ public final class InstanceRows {
 	}
 
 	public List<InstanceRow> visited(VisitedSet visited, TreeFilter filter, InstanceSort sort) {
-		return sorted(visited.instances().stream().map(instance -> row(instance.instance(), OptionalLong.of(instance.day()))).toList(), filter, sort);
+		return sorted(visited.instances().stream().map(instance -> row(instance.key(), OptionalLong.of(instance.day()))).toList(), filter, sort);
 	}
 
 	public List<InstanceRow> skipped(Set<InstanceKey> skipped, TreeFilter filter, InstanceSort sort) {
@@ -45,7 +45,7 @@ public final class InstanceRows {
 
 	private InstanceRow row(InstanceKey instance, OptionalLong day) {
 		BlockXZ center = instance.startChunk().center();
-		OptionalInt distance = instance.dimension().equals(dimension) ? OptionalInt.of((int) Math.round(Math.sqrt(here.distanceSq(center)))) : OptionalInt.empty();
+		OptionalInt distance = instance.dimension().equals(dimension) ? OptionalInt.of(here.distance(center)) : OptionalInt.empty();
 		return new InstanceRow(instance, displayName.apply(instance.structureId()), day, center, distance);
 	}
 
@@ -63,10 +63,7 @@ public final class InstanceRows {
 	private Comparator<InstanceRow> nearest() {
 		return Comparator.<InstanceRow, Boolean>comparing(row -> row.distance().isEmpty())
 				.thenComparingLong(row -> here.distanceSq(row.center()))
-				.thenComparing(row -> row.instance().dimension())
-				.thenComparing(row -> row.instance().structureId())
-				.thenComparingInt(row -> row.instance().startChunk().x())
-				.thenComparingInt(row -> row.instance().startChunk().z());
+				.thenComparing(InstanceRow::instance, InstanceKey.ORDER);
 	}
 
 }

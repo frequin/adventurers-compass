@@ -1,6 +1,5 @@
 package io.github.frequin.adventurerscompass.codec;
 
-import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
 
@@ -49,23 +48,18 @@ public final class CompassCodecs {
 			ByteBufCodecs.VAR_INT, target -> target.pos().z(),
 			(key, x, z) -> new Target(key, new BlockXZ(x, z)));
 
-	private static final Comparator<InstanceKey> ORDER = Comparator.comparing(InstanceKey::dimension)
-			.thenComparing(InstanceKey::structureId)
-			.thenComparingInt(key -> key.startChunk().x())
-			.thenComparingInt(key -> key.startChunk().z());
-
 	public static final Codec<Set<InstanceKey>> SKIPPED = INSTANCE_KEY.listOf().xmap(Set::copyOf, CompassCodecs::sorted);
 
 	public static final StreamCodec<ByteBuf, Set<InstanceKey>> SKIPPED_STREAM = INSTANCE_KEY_STREAM.apply(ByteBufCodecs.list()).map(Set::copyOf, CompassCodecs::sorted);
 
 	/** Saved form of the Visited attachment: a list of {@code {instance: {...}, day}}, in the order they were marked. */
 	public static final Codec<VisitedSet> VISITED = RecordCodecBuilder.<VisitedInstance>create(instance -> instance.group(
-			INSTANCE_KEY.fieldOf("instance").forGetter(VisitedInstance::instance),
+			INSTANCE_KEY.fieldOf("instance").forGetter(VisitedInstance::key),
 			Codec.LONG.fieldOf("day").forGetter(VisitedInstance::day))
 			.apply(instance, VisitedInstance::new)).listOf().xmap(VisitedSet::of, VisitedSet::instances);
 
 	public static final StreamCodec<ByteBuf, VisitedSet> VISITED_STREAM = StreamCodec.composite(
-			INSTANCE_KEY_STREAM, VisitedInstance::instance,
+			INSTANCE_KEY_STREAM, VisitedInstance::key,
 			ByteBufCodecs.VAR_LONG, VisitedInstance::day,
 			VisitedInstance::new).apply(ByteBufCodecs.list()).map(VisitedSet::of, VisitedSet::instances);
 
@@ -88,7 +82,7 @@ public final class CompassCodecs {
 	}
 
 	private static List<InstanceKey> sorted(Set<InstanceKey> keys) {
-		return keys.stream().sorted(ORDER).toList();
+		return keys.stream().sorted(InstanceKey.ORDER).toList();
 	}
 
 }

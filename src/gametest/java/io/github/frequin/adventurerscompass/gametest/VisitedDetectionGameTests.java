@@ -2,6 +2,7 @@ package io.github.frequin.adventurerscompass.gametest;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 import com.mojang.authlib.GameProfile;
@@ -70,11 +71,11 @@ public class VisitedDetectionGameTests {
 		compass.set(AdventurersCompass.TARGET, new Target(elsewhere, new BlockXZ(0, 0)));
 		stand(player, gap);
 		VisitedDetection.poll(player);
-		helper.assertTrue(PlayerVisited.get(player).list().isEmpty(), "standing between pieces, inside the start's box, should not mark the Instance");
+		helper.assertTrue(PlayerVisited.get(player).asSet().isEmpty(), "standing between pieces, inside the start's box, should not mark the Instance");
 
 		stand(player, firstPiece);
 		VisitedDetection.poll(player);
-		helper.assertValueEqual(List.of(village), PlayerVisited.get(player).list(), "Visited Instances");
+		helper.assertValueEqual(Set.of(village), PlayerVisited.get(player).asSet(), "Visited Instances");
 		helper.assertValueEqual(soundsSent(channel), List.of(), "sounds for a Structure that is not the Target");
 
 		compass.set(AdventurersCompass.TARGET, new Target(village, new BlockXZ(0, 0)));
@@ -104,7 +105,7 @@ public class VisitedDetectionGameTests {
 		stand(player, piece);
 		VisitedDetection.poll(player);
 
-		helper.assertTrue(PlayerVisited.get(player).list().isEmpty(), "a spectator should not mark any Instance");
+		helper.assertTrue(PlayerVisited.get(player).asSet().isEmpty(), "a spectator should not mark any Instance");
 		helper.succeed();
 	}
 

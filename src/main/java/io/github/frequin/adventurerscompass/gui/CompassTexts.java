@@ -67,7 +67,7 @@ public final class CompassTexts {
 	/** Horizontal distance in whole blocks. */
 	public static int distance(Target target, Player player) {
 		BlockXZ here = new BlockXZ(player.blockPosition().getX(), player.blockPosition().getZ());
-		return (int) Math.round(Math.sqrt(here.distanceSq(target.pos())));
+		return here.distance(target.pos());
 	}
 
 	/** The player's Visited Instances, as synced by the server to this player only. */

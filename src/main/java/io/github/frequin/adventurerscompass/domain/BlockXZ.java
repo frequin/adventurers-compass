@@ -10,4 +10,9 @@ public record BlockXZ(int x, int z) {
 		return dx * dx + dz * dz;
 	}
 
+	/** Horizontal distance in whole blocks. */
+	public int distance(BlockXZ other) {
+		return (int) Math.round(Math.sqrt(distanceSq(other)));
+	}
+
 }
