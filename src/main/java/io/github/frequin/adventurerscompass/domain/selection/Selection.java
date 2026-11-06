@@ -45,10 +45,14 @@ public record Selection(Set<String> structures, Set<String> groups) {
 		return new Selection(nextStructures, nextGroups);
 	}
 
-	/** Ticks a whole Group; its Structures ticked one by one are absorbed into it. */
-	public Selection tickGroup(String groupId, Catalogue catalogue) {
+	/**
+	 * Ticks a whole Group, as listed in {@code dimension}. Its Structures listed
+	 * there and ticked one by one are absorbed into it; the others (of another
+	 * dimension, or Hidden) stay, so unticking the Group does not lose them.
+	 */
+	public Selection tickGroup(String groupId, Catalogue catalogue, String dimension) {
 		Set<String> nextStructures = new TreeSet<>(structures);
-		catalogue.members(groupId).forEach(nextStructures::remove);
+		catalogue.members(groupId).stream().filter(id -> catalogue.entry(id).get().listedIn(dimension)).forEach(nextStructures::remove);
 		Set<String> nextGroups = new TreeSet<>(groups);
 		nextGroups.add(groupId);
 		return new Selection(nextStructures, nextGroups);
@@ -71,7 +75,7 @@ public record Selection(Set<String> structures, Set<String> groups) {
 		Selection next = this;
 		for (TreeEntry entry : listed) {
 			next = switch (entry) {
-				case TreeEntry.GroupEntry group when wholeTree.contains(group) -> next.tickGroup(group.groupId(), catalogue);
+				case TreeEntry.GroupEntry group when wholeTree.contains(group) -> next.tickGroup(group.groupId(), catalogue, dimension);
 				case TreeEntry.GroupEntry group -> next.tickUncovered(group.structureIds(), catalogue);
 				case TreeEntry.StructureEntry structure -> next.tickUncovered(List.of(structure.structureId()), catalogue);
 			};
@@ -101,7 +105,7 @@ public record Selection(Set<String> structures, Set<String> groups) {
 
 	/** A click on a Group's checkbox: an empty or partial Group becomes ticked, a ticked Group empty. */
 	public Selection toggleGroup(String groupId, Catalogue catalogue, String dimension) {
-		return groupState(groupId, catalogue, dimension) == GroupState.TICKED ? untickGroup(groupId) : tickGroup(groupId, catalogue);
+		return groupState(groupId, catalogue, dimension) == GroupState.TICKED ? untickGroup(groupId) : tickGroup(groupId, catalogue, dimension);
 	}
 
 	public GroupState groupState(String groupId, Catalogue catalogue, String dimension) {

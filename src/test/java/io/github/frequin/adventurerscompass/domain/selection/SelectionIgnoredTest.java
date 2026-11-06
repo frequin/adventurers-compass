@@ -43,14 +43,14 @@ class SelectionIgnoredTest {
 
 	@Test
 	void aSelectionThatGeneratesHereIgnoresNothing() {
-		Selection selection = Selection.EMPTY.tickStructure(PORTAL).tickGroup(VILLAGES, CATALOGUE);
+		Selection selection = Selection.EMPTY.tickStructure(PORTAL).tickGroup(VILLAGES, CATALOGUE, OVERWORLD);
 
 		assertEquals(List.of(), selection.ignored(CATALOGUE, OVERWORLD));
 	}
 
 	@Test
 	void afterATripToTheNetherOverworldElementsAreIgnoredGroupsFirstAndTheRestIsSearched() {
-		Selection selection = Selection.EMPTY.tickGroup(VILLAGES, CATALOGUE).tickStructure(PORTAL).tickStructure(FORTRESS);
+		Selection selection = Selection.EMPTY.tickGroup(VILLAGES, CATALOGUE, OVERWORLD).tickStructure(PORTAL).tickStructure(FORTRESS);
 
 		assertEquals(List.of(
 				new IgnoredElement(VILLAGES, Reason.ABSENT_FROM_DIMENSION),
@@ -60,7 +60,7 @@ class SelectionIgnoredTest {
 
 	@Test
 	void aRoundTripBetweenDimensionsLeavesTheSelectionWhole() {
-		Selection selection = Selection.EMPTY.tickGroup(VILLAGES, CATALOGUE).tickStructure(FORTRESS);
+		Selection selection = Selection.EMPTY.tickGroup(VILLAGES, CATALOGUE, OVERWORLD).tickStructure(FORTRESS);
 
 		assertEquals(1, selection.ignored(CATALOGUE, NETHER).size());
 		assertEquals(1, selection.ignored(CATALOGUE, OVERWORLD).size());
@@ -71,7 +71,7 @@ class SelectionIgnoredTest {
 
 	@Test
 	void aGroupSpanningDimensionsIsNotIgnoredWhereOneOfItsStructuresGenerates() {
-		Selection selection = Selection.EMPTY.tickGroup(RUINED_PORTALS, CATALOGUE);
+		Selection selection = Selection.EMPTY.tickGroup(RUINED_PORTALS, CATALOGUE, OVERWORLD);
 
 		assertEquals(List.of(), selection.ignored(CATALOGUE, NETHER));
 		assertEquals(List.of(), selection.ignored(CATALOGUE, OVERWORLD));
@@ -79,14 +79,14 @@ class SelectionIgnoredTest {
 
 	@Test
 	void clearingEmptiesTheSelection() {
-		Selection selection = Selection.EMPTY.tickGroup(VILLAGES, CATALOGUE).tickStructure(FORTRESS);
+		Selection selection = Selection.EMPTY.tickGroup(VILLAGES, CATALOGUE, OVERWORLD).tickStructure(FORTRESS);
 
 		assertEquals(Selection.EMPTY, selection.clear());
 	}
 
 	@Test
 	void aSelectionWithNothingGeneratedInTheDimensionCannotBeSearchedThere() {
-		Selection selection = Selection.EMPTY.tickGroup(VILLAGES, CATALOGUE).tickStructure(PORTAL);
+		Selection selection = Selection.EMPTY.tickGroup(VILLAGES, CATALOGUE, OVERWORLD).tickStructure(PORTAL);
 
 		assertFalse(selection.canSearchIn(CATALOGUE, NETHER));
 		assertTrue(selection.canSearchIn(CATALOGUE, OVERWORLD));
@@ -95,7 +95,7 @@ class SelectionIgnoredTest {
 
 	@Test
 	void oneElementNotIgnoredIsEnoughToSearch() {
-		Selection selection = Selection.EMPTY.tickGroup(VILLAGES, CATALOGUE).tickStructure(BASTION);
+		Selection selection = Selection.EMPTY.tickGroup(VILLAGES, CATALOGUE, OVERWORLD).tickStructure(BASTION);
 
 		assertTrue(selection.canSearchIn(CATALOGUE, NETHER));
 	}

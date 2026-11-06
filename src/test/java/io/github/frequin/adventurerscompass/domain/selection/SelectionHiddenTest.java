@@ -42,14 +42,14 @@ class SelectionHiddenTest {
 
 	@Test
 	void aHiddenStructureIsNotSearchedEvenThroughItsGroup() {
-		Selection selection = Selection.EMPTY.tickGroup(VILLAGES, CATALOGUE).tickStructure(STRONGHOLD).tickStructure(OUTPOST);
+		Selection selection = Selection.EMPTY.tickGroup(VILLAGES, CATALOGUE, OVERWORLD).tickStructure(STRONGHOLD).tickStructure(OUTPOST);
 
 		assertEquals(Set.of(PLAINS, SNOWY, OUTPOST), selection.resolve(CATALOGUE, OVERWORLD));
 	}
 
 	@Test
 	void explodingAGroupDoesNotTickItsHiddenMembers() {
-		Selection selection = Selection.EMPTY.tickGroup(VILLAGES, CATALOGUE).untickStructure(PLAINS, CATALOGUE);
+		Selection selection = Selection.EMPTY.tickGroup(VILLAGES, CATALOGUE, OVERWORLD).untickStructure(PLAINS, CATALOGUE);
 
 		assertEquals(new Selection(Set.of(SNOWY), Set.of()), selection);
 	}
@@ -87,14 +87,22 @@ class SelectionHiddenTest {
 
 	@Test
 	void aGroupIsNotIgnoredWhileOneOfItsMembersIsNotHidden() {
-		Selection selection = Selection.EMPTY.tickGroup(VILLAGES, CATALOGUE);
+		Selection selection = Selection.EMPTY.tickGroup(VILLAGES, CATALOGUE, OVERWORLD);
 
 		assertEquals(List.of(), selection.ignored(CATALOGUE, OVERWORLD));
 	}
 
 	@Test
+	void aHiddenStructureTickedOneByOneStaysCountedAndOutlivesItsGroup() {
+		Selection ticked = Selection.EMPTY.tickStructure(DESERT).tickGroup(VILLAGES, CATALOGUE, OVERWORLD);
+
+		assertEquals(List.of(new IgnoredElement(DESERT, Reason.HIDDEN)), ticked.ignored(CATALOGUE, OVERWORLD));
+		assertEquals(new Selection(Set.of(DESERT), Set.of()), ticked.untickGroup(VILLAGES));
+	}
+
+	@Test
 	void aGroupWhoseMembersAreAllHiddenIsIgnoredAsHidden() {
-		Selection selection = Selection.EMPTY.tickGroup(STRONGHOLDS, CATALOGUE);
+		Selection selection = Selection.EMPTY.tickGroup(STRONGHOLDS, CATALOGUE, OVERWORLD);
 
 		assertEquals(List.of(new IgnoredElement(STRONGHOLDS, Reason.HIDDEN)), selection.ignored(CATALOGUE, OVERWORLD));
 		assertEquals(false, selection.canSearchIn(CATALOGUE, OVERWORLD));

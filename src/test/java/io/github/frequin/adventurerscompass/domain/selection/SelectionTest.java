@@ -46,14 +46,14 @@ class SelectionTest {
 
 	@Test
 	void aTickedGroupMakesAllItsStructuresSearchable() {
-		Selection selection = Selection.EMPTY.tickGroup(VILLAGES, CATALOGUE).tickGroup(OUTPOSTS, CATALOGUE);
+		Selection selection = Selection.EMPTY.tickGroup(VILLAGES, CATALOGUE, OVERWORLD).tickGroup(OUTPOSTS, CATALOGUE, OVERWORLD);
 
 		assertEquals(Set.of(PLAINS, DESERT, SNOWY, OUTPOST), selection.resolve(CATALOGUE, OVERWORLD));
 	}
 
 	@Test
 	void onlyStructuresGeneratedInTheDimensionAreSearchable() {
-		Selection selection = Selection.EMPTY.tickGroup(RUINED_PORTALS, CATALOGUE).tickStructure(DESERT);
+		Selection selection = Selection.EMPTY.tickGroup(RUINED_PORTALS, CATALOGUE, OVERWORLD).tickStructure(DESERT);
 
 		assertEquals(Set.of(PORTAL_NETHER), selection.resolve(CATALOGUE, NETHER));
 		assertEquals(Set.of(PORTAL, DESERT), selection.resolve(CATALOGUE, OVERWORLD));
@@ -68,36 +68,56 @@ class SelectionTest {
 
 	@Test
 	void untickingAStructureInATickedGroupExplodesTheGroupIntoItsOtherStructures() {
-		Selection selection = Selection.EMPTY.tickGroup(VILLAGES, CATALOGUE).untickStructure(SNOWY, CATALOGUE);
+		Selection selection = Selection.EMPTY.tickGroup(VILLAGES, CATALOGUE, OVERWORLD).untickStructure(SNOWY, CATALOGUE);
 
 		assertEquals(new Selection(Set.of(PLAINS, DESERT), Set.of()), selection);
 	}
 
 	@Test
 	void severalStructuresCanBeTakenOutOfTheSameGroup() {
-		Selection selection = Selection.EMPTY.tickGroup(VILLAGES, CATALOGUE).untickStructure(SNOWY, CATALOGUE).untickStructure(PLAINS, CATALOGUE);
+		Selection selection = Selection.EMPTY.tickGroup(VILLAGES, CATALOGUE, OVERWORLD).untickStructure(SNOWY, CATALOGUE).untickStructure(PLAINS, CATALOGUE);
 
 		assertEquals(Set.of(DESERT), selection.resolve(CATALOGUE, OVERWORLD));
 	}
 
 	@Test
 	void explodingAGroupKeepsItsStructuresOfOtherDimensions() {
-		Selection selection = Selection.EMPTY.tickGroup(RUINED_PORTALS, CATALOGUE).untickStructure(PORTAL, CATALOGUE);
+		Selection selection = Selection.EMPTY.tickGroup(RUINED_PORTALS, CATALOGUE, OVERWORLD).untickStructure(PORTAL, CATALOGUE);
 
 		assertEquals(Set.of(), selection.resolve(CATALOGUE, OVERWORLD));
 		assertEquals(Set.of(PORTAL_NETHER), selection.resolve(CATALOGUE, NETHER));
 	}
 
 	@Test
+	void aStructureOfAnotherDimensionTickedOneByOneOutlivesItsGroupBeingTickedThenUnticked() {
+		Selection before = Selection.EMPTY.tickStructure(PORTAL_NETHER);
+
+		Selection ticked = before.toggleGroup(RUINED_PORTALS, CATALOGUE, OVERWORLD);
+		Selection unticked = ticked.toggleGroup(RUINED_PORTALS, CATALOGUE, OVERWORLD);
+
+		assertEquals(new Selection(Set.of(PORTAL_NETHER), Set.of(RUINED_PORTALS)), ticked);
+		assertEquals(before, unticked);
+	}
+
+	@Test
+	void aTickedGroupCoversItsStructuresOfOtherDimensionsThatWereNeverTicked() {
+		Selection selection = Selection.EMPTY.tickGroup(RUINED_PORTALS, CATALOGUE, OVERWORLD);
+
+		assertEquals(new Selection(Set.of(), Set.of(RUINED_PORTALS)), selection);
+		assertEquals(StructureState.TICKED_BY_GROUP, selection.structureState(PORTAL_NETHER, CATALOGUE));
+		assertEquals(Set.of(PORTAL_NETHER), selection.resolve(CATALOGUE, NETHER));
+	}
+
+	@Test
 	void tickingAGroupAbsorbsItsStructuresTickedOneByOne() {
-		Selection selection = Selection.EMPTY.tickStructure(DESERT).tickStructure(OUTPOST).tickGroup(VILLAGES, CATALOGUE);
+		Selection selection = Selection.EMPTY.tickStructure(DESERT).tickStructure(OUTPOST).tickGroup(VILLAGES, CATALOGUE, OVERWORLD);
 
 		assertEquals(new Selection(Set.of(OUTPOST), Set.of(VILLAGES)), selection);
 	}
 
 	@Test
 	void aGroupReadsTickedPartialOrEmpty() {
-		Selection selection = Selection.EMPTY.tickGroup(VILLAGES, CATALOGUE).tickStructure(PORTAL);
+		Selection selection = Selection.EMPTY.tickGroup(VILLAGES, CATALOGUE, OVERWORLD).tickStructure(PORTAL);
 
 		assertEquals(GroupState.TICKED, selection.groupState(VILLAGES, CATALOGUE, OVERWORLD));
 		assertEquals(GroupState.PARTIAL, selection.groupState(RUINED_PORTALS, CATALOGUE, OVERWORLD));
@@ -113,7 +133,7 @@ class SelectionTest {
 
 	@Test
 	void aStructureReadsTickedByItselfThroughItsGroupOrNot() {
-		Selection selection = Selection.EMPTY.tickGroup(VILLAGES, CATALOGUE).tickStructure(OUTPOST);
+		Selection selection = Selection.EMPTY.tickGroup(VILLAGES, CATALOGUE, OVERWORLD).tickStructure(OUTPOST);
 
 		assertEquals(StructureState.TICKED, selection.structureState(OUTPOST, CATALOGUE));
 		assertEquals(StructureState.TICKED_BY_GROUP, selection.structureState(DESERT, CATALOGUE));
@@ -157,14 +177,14 @@ class SelectionTest {
 
 	@Test
 	void togglingAStructureTickedByItsGroupExplodesTheGroup() {
-		Selection selection = Selection.EMPTY.tickGroup(VILLAGES, CATALOGUE).toggleStructure(PLAINS, CATALOGUE);
+		Selection selection = Selection.EMPTY.tickGroup(VILLAGES, CATALOGUE, OVERWORLD).toggleStructure(PLAINS, CATALOGUE);
 
 		assertEquals(Set.of(DESERT, SNOWY), selection.resolve(CATALOGUE, OVERWORLD));
 	}
 
 	@Test
 	void untickingAStructureOrAGroupRemovesIt() {
-		Selection selection = Selection.EMPTY.tickStructure(DESERT).tickStructure(OUTPOST).tickGroup(RUINED_PORTALS, CATALOGUE)
+		Selection selection = Selection.EMPTY.tickStructure(DESERT).tickStructure(OUTPOST).tickGroup(RUINED_PORTALS, CATALOGUE, OVERWORLD)
 				.untickStructure(OUTPOST, CATALOGUE).untickGroup(RUINED_PORTALS);
 
 		assertEquals(Set.of(DESERT), selection.resolve(CATALOGUE, OVERWORLD));
