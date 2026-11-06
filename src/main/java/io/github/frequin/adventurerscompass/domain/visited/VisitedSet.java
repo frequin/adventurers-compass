@@ -30,7 +30,7 @@ public final class VisitedSet {
 	/** The set holding these Instances, in this order (for a repeated key, the first day is kept). */
 	public static VisitedSet of(Collection<VisitedInstance> instances) {
 		var days = new LinkedHashMap<InstanceKey, Long>();
-		instances.forEach(visited -> days.putIfAbsent(visited.instance(), visited.day()));
+		instances.forEach(visited -> days.putIfAbsent(visited.key(), visited.day()));
 		return days.isEmpty() ? EMPTY : new VisitedSet(days);
 	}
 
@@ -65,11 +65,6 @@ public final class VisitedSet {
 
 	public boolean contains(InstanceKey key) {
 		return days.containsKey(key);
-	}
-
-	/** The Visited Instances, in the order they were marked. */
-	public List<InstanceKey> list() {
-		return List.copyOf(days.keySet());
 	}
 
 	/** The Visited Instances with their days, in the order they were marked. */

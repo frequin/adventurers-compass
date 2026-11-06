@@ -2,8 +2,8 @@ package io.github.frequin.adventurerscompass.network;
 
 import io.github.frequin.adventurerscompass.AdventurersCompass;
 import io.github.frequin.adventurerscompass.codec.CompassCodecs;
-import io.github.frequin.adventurerscompass.compass.CompassVisited;
 import io.github.frequin.adventurerscompass.domain.InstanceKey;
+import io.github.frequin.adventurerscompass.visited.PlayerVisited;
 
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.network.FriendlyByteBuf;
@@ -19,7 +19,7 @@ public record UnmarkVisitedPacket(InstanceKey instance) implements CustomPacketP
 	public static final StreamCodec<FriendlyByteBuf, UnmarkVisitedPacket> CODEC = CompassCodecs.INSTANCE_KEY_STREAM.map(UnmarkVisitedPacket::new, UnmarkVisitedPacket::instance).cast();
 
 	public static void handle(UnmarkVisitedPacket packet, ServerPlayNetworking.Context context) {
-		context.server().execute(() -> CompassVisited.unmark(context.player(), packet.instance()));
+		context.server().execute(() -> PlayerVisited.unmark(context.player(), packet.instance()));
 	}
 
 	@Override

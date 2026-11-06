@@ -84,15 +84,22 @@ class NothingFoundExpiryTest {
 	}
 
 	@Test
+	void aRecentMessageOutOfTheHandIsForgottenAtOnceAsWhenThePlayerReconnects() {
+		var nothing = nothingFound(withTarget());
+
+		assertEquals(Status.TARGET, compass.tick(nothing, !HELD).status(OVERWORLD));
+	}
+
+	@Test
 	void aMessageSavedByAnEarlierRunWhoseClockWasAheadIsForgotten() {
-		var saved = withTarget().withNothingFound(NOTHING, 100 * ONE_SECOND);
+		var saved = withTarget().withNothingFound(new NothingFoundMessage(NOTHING, 100 * ONE_SECOND));
 
 		assertEquals(Status.TARGET, compass.tick(saved, HELD).status(OVERWORLD));
 	}
 
 	@Test
 	void aMessageWithoutATimeIsForgotten() {
-		var saved = withTarget().withNothingFound(NOTHING);
+		var saved = withTarget().withNothingFound(new NothingFoundMessage(NOTHING, null));
 
 		assertEquals(Status.TARGET, compass.tick(saved, HELD).status(OVERWORLD));
 	}

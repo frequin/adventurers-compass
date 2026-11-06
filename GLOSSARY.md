@@ -24,6 +24,10 @@ _Avoid_: Location, structure (when one occurrence is meant)
 The set of Structures and Groups ticked on a compass; a search looks for the nearest Instance of any of them.
 _Avoid_: Filter, profile, target list
 
+**Unsearchable**:
+The state of a Structure or Group of the Selection that a search leaves out in the Current dimension, because nothing it stands for generates there or what it stands for is Hidden; it stays on the compass.
+_Avoid_: Ignored
+
 **Target**:
 The Instance the compass currently points at.
 _Avoid_: Destination, result
@@ -33,7 +37,7 @@ The state of an Instance a player has stood inside, or has marked by hand as the
 _Avoid_: Explored, discovered, done
 
 **Skipped**:
-The state of an Instance a player chose to pass over without visiting it; held by one compass and cleared when a fresh search starts or the Selection changes.
+The state of an Instance a player chose to pass over without visiting it; held by one compass and cleared when a fresh search starts, when the Selection changes, or by hand.
 _Avoid_: Ignored, excluded, Visited (when the player has not been there)
 
 **Current dimension**:

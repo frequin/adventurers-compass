@@ -1,7 +1,7 @@
 package io.github.frequin.adventurerscompass.network;
 
 import io.github.frequin.adventurerscompass.AdventurersCompass;
-import io.github.frequin.adventurerscompass.compass.CompassVisited;
+import io.github.frequin.adventurerscompass.visited.PlayerVisited;
 
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.network.FriendlyByteBuf;
@@ -17,7 +17,7 @@ public record ClearVisitedPacket() implements CustomPacketPayload {
 	public static final StreamCodec<FriendlyByteBuf, ClearVisitedPacket> CODEC = StreamCodec.unit(new ClearVisitedPacket());
 
 	public static void handle(ClearVisitedPacket packet, ServerPlayNetworking.Context context) {
-		context.server().execute(() -> CompassVisited.clear(context.player()));
+		context.server().execute(() -> PlayerVisited.clear(context.player()));
 	}
 
 	@Override

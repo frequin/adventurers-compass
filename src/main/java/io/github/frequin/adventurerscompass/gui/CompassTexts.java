@@ -39,7 +39,7 @@ public final class CompassTexts {
 			case TARGET -> lines.add(Component.translatable("string.adventurerscompass.hud.target", structureName(state.target()), distance(state.target(), player)));
 			case TARGET_VISITED -> lines.add(Component.translatable("string.adventurerscompass.hud.targetVisited", structureName(state.target())));
 			case OTHER_DIMENSION -> lines.add(Component.translatable("string.adventurerscompass.hud.otherDimension", structureName(state.target()), dimensionName(state.target().dimension())));
-			case NOTHING_FOUND -> lines.add(nothingFound(state.nothingFound()));
+			case NOTHING_FOUND -> lines.add(nothingFound(state.nothingFound().result()));
 			case IDLE -> {
 			}
 		}
@@ -67,7 +67,7 @@ public final class CompassTexts {
 	/** Horizontal distance in whole blocks. */
 	public static int distance(Target target, Player player) {
 		BlockXZ here = new BlockXZ(player.blockPosition().getX(), player.blockPosition().getZ());
-		return (int) Math.round(Math.sqrt(here.distanceSq(target.pos())));
+		return here.distance(target.pos());
 	}
 
 	/** The player's Visited Instances, as synced by the server to this player only. */

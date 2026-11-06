@@ -4,7 +4,6 @@ import java.util.Set;
 import java.util.UUID;
 
 import io.github.frequin.adventurerscompass.domain.InstanceKey;
-import io.github.frequin.adventurerscompass.domain.search.SearchResult;
 
 /**
  * What one compass knows, carried by the item. Immutable; the commands of
@@ -13,21 +12,20 @@ import io.github.frequin.adventurerscompass.domain.search.SearchResult;
  * @param search       id of the running search, or {@code null} when none runs
  * @param target       the Target, or {@code null}
  * @param skipped      Instances passed over with "Pass"
- * @param nothingFound the last search's "nothing found", or {@code null}; shown over the Target for {@link Compass#NOTHING_FOUND_NANOS}, cleared sooner by the next search, a Selection change, a dimension change or the compass leaving the hand
+ * @param nothingFound the last search's "nothing found", or {@code null}; cleared when its time is up, or sooner by the next search, a Selection change, a dimension change or the compass leaving the hand
  * @param wear         Targets found since the last repair (Pass included)
- * @param nothingFoundAt the {@link io.github.frequin.adventurerscompass.domain.Clock} time {@code nothingFound} appeared, or {@code null}
  */
-public record CompassState(UUID search, Target target, Set<InstanceKey> skipped, SearchResult.NothingFound nothingFound, int wear, Long nothingFoundAt) {
+public record CompassState(UUID search, Target target, Set<InstanceKey> skipped, NothingFoundMessage nothingFound, int wear) {
 
-	public static final CompassState EMPTY = new CompassState(null, null, Set.of(), null, 0, null);
+	public static final CompassState EMPTY = new CompassState(null, null, Set.of(), null, 0);
 
 	public CompassState {
 		skipped = Set.copyOf(skipped);
 	}
 
 	/** A compass without wear. */
-	public CompassState(UUID search, Target target, Set<InstanceKey> skipped, SearchResult.NothingFound nothingFound) {
-		this(search, target, skipped, nothingFound, 0, null);
+	public CompassState(UUID search, Target target, Set<InstanceKey> skipped, NothingFoundMessage nothingFound) {
+		this(search, target, skipped, nothingFound, 0);
 	}
 
 	public boolean isSearching() {
@@ -83,27 +81,23 @@ public record CompassState(UUID search, Target target, Set<InstanceKey> skipped,
 	}
 
 	public CompassState withSearch(UUID search) {
-		return new CompassState(search, target, skipped, nothingFound, wear, nothingFoundAt);
+		return new CompassState(search, target, skipped, nothingFound, wear);
 	}
 
 	public CompassState withTarget(Target target) {
-		return new CompassState(search, target, skipped, nothingFound, wear, nothingFoundAt);
+		return new CompassState(search, target, skipped, nothingFound, wear);
 	}
 
 	public CompassState withSkipped(Set<InstanceKey> skipped) {
-		return new CompassState(search, target, skipped, nothingFound, wear, nothingFoundAt);
+		return new CompassState(search, target, skipped, nothingFound, wear);
 	}
 
-	public CompassState withNothingFound(SearchResult.NothingFound nothingFound) {
-		return withNothingFound(nothingFound, null);
-	}
-
-	public CompassState withNothingFound(SearchResult.NothingFound nothingFound, Long nothingFoundAt) {
-		return new CompassState(search, target, skipped, nothingFound, wear, nothingFoundAt);
+	public CompassState withNothingFound(NothingFoundMessage nothingFound) {
+		return new CompassState(search, target, skipped, nothingFound, wear);
 	}
 
 	public CompassState withWear(int wear) {
-		return new CompassState(search, target, skipped, nothingFound, wear, nothingFoundAt);
+		return new CompassState(search, target, skipped, nothingFound, wear);
 	}
 
 }

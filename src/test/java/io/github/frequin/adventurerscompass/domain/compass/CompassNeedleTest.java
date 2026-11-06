@@ -51,7 +51,7 @@ class CompassNeedleTest {
 
 	@Test
 	void pointsAtAKeptTargetEvenWhenTheLastSearchFoundNothing() {
-		var state = CompassState.EMPTY.withTarget(targetIn(OVERWORLD)).withNothingFound(NOTHING);
+		var state = CompassState.EMPTY.withTarget(targetIn(OVERWORLD)).withNothingFound(new NothingFoundMessage(NOTHING, null));
 
 		assertEquals(Needle.TARGET, state.needle(OVERWORLD));
 	}

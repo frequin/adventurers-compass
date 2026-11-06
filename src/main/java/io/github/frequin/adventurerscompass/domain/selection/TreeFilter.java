@@ -37,11 +37,10 @@ public final class TreeFilter {
 	}
 
 	/**
-	 * Narrows a tree. {@code displayName} gives the name shown for a Structure
-	 * id, {@code groupName} the one shown for a Group id. Groups keep only their
-	 * matching Structures and disappear when none match.
+	 * Narrows a tree. Groups keep only their matching Structures and disappear
+	 * when none match.
 	 */
-	public List<TreeEntry> apply(List<TreeEntry> tree, Catalogue catalogue, Function<String, String> displayName, Function<String, String> groupName) {
+	public List<TreeEntry> apply(List<TreeEntry> tree, Catalogue catalogue, TreeNames names) {
 		if (isNone()) {
 			return tree;
 		}
@@ -49,17 +48,17 @@ public final class TreeFilter {
 		for (TreeEntry entry : tree) {
 			switch (entry) {
 				case TreeEntry.GroupEntry group -> {
-					if (!bySource && matchesName(group.groupId(), groupName)) {
+					if (!bySource && matchesName(group.groupId(), names::group)) {
 						kept.add(group);
 					} else {
-						List<String> members = group.structureIds().stream().filter(id -> matches(id, catalogue, displayName)).toList();
+						List<String> members = group.structureIds().stream().filter(id -> matches(id, catalogue, names::structure)).toList();
 						if (!members.isEmpty()) {
 							kept.add(new TreeEntry.GroupEntry(group.groupId(), members));
 						}
 					}
 				}
 				case TreeEntry.StructureEntry structure -> {
-					if (matches(structure.structureId(), catalogue, displayName)) {
+					if (matches(structure.structureId(), catalogue, names::structure)) {
 						kept.add(structure);
 					}
 				}

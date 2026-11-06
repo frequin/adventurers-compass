@@ -38,18 +38,33 @@ class TreeFilterTest {
 	private static final Map<String, String> NAMES = Map.of(
 			VILLAGES, "Villages", PLAINS, "Plains Village", DESERT, "Desert Village", OUTPOST, "Pillager Outpost",
 			TOWERS, "Towers", ICE_TOWER, "Ice Tower", DESERT_TOWER, "Sandy Spire");
-	private static final Function<String, String> NAME = id -> NAMES.getOrDefault(id, id);
+	private static final TreeNames TREE_NAMES = names(id -> NAMES.getOrDefault(id, id), id -> NAMES.getOrDefault(id, id));
+
+	private static TreeNames names(Function<String, String> structures, Function<String, String> groups) {
+		return new TreeNames() {
+
+			@Override
+			public String structure(String structureId) {
+				return structures.apply(structureId);
+			}
+
+			@Override
+			public String group(String groupId) {
+				return groups.apply(groupId);
+			}
+
+		};
+	}
 
 	private static List<TreeEntry> filter(String query) {
-		return TreeFilter.of(query).apply(CATALOGUE.tree(OVERWORLD), CATALOGUE, NAME, NAME);
+		return TreeFilter.of(query).apply(CATALOGUE.tree(OVERWORLD), CATALOGUE, TREE_NAMES);
 	}
 
 	@Test
 	void aGroupMatchesByItsGroupNameNotAStructureNameOfTheSameId() {
-		Function<String, String> structureName = id -> "Unrelated";
-		Function<String, String> groupName = id -> id.equals(VILLAGES) ? "Hameaux" : "Autre";
+		TreeNames names = names(id -> "Unrelated", id -> id.equals(VILLAGES) ? "Hameaux" : "Autre");
 
-		List<TreeEntry> kept = TreeFilter.of("hameaux").apply(CATALOGUE.tree(OVERWORLD), CATALOGUE, structureName, groupName);
+		List<TreeEntry> kept = TreeFilter.of("hameaux").apply(CATALOGUE.tree(OVERWORLD), CATALOGUE, names);
 
 		assertEquals(List.of(new TreeEntry.GroupEntry(VILLAGES, List.of(PLAINS, DESERT))), kept);
 	}

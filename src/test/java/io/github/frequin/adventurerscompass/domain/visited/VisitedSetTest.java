@@ -41,8 +41,8 @@ class VisitedSetTest {
 	void listsVisitedInstancesInTheOrderTheyWereMarked() {
 		var visited = VisitedSet.empty().mark(DESERT_PYRAMID, 40).visited().mark(PLAINS_VILLAGE, 12).visited().mark(DESERT_PYRAMID, 40).visited();
 
-		assertEquals(List.of(DESERT_PYRAMID, PLAINS_VILLAGE), visited.list());
-		assertEquals(List.of(), VisitedSet.empty().list());
+		assertEquals(List.of(DESERT_PYRAMID, PLAINS_VILLAGE), visited.instances().stream().map(VisitedInstance::key).toList());
+		assertEquals(List.of(), VisitedSet.empty().instances());
 	}
 
 	@Test
@@ -72,7 +72,7 @@ class VisitedSetTest {
 
 		var cleared = visited.clear();
 
-		assertEquals(List.of(), cleared.list());
+		assertEquals(List.of(), cleared.instances());
 		assertFalse(cleared.contains(PLAINS_VILLAGE));
 		assertTrue(cleared.mark(PLAINS_VILLAGE, 50).isNew());
 	}

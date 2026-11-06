@@ -11,9 +11,9 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 
 /**
- * The server side of the Visited rules of the compass: "Mark Visited",
- * "Unmark", "Unmark all", and what happens when an Instance becomes Visited (the action-bar
- * message, and the sound when it is the Target of a compass the player carries).
+ * The server side of the Visited rules of the compass: "Mark Visited", and
+ * what happens when an Instance becomes Visited (the action-bar message, and
+ * the sound when it is the Target of a compass the player carries).
  */
 public final class CompassVisited {
 
@@ -25,16 +25,6 @@ public final class CompassVisited {
 		if (PlayerVisited.mark(player, instance)) {
 			becameVisited(player, instance);
 		}
-	}
-
-	/** Makes the Instance searchable again for the player. */
-	public static void unmark(ServerPlayer player, InstanceKey instance) {
-		PlayerVisited.unmark(player, instance);
-	}
-
-	/** Makes every Visited Instance searchable again for the player. */
-	public static void clear(ServerPlayer player) {
-		PlayerVisited.clear(player);
 	}
 
 	/**
@@ -54,7 +44,7 @@ public final class CompassVisited {
 	 */
 	static void playArrivalSound(ServerPlayer player) {
 		if (AdventurersCompassConfig.targetVisitedSound) {
-			player.connection.send(new ClientboundSoundPacket(SoundEvents.NOTE_BLOCK_CHIME, SoundSource.PLAYERS, player.getX(), player.getY(), player.getZ(), 1.0F, 1.0F, player.getRandom().nextLong()));
+			player.connection.send(new ClientboundSoundPacket(SoundEvents.NOTE_BLOCK_CHIME, SoundSource.PLAYERS, player.getX(), player.getY(), player.getZ(), 0.5F, 1.0F, player.getRandom().nextLong()));
 		}
 	}
 

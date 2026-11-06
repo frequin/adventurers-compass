@@ -4,6 +4,8 @@ import java.util.Set;
 
 import io.github.frequin.adventurerscompass.AdventurersCompass;
 import io.github.frequin.adventurerscompass.domain.compass.CompassState;
+import io.github.frequin.adventurerscompass.domain.compass.NothingFoundMessage;
+import io.github.frequin.adventurerscompass.domain.search.SearchResult;
 
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.world.item.ItemStack;
@@ -20,21 +22,22 @@ public final class CompassStacks {
 	}
 
 	public static CompassState read(ItemStack stack) {
+		SearchResult.NothingFound nothingFound = stack.get(AdventurersCompass.NOTHING_FOUND);
 		return new CompassState(
 				stack.get(AdventurersCompass.SEARCH),
 				stack.get(AdventurersCompass.TARGET),
 				stack.getOrDefault(AdventurersCompass.SKIPPED, Set.of()),
-				stack.get(AdventurersCompass.NOTHING_FOUND),
-				stack.getOrDefault(AdventurersCompass.DAMAGE, 0),
-				stack.get(AdventurersCompass.NOTHING_FOUND_AT));
+				nothingFound == null ? null : new NothingFoundMessage(nothingFound, stack.get(AdventurersCompass.NOTHING_FOUND_AT)),
+				stack.getOrDefault(AdventurersCompass.DAMAGE, 0));
 	}
 
 	public static void write(ItemStack stack, CompassState state) {
 		setOrRemove(stack, AdventurersCompass.SEARCH, state.search());
 		setOrRemove(stack, AdventurersCompass.TARGET, state.target());
 		setOrRemove(stack, AdventurersCompass.SKIPPED, state.skipped().isEmpty() ? null : state.skipped());
-		setOrRemove(stack, AdventurersCompass.NOTHING_FOUND, state.nothingFound());
-		setOrRemove(stack, AdventurersCompass.NOTHING_FOUND_AT, state.nothingFoundAt());
+		NothingFoundMessage nothingFound = state.nothingFound();
+		setOrRemove(stack, AdventurersCompass.NOTHING_FOUND, nothingFound == null ? null : nothingFound.result());
+		setOrRemove(stack, AdventurersCompass.NOTHING_FOUND_AT, nothingFound == null ? null : nothingFound.shownAt());
 		setOrRemove(stack, AdventurersCompass.DAMAGE, state.wear() == 0 ? null : state.wear());
 	}
 

@@ -35,6 +35,20 @@ class SelectionTickAllTest {
 			new CatalogueEntry(FORTRESS, FORTRESSES, Set.of(NETHER), "Minecraft"),
 			new CatalogueEntry(BASTION, FORTRESSES, Set.of(NETHER), "Minecraft")));
 
+	private static final TreeNames IDS = new TreeNames() {
+
+		@Override
+		public String structure(String structureId) {
+			return structureId;
+		}
+
+		@Override
+		public String group(String groupId) {
+			return groupId;
+		}
+
+	};
+
 	@Test
 	void withoutAFilterEveryRowOfTheTreeIsTicked() {
 		Selection selection = Selection.EMPTY.tickAll(CATALOGUE.tree(OVERWORLD), CATALOGUE, OVERWORLD);
@@ -44,7 +58,7 @@ class SelectionTickAllTest {
 
 	@Test
 	void aFilterThatKeepsPartOfAGroupTicksOnlyTheStructuresItLists() {
-		List<TreeEntry> listed = TreeFilter.of("desert").apply(CATALOGUE.tree(OVERWORLD), CATALOGUE, id -> id, id -> id);
+		List<TreeEntry> listed = TreeFilter.of("desert").apply(CATALOGUE.tree(OVERWORLD), CATALOGUE, IDS);
 
 		Selection selection = Selection.EMPTY.tickAll(listed, CATALOGUE, OVERWORLD);
 
@@ -53,7 +67,7 @@ class SelectionTickAllTest {
 
 	@Test
 	void aFilterThatKeepsAWholeGroupTicksTheGroup() {
-		List<TreeEntry> listed = TreeFilter.of("villages").apply(CATALOGUE.tree(OVERWORLD), CATALOGUE, id -> id, id -> id);
+		List<TreeEntry> listed = TreeFilter.of("villages").apply(CATALOGUE.tree(OVERWORLD), CATALOGUE, IDS);
 
 		Selection selection = Selection.EMPTY.tickAll(listed, CATALOGUE, OVERWORLD);
 
@@ -62,7 +76,7 @@ class SelectionTickAllTest {
 
 	@Test
 	void whatTheFilterLeavesOutStaysAsItWas() {
-		List<TreeEntry> listed = TreeFilter.of("desert").apply(CATALOGUE.tree(OVERWORLD), CATALOGUE, id -> id, id -> id);
+		List<TreeEntry> listed = TreeFilter.of("desert").apply(CATALOGUE.tree(OVERWORLD), CATALOGUE, IDS);
 
 		Selection selection = Selection.EMPTY.tickStructure(OUTPOST).tickAll(listed, CATALOGUE, OVERWORLD);
 
@@ -71,8 +85,8 @@ class SelectionTickAllTest {
 
 	@Test
 	void aStructureAlreadyCoveredByItsTickedGroupIsNotTickedAgain() {
-		List<TreeEntry> listed = TreeFilter.of("desert").apply(CATALOGUE.tree(OVERWORLD), CATALOGUE, id -> id, id -> id);
-		Selection ticked = Selection.EMPTY.tickGroup(VILLAGES, CATALOGUE);
+		List<TreeEntry> listed = TreeFilter.of("desert").apply(CATALOGUE.tree(OVERWORLD), CATALOGUE, IDS);
+		Selection ticked = Selection.EMPTY.tickGroup(VILLAGES, CATALOGUE, OVERWORLD);
 
 		assertEquals(ticked, ticked.tickAll(listed, CATALOGUE, OVERWORLD));
 	}
@@ -85,7 +99,7 @@ class SelectionTickAllTest {
 	}
 
 	@Test
-	void aStructureOfAnotherDimensionAbsorbedByItsGroupIsStillSearchedThere() {
+	void aStructureOfAnotherDimensionOfAGroupTickedWholeStaysTickedOneByOne() {
 		Catalogue catalogue = new Catalogue(List.of(
 				new CatalogueEntry(PORTAL, PORTALS, Set.of(OVERWORLD), "Minecraft"),
 				new CatalogueEntry(PORTAL_DESERT, PORTALS, Set.of(OVERWORLD), "Minecraft"),
@@ -93,7 +107,9 @@ class SelectionTickAllTest {
 
 		Selection selection = Selection.EMPTY.tickStructure(PORTAL_NETHER).tickAll(catalogue.tree(OVERWORLD), catalogue, OVERWORLD);
 
+		assertEquals(new Selection(Set.of(PORTAL_NETHER), Set.of(PORTALS)), selection);
 		assertEquals(Set.of(PORTAL_NETHER), selection.resolve(catalogue, NETHER));
+		assertEquals(new Selection(Set.of(PORTAL_NETHER), Set.of()), selection.untickGroup(PORTALS));
 	}
 
 	@Test

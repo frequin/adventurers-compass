@@ -11,7 +11,7 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.Identifier;
 
-/** Client to server: the player edited the Selection of the compass they hold, which cancels its search and clears its Target and Skipped. */
+/** Client to server: the player edited the Selection of the compass they hold, which cancels its search, keeps its Target and clears its Skipped. */
 public record UpdateSelectionPacket(Selection selection) implements CustomPacketPayload {
 
 	public static final Type<UpdateSelectionPacket> TYPE = new Type<>(Identifier.fromNamespaceAndPath(AdventurersCompass.MODID, "update_selection"));

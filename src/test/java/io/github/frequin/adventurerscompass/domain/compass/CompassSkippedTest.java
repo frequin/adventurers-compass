@@ -24,7 +24,7 @@ class CompassSkippedTest {
 	private static final InstanceKey FIRST = village(1, 1);
 	private static final InstanceKey SECOND = village(2, 2);
 	private static final Target TARGET = new Target(village(3, 3), new BlockXZ(56, 56));
-	private static final SearchResult.NothingFound NOTHING = new SearchResult.NothingFound(OVERWORLD, 1000, 0, 2);
+	private static final NothingFoundMessage SHOWN = new NothingFoundMessage(new SearchResult.NothingFound(OVERWORLD, 1000, 0, 2), 7L);
 
 	private final Compass compass = new Compass();
 
@@ -78,13 +78,13 @@ class CompassSkippedTest {
 	@Test
 	void neitherCommandTouchesTheRunningSearchTheTargetTheWearOrTheLastNothingFound() {
 		var search = UUID.randomUUID();
-		var state = new CompassState(search, TARGET, Set.of(FIRST, SECOND), NOTHING, 2, 7L);
+		var state = new CompassState(search, TARGET, Set.of(FIRST, SECOND), SHOWN, 2);
 
 		var removed = accepted(compass.removeSkipped(state, FIRST));
 		var cleared = accepted(compass.clearSkipped(state));
 
-		assertEquals(new CompassState(search, TARGET, Set.of(SECOND), NOTHING, 2, 7L), removed.state());
-		assertEquals(new CompassState(search, TARGET, Set.of(), NOTHING, 2, 7L), cleared.state());
+		assertEquals(new CompassState(search, TARGET, Set.of(SECOND), SHOWN, 2), removed.state());
+		assertEquals(new CompassState(search, TARGET, Set.of(), SHOWN, 2), cleared.state());
 		assertEquals(List.of(), removed.effects());
 		assertEquals(List.of(), cleared.effects());
 	}

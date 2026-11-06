@@ -11,7 +11,7 @@ import java.util.Set;
  * @param source      display name of the mod or datapack that adds it
  * @param hidden      whether it is Hidden (see {@link HiddenRule}): kept in the
  *                    catalogue so a Selection that holds it can count it as
- *                    ignored, but neither listed in the tree nor searched
+ *                    unsearchable, but neither listed in the tree nor searched
  */
 public record CatalogueEntry(String structureId, String groupId, Set<String> dimensions, String source, boolean hidden) {
 

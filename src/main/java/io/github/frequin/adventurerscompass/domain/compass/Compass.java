@@ -18,9 +18,6 @@ public final class Compass {
 	/** The rules every compass applies before a search starts. */
 	public static final List<LaunchRule> DEFAULT_RULES = List.of(LaunchRule.SOMETHING_SEARCHABLE, LaunchRule.NOT_BROKEN, LaunchRule.ENOUGH_XP);
 
-	/** How long a "nothing found" shows before the HUD goes back to the Target. */
-	public static final long NOTHING_FOUND_NANOS = 5_000_000_000L;
-
 	private final List<LaunchRule> rules;
 	private final Clock clock;
 
@@ -156,7 +153,7 @@ public final class Compass {
 		return switch (result) {
 			case SearchResult.Found found -> state.withSearch(null).withTarget(new Target(found.instance(), found.pos())).withNothingFound(null).withWear(worn(state.wear(), wear));
 			// The Target is kept (a detour costs nothing); the status shows "nothing found" until it expires or the next change
-			case SearchResult.NothingFound nothing -> state.withSearch(null).withNothingFound(nothing, clock.nanoTime());
+			case SearchResult.NothingFound nothing -> state.withSearch(null).withNothingFound(new NothingFoundMessage(nothing, clock.nanoTime()));
 			case SearchResult.Cancelled cancelled -> state.withSearch(null);
 		};
 	}
@@ -169,16 +166,7 @@ public final class Compass {
 		if (state.nothingFound() == null) {
 			return state;
 		}
-		return held && isShowing(state.nothingFoundAt()) ? state : state.withNothingFound(null);
-	}
-
-	/** A time from a previous run of the game means nothing to this clock: it reads as over, whichever side it falls. */
-	private boolean isShowing(Long shownAt) {
-		if (shownAt == null) {
-			return false;
-		}
-		long elapsed = clock.nanoTime() - shownAt;
-		return elapsed >= 0 && elapsed < NOTHING_FOUND_NANOS;
+		return held && state.nothingFound().isShowing(clock.nanoTime()) ? state : state.withNothingFound(null);
 	}
 
 	/** Repair (crafting with a compass): resets wear and keeps the Target, Skipped and any running search. */

@@ -7,6 +7,7 @@ final class ScreenLayout {
 	static final int MIN_SCREEN_WIDTH = 320;
 	static final int MARGIN = 10;
 	static final int GAP = 5;
+	static final int BUTTON_HEIGHT = 20;
 	/** Kept free on each side of a button's label. */
 	static final int LABEL_PADDING = 2;
 	/** Added to a label to size the small buttons of the list bar. */

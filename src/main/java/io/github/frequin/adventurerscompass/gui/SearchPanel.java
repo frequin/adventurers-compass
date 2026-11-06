@@ -1,5 +1,8 @@
 package io.github.frequin.adventurerscompass.gui;
 
+import static io.github.frequin.adventurerscompass.gui.ScreenLayout.BUTTON_HEIGHT;
+import static io.github.frequin.adventurerscompass.gui.ScreenLayout.GAP;
+
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -40,8 +43,6 @@ import net.minecraft.world.item.ItemStack;
 @Environment(EnvType.CLIENT)
 final class SearchPanel {
 
-	private static final int BUTTON_HEIGHT = 20;
-	private static final int GAP = 5;
 	private static final int LINE = 10;
 	private static final int TARGET_TEXT_LINES = 3;
 	private static final int CLEAR_TARGET_HEIGHT = 12;
