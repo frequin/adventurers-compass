@@ -52,6 +52,7 @@ public final class ServerCompass {
 	public static void register() {
 		ServerEntityLevelChangeEvents.AFTER_PLAYER_CHANGE_LEVEL.register((player, origin, destination) -> dimensionChanged(player));
 		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> CompassSearches.cancel(handler.player));
+		ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> playerJoined(handler.player));
 	}
 
 	/** "Search" with the compass the player holds. */
@@ -161,6 +162,22 @@ public final class ServerCompass {
 		CompassState state = CompassStacks.read(stack);
 		if (state.isSearching() && !CompassSearches.isRunning(state.search())) {
 			CompassStacks.write(stack, COMPASS.searchEnded(state, state.search(), new SearchResult.Cancelled()));
+		}
+	}
+
+	/** Called while the compass ticks in an inventory: its "nothing found" goes when its time is up or the compass leaves the hand. */
+	public static void tickNothingFound(ItemStack stack, boolean held) {
+		CompassState state = CompassStacks.read(stack);
+		CompassState next = COMPASS.tick(state, held);
+		if (next != state) {
+			CompassStacks.write(stack, next);
+		}
+	}
+
+	/** A "nothing found" saved with the player does not outlive their session: it is gone before the client gets their inventory. */
+	public static void playerJoined(ServerPlayer player) {
+		for (ItemStack stack : ItemUtils.allCompasses(player)) {
+			tickNothingFound(stack, false);
 		}
 	}
 

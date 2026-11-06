@@ -104,6 +104,7 @@ public class AdventurersCompassItem extends Item {
 	@Override
 	public void inventoryTick(ItemStack stack, ServerLevel level, Entity owner, EquipmentSlot slot) {
 		ServerCompass.interruptIfOrphaned(stack);
+		ServerCompass.tickNothingFound(stack, slot == EquipmentSlot.MAINHAND || slot == EquipmentSlot.OFFHAND);
 		// The client reads these server settings from the compass: durability for
 		// the wear bar, the tooltip and the screen; displayCoordinates for the HUD
 		if (durability(stack) != AdventurersCompassConfig.compassDurability) {
