@@ -51,6 +51,7 @@
     "_comment": "STRINGS - VISITED",
     "string.adventurerscompass.hud.targetVisited": "%s · Visited — Search for the next one",
     "string.adventurerscompass.markVisited": "Mark Visited",
+    "string.adventurerscompass.clearTarget": "Clear Target",
     "string.adventurerscompass.targetVisited": "%s (Visited)",
     "string.adventurerscompass.visitedList": "Visited (%s)",
     "string.adventurerscompass.noVisited": "Nothing Visited yet",

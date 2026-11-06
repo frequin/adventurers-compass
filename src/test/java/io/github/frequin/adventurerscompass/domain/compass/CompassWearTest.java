@@ -123,6 +123,25 @@ class CompassWearTest {
 	}
 
 	@Test
+	void aBrokenCompassCanClearItsTarget() {
+		var broken = brokenWithTarget();
+
+		var outcome = accepted(compass.clearTarget(broken));
+
+		assertEquals(null, outcome.state().target());
+		assertEquals(true, outcome.state().isBroken(DURABILITY));
+	}
+
+	@Test
+	void clearingTheTargetDoesNotWearTheCompass() {
+		var worn = searchAndFind(CompassState.EMPTY, 1, SURVIVAL);
+
+		var after = accepted(compass.clearTarget(worn)).state();
+
+		assertEquals(2, after.searchesLeft(DURABILITY));
+	}
+
+	@Test
 	void withoutDurabilityTheCompassNeverWearsNorBreaks() {
 		var unbreakable = new WearContext(0, false);
 		var state = CompassState.EMPTY;
