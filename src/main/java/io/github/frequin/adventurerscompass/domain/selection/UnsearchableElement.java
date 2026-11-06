@@ -7,7 +7,7 @@ package io.github.frequin.adventurerscompass.domain.selection;
  * @param id     the Group or Structure id
  * @param reason why the search leaves it out
  */
-public record IgnoredElement(String id, Reason reason) {
+public record UnsearchableElement(String id, Reason reason) {
 
 	public enum Reason {
 		/** Not generated in the Current dimension, or no longer in the catalogue. */

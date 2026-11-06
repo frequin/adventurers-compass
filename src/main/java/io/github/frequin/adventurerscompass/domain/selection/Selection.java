@@ -6,7 +6,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
 
-import io.github.frequin.adventurerscompass.domain.selection.IgnoredElement.Reason;
+import io.github.frequin.adventurerscompass.domain.selection.UnsearchableElement.Reason;
 
 /**
  * The Structures and Groups ticked on a compass. Immutable: every operation
@@ -151,22 +151,22 @@ public record Selection(Set<String> structures, Set<String> groups) {
 
 	/**
 	 * The elements of the Selection a search in {@code dimension} leaves out:
-	 * Groups first, then Structures, each sorted by id. An element is ignored when
+	 * Groups first, then Structures, each sorted by id. An element is unsearchable when
 	 * nothing it stands for generates in the dimension, or when what it stands for
 	 * is Hidden; it stays on the compass. Hidden wins over absent.
 	 */
-	public List<IgnoredElement> ignored(Catalogue catalogue, String dimension) {
-		List<IgnoredElement> ignored = new ArrayList<>();
+	public List<UnsearchableElement> unsearchable(Catalogue catalogue, String dimension) {
+		List<UnsearchableElement> unsearchable = new ArrayList<>();
 		for (String groupId : new TreeSet<>(groups)) {
-			ignoredGroupReason(groupId, catalogue, dimension).ifPresent(reason -> ignored.add(new IgnoredElement(groupId, reason)));
+			unsearchableGroupReason(groupId, catalogue, dimension).ifPresent(reason -> unsearchable.add(new UnsearchableElement(groupId, reason)));
 		}
 		for (String structureId : new TreeSet<>(structures)) {
-			ignoredStructureReason(structureId, catalogue, dimension).ifPresent(reason -> ignored.add(new IgnoredElement(structureId, reason)));
+			unsearchableStructureReason(structureId, catalogue, dimension).ifPresent(reason -> unsearchable.add(new UnsearchableElement(structureId, reason)));
 		}
-		return ignored;
+		return unsearchable;
 	}
 
-	private static Optional<Reason> ignoredStructureReason(String structureId, Catalogue catalogue, String dimension) {
+	private static Optional<Reason> unsearchableStructureReason(String structureId, Catalogue catalogue, String dimension) {
 		Optional<CatalogueEntry> entry = catalogue.entry(structureId);
 		if (entry.isEmpty()) {
 			return Optional.of(Reason.ABSENT_FROM_DIMENSION);
@@ -178,11 +178,11 @@ public record Selection(Set<String> structures, Set<String> groups) {
 	}
 
 	/**
-	 * Not ignored when a non-Hidden member generates in the dimension. Otherwise
+	 * Not unsearchable when a non-Hidden member generates in the dimension. Otherwise
 	 * HIDDEN when the members that generate there (or, if none does, all its
 	 * members) are Hidden, else ABSENT_FROM_DIMENSION.
 	 */
-	private static Optional<Reason> ignoredGroupReason(String groupId, Catalogue catalogue, String dimension) {
+	private static Optional<Reason> unsearchableGroupReason(String groupId, Catalogue catalogue, String dimension) {
 		List<CatalogueEntry> members = catalogue.members(groupId).stream().map(id -> catalogue.entry(id).get()).toList();
 		if (members.stream().anyMatch(entry -> entry.listedIn(dimension))) {
 			return Optional.empty();

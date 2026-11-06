@@ -9,9 +9,9 @@ import java.util.Set;
 
 import org.junit.jupiter.api.Test;
 
-import io.github.frequin.adventurerscompass.domain.selection.IgnoredElement.Reason;
+import io.github.frequin.adventurerscompass.domain.selection.UnsearchableElement.Reason;
 
-class SelectionIgnoredTest {
+class SelectionUnsearchableTest {
 
 	private static final String OVERWORLD = "minecraft:overworld";
 	private static final String NETHER = "minecraft:the_nether";
@@ -37,24 +37,24 @@ class SelectionIgnoredTest {
 			new CatalogueEntry(PORTAL_NETHER, RUINED_PORTALS, Set.of(NETHER), "Minecraft")));
 
 	@Test
-	void anEmptySelectionIgnoresNothing() {
-		assertEquals(List.of(), Selection.EMPTY.ignored(CATALOGUE, OVERWORLD));
+	void anEmptySelectionHasNothingUnsearchable() {
+		assertEquals(List.of(), Selection.EMPTY.unsearchable(CATALOGUE, OVERWORLD));
 	}
 
 	@Test
-	void aSelectionThatGeneratesHereIgnoresNothing() {
+	void aSelectionThatGeneratesHereHasNothingUnsearchable() {
 		Selection selection = Selection.EMPTY.tickStructure(PORTAL).tickGroup(VILLAGES, CATALOGUE, OVERWORLD);
 
-		assertEquals(List.of(), selection.ignored(CATALOGUE, OVERWORLD));
+		assertEquals(List.of(), selection.unsearchable(CATALOGUE, OVERWORLD));
 	}
 
 	@Test
-	void afterATripToTheNetherOverworldElementsAreIgnoredGroupsFirstAndTheRestIsSearched() {
+	void afterATripToTheNetherOverworldElementsAreUnsearchableGroupsFirstAndTheRestIsSearched() {
 		Selection selection = Selection.EMPTY.tickGroup(VILLAGES, CATALOGUE, OVERWORLD).tickStructure(PORTAL).tickStructure(FORTRESS);
 
 		assertEquals(List.of(
-				new IgnoredElement(VILLAGES, Reason.ABSENT_FROM_DIMENSION),
-				new IgnoredElement(PORTAL, Reason.ABSENT_FROM_DIMENSION)), selection.ignored(CATALOGUE, NETHER));
+				new UnsearchableElement(VILLAGES, Reason.ABSENT_FROM_DIMENSION),
+				new UnsearchableElement(PORTAL, Reason.ABSENT_FROM_DIMENSION)), selection.unsearchable(CATALOGUE, NETHER));
 		assertEquals(Set.of(FORTRESS), selection.resolve(CATALOGUE, NETHER));
 	}
 
@@ -62,19 +62,19 @@ class SelectionIgnoredTest {
 	void aRoundTripBetweenDimensionsLeavesTheSelectionWhole() {
 		Selection selection = Selection.EMPTY.tickGroup(VILLAGES, CATALOGUE, OVERWORLD).tickStructure(FORTRESS);
 
-		assertEquals(1, selection.ignored(CATALOGUE, NETHER).size());
-		assertEquals(1, selection.ignored(CATALOGUE, OVERWORLD).size());
+		assertEquals(1, selection.unsearchable(CATALOGUE, NETHER).size());
+		assertEquals(1, selection.unsearchable(CATALOGUE, OVERWORLD).size());
 		assertEquals(Set.of(PLAINS, DESERT), selection.resolve(CATALOGUE, OVERWORLD));
 		assertEquals(Set.of(FORTRESS), selection.resolve(CATALOGUE, NETHER));
 		assertEquals(new Selection(Set.of(FORTRESS), Set.of(VILLAGES)), selection);
 	}
 
 	@Test
-	void aGroupSpanningDimensionsIsNotIgnoredWhereOneOfItsStructuresGenerates() {
+	void aGroupSpanningDimensionsIsNotUnsearchableWhereOneOfItsStructuresGenerates() {
 		Selection selection = Selection.EMPTY.tickGroup(RUINED_PORTALS, CATALOGUE, OVERWORLD);
 
-		assertEquals(List.of(), selection.ignored(CATALOGUE, NETHER));
-		assertEquals(List.of(), selection.ignored(CATALOGUE, OVERWORLD));
+		assertEquals(List.of(), selection.unsearchable(CATALOGUE, NETHER));
+		assertEquals(List.of(), selection.unsearchable(CATALOGUE, OVERWORLD));
 	}
 
 	@Test
@@ -94,19 +94,19 @@ class SelectionIgnoredTest {
 	}
 
 	@Test
-	void oneElementNotIgnoredIsEnoughToSearch() {
+	void oneElementNotUnsearchableIsEnoughToSearch() {
 		Selection selection = Selection.EMPTY.tickGroup(VILLAGES, CATALOGUE, OVERWORLD).tickStructure(BASTION);
 
 		assertTrue(selection.canSearchIn(CATALOGUE, NETHER));
 	}
 
 	@Test
-	void anElementMissingFromTheCatalogueIsIgnored() {
+	void anElementMissingFromTheCatalogueIsUnsearchable() {
 		Selection selection = new Selection(Set.of("othermod:gone"), Set.of("othermod:gone_group"));
 
 		assertEquals(List.of(
-				new IgnoredElement("othermod:gone_group", Reason.ABSENT_FROM_DIMENSION),
-				new IgnoredElement("othermod:gone", Reason.ABSENT_FROM_DIMENSION)), selection.ignored(CATALOGUE, OVERWORLD));
+				new UnsearchableElement("othermod:gone_group", Reason.ABSENT_FROM_DIMENSION),
+				new UnsearchableElement("othermod:gone", Reason.ABSENT_FROM_DIMENSION)), selection.unsearchable(CATALOGUE, OVERWORLD));
 	}
 
 }

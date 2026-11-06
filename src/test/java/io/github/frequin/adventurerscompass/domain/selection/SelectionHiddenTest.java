@@ -7,7 +7,7 @@ import java.util.Set;
 
 import org.junit.jupiter.api.Test;
 
-import io.github.frequin.adventurerscompass.domain.selection.IgnoredElement.Reason;
+import io.github.frequin.adventurerscompass.domain.selection.UnsearchableElement.Reason;
 
 class SelectionHiddenTest {
 
@@ -71,40 +71,40 @@ class SelectionHiddenTest {
 	}
 
 	@Test
-	void aStructureHiddenAfterBeingSelectedStaysInTheSelectionAndIsIgnored() {
+	void aStructureHiddenAfterBeingSelectedStaysInTheSelectionAndIsUnsearchable() {
 		Selection selection = Selection.EMPTY.tickStructure(STRONGHOLD).tickStructure(OUTPOST);
 
-		assertEquals(List.of(new IgnoredElement(STRONGHOLD, Reason.HIDDEN)), selection.ignored(CATALOGUE, OVERWORLD));
+		assertEquals(List.of(new UnsearchableElement(STRONGHOLD, Reason.HIDDEN)), selection.unsearchable(CATALOGUE, OVERWORLD));
 		assertEquals(Set.of(STRONGHOLD, OUTPOST), selection.structures());
 	}
 
 	@Test
-	void aHiddenStructureIsIgnoredAsHiddenEvenOutsideItsDimension() {
+	void aHiddenStructureIsUnsearchableAsHiddenEvenOutsideItsDimension() {
 		Selection selection = Selection.EMPTY.tickStructure(STRONGHOLD);
 
-		assertEquals(List.of(new IgnoredElement(STRONGHOLD, Reason.HIDDEN)), selection.ignored(CATALOGUE, NETHER));
+		assertEquals(List.of(new UnsearchableElement(STRONGHOLD, Reason.HIDDEN)), selection.unsearchable(CATALOGUE, NETHER));
 	}
 
 	@Test
-	void aGroupIsNotIgnoredWhileOneOfItsMembersIsNotHidden() {
+	void aGroupIsNotUnsearchableWhileOneOfItsMembersIsNotHidden() {
 		Selection selection = Selection.EMPTY.tickGroup(VILLAGES, CATALOGUE, OVERWORLD);
 
-		assertEquals(List.of(), selection.ignored(CATALOGUE, OVERWORLD));
+		assertEquals(List.of(), selection.unsearchable(CATALOGUE, OVERWORLD));
 	}
 
 	@Test
 	void aHiddenStructureTickedOneByOneStaysCountedAndOutlivesItsGroup() {
 		Selection ticked = Selection.EMPTY.tickStructure(DESERT).tickGroup(VILLAGES, CATALOGUE, OVERWORLD);
 
-		assertEquals(List.of(new IgnoredElement(DESERT, Reason.HIDDEN)), ticked.ignored(CATALOGUE, OVERWORLD));
+		assertEquals(List.of(new UnsearchableElement(DESERT, Reason.HIDDEN)), ticked.unsearchable(CATALOGUE, OVERWORLD));
 		assertEquals(new Selection(Set.of(DESERT), Set.of()), ticked.untickGroup(VILLAGES));
 	}
 
 	@Test
-	void aGroupWhoseMembersAreAllHiddenIsIgnoredAsHidden() {
+	void aGroupWhoseMembersAreAllHiddenIsUnsearchableAsHidden() {
 		Selection selection = Selection.EMPTY.tickGroup(STRONGHOLDS, CATALOGUE, OVERWORLD);
 
-		assertEquals(List.of(new IgnoredElement(STRONGHOLDS, Reason.HIDDEN)), selection.ignored(CATALOGUE, OVERWORLD));
+		assertEquals(List.of(new UnsearchableElement(STRONGHOLDS, Reason.HIDDEN)), selection.unsearchable(CATALOGUE, OVERWORLD));
 		assertEquals(false, selection.canSearchIn(CATALOGUE, OVERWORLD));
 	}
 

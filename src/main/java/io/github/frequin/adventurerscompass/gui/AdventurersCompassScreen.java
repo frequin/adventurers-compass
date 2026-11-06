@@ -14,9 +14,9 @@ import io.github.frequin.adventurerscompass.domain.rows.InstanceRow;
 import io.github.frequin.adventurerscompass.domain.rows.InstanceRows;
 import io.github.frequin.adventurerscompass.domain.rows.InstanceSort;
 import io.github.frequin.adventurerscompass.domain.selection.Catalogue;
-import io.github.frequin.adventurerscompass.domain.selection.IgnoredElement;
 import io.github.frequin.adventurerscompass.domain.selection.Selection;
 import io.github.frequin.adventurerscompass.domain.selection.TreeFilter;
+import io.github.frequin.adventurerscompass.domain.selection.UnsearchableElement;
 import io.github.frequin.adventurerscompass.domain.xp.PlayerXp;
 import io.github.frequin.adventurerscompass.domain.xp.XpThreshold;
 import io.github.frequin.adventurerscompass.item.AdventurersCompassItem;
@@ -46,7 +46,7 @@ import net.minecraft.world.item.ItemStack;
 /**
  * The compass screen, variant E of the tabs prototype: three tabs across the
  * top. The Search tab holds the search box, the Selection tree of the Current
- * dimension, "Select all", the count of Selection elements ignored here and the
+ * dimension, "Select all", the count of Selection elements unsearchable here and the
  * count of Structures of other dimensions on the left; the search actions and
  * "Clear" on the right. The Visited and Skipped tabs hold a full-width list with
  * a filter, a sort button and a button that clears the whole list, over a footer
@@ -83,8 +83,8 @@ public class AdventurersCompassScreen extends Screen {
 	private Selection selection;
 	private Catalogue catalogue;
 	private String dimension;
-	private int ignoredX;
-	private int ignoredY;
+	private int unsearchableX;
+	private int unsearchableY;
 	private TransparentEditBox filterBox;
 	private SelectionTree tree;
 	private Button clearButton;
@@ -186,8 +186,8 @@ public class AdventurersCompassScreen extends Screen {
 		selectAllButton = addRenderableWidget(new TransparentButton(MARGIN, treeBottom + 3, selectAllWidth, BUTTON_HEIGHT, selectAll, (onPress) -> {
 			updateSelection(selectAll());
 		}));
-		ignoredX = MARGIN + selectAllWidth + GAP;
-		ignoredY = treeBottom + 9;
+		unsearchableX = MARGIN + selectAllWidth + GAP;
+		unsearchableY = treeBottom + 9;
 
 		// The right column stacks from the top, so "Done" can only be pushed down, never over it
 		int clearTop = TREE_TOP + SearchPanel.height(AdventurersCompass.canTeleport) + GAP;
@@ -325,7 +325,7 @@ public class AdventurersCompassScreen extends Screen {
 			String text = Component.translatable("string.adventurerscompass.otherDimensionsHidden", outside).getString();
 			guiGraphics.text(font, font.plainSubstrByWidth(text, leftColumnRight() - MARGIN), MARGIN, height - MARGIN - 8, 0xff808080);
 		}
-		renderIgnored(guiGraphics, mouseX, mouseY);
+		renderUnsearchable(guiGraphics, mouseX, mouseY);
 	}
 
 	/** The Target as text, left of "Done": "◎ Structure · distance", or its dimension when elsewhere. */
@@ -342,33 +342,33 @@ public class AdventurersCompassScreen extends Screen {
 		return CompassTexts.dimensionName(target.dimension());
 	}
 
-	/** The count of Selection elements ignored here, beside "Select all"; its tooltip names them. */
-	private void renderIgnored(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY) {
-		List<IgnoredElement> ignored = selection.ignored(catalogue, dimension);
-		if (ignored.isEmpty()) {
+	/** The count of Selection elements unsearchable here, beside "Select all"; its tooltip names them. */
+	private void renderUnsearchable(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY) {
+		List<UnsearchableElement> unsearchable = selection.unsearchable(catalogue, dimension);
+		if (unsearchable.isEmpty()) {
 			return;
 		}
-		String text = Component.translatable("string.adventurerscompass.ignoredHere", ignored.size()).getString();
-		String count = font.plainSubstrByWidth(text, leftColumnRight() - ignoredX);
-		guiGraphics.text(font, count, ignoredX, ignoredY, 0xffaaaaaa);
-		if (mouseX >= ignoredX && mouseX < ignoredX + font.width(count) && mouseY >= ignoredY - 1 && mouseY < ignoredY + font.lineHeight) {
-			guiGraphics.setComponentTooltipForNextFrame(font, ignoredTooltip(ignored), mouseX, mouseY);
+		String text = Component.translatable("string.adventurerscompass.unsearchableHere", unsearchable.size()).getString();
+		String count = font.plainSubstrByWidth(text, leftColumnRight() - unsearchableX);
+		guiGraphics.text(font, count, unsearchableX, unsearchableY, 0xffaaaaaa);
+		if (mouseX >= unsearchableX && mouseX < unsearchableX + font.width(count) && mouseY >= unsearchableY - 1 && mouseY < unsearchableY + font.lineHeight) {
+			guiGraphics.setComponentTooltipForNextFrame(font, unsearchableTooltip(unsearchable), mouseX, mouseY);
 		}
 	}
 
-	private List<Component> ignoredTooltip(List<IgnoredElement> ignored) {
+	private List<Component> unsearchableTooltip(List<UnsearchableElement> unsearchable) {
 		List<Component> lines = new ArrayList<>();
-		for (IgnoredElement.Reason reason : IgnoredElement.Reason.values()) {
-			List<IgnoredElement> elements = ignored.stream().filter(element -> element.reason() == reason).toList();
+		for (UnsearchableElement.Reason reason : UnsearchableElement.Reason.values()) {
+			List<UnsearchableElement> elements = unsearchable.stream().filter(element -> element.reason() == reason).toList();
 			if (!elements.isEmpty()) {
-				lines.add(Component.translatable(reason == IgnoredElement.Reason.HIDDEN ? "string.adventurerscompass.ignoredHidden" : "string.adventurerscompass.ignoredAbsent").withColor(0xffaaaaaa));
-				elements.forEach(element -> lines.add(Component.literal(ignoredName(element))));
+				lines.add(Component.translatable(reason == UnsearchableElement.Reason.HIDDEN ? "string.adventurerscompass.unsearchableHidden" : "string.adventurerscompass.unsearchableAbsent").withColor(0xffaaaaaa));
+				elements.forEach(element -> lines.add(Component.literal(unsearchableName(element))));
 			}
 		}
 		return lines;
 	}
 
-	private String ignoredName(IgnoredElement element) {
+	private String unsearchableName(UnsearchableElement element) {
 		return selection.groups().contains(element.id()) ? StructureUtils.getGroupName(Identifier.parse(element.id())) : structureName(element.id());
 	}
 
@@ -449,7 +449,7 @@ public class AdventurersCompassScreen extends Screen {
 		boolean affordable = new PlayerXp(player.experienceLevel, AdventurersCompass.infiniteXp).canLaunch(threshold);
 		Component refusal = null;
 		if (!canSearch && !selection.equals(Selection.EMPTY)) {
-			// Only ignored elements: say why nothing can be searched here
+			// Only unsearchable elements: say why nothing can be searched here
 			refusal = Component.translatable("string.adventurerscompass.nothingSearchableHere");
 		} else if (canSearch && !affordable) {
 			refusal = Component.translatable("string.adventurerscompass.notEnoughXp", threshold.levels());

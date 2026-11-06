@@ -24,6 +24,10 @@ _Avoid_: Location, structure (when one occurrence is meant)
 The set of Structures and Groups ticked on a compass; a search looks for the nearest Instance of any of them.
 _Avoid_: Filter, profile, target list
 
+**Unsearchable**:
+The state of a Structure or Group of the Selection that a search leaves out in the Current dimension, because nothing it stands for generates there or what it stands for is Hidden; it stays on the compass.
+_Avoid_: Ignored
+
 **Target**:
 The Instance the compass currently points at.
 _Avoid_: Destination, result
