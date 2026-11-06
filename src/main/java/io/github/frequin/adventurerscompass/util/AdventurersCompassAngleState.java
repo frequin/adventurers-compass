@@ -5,6 +5,7 @@ import org.jetbrains.annotations.Nullable;
 import io.github.frequin.adventurerscompass.AdventurersCompass;
 import io.github.frequin.adventurerscompass.compass.CompassStacks;
 import io.github.frequin.adventurerscompass.domain.compass.CompassState;
+import io.github.frequin.adventurerscompass.domain.compass.Needle;
 
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
@@ -23,12 +24,16 @@ import net.minecraft.world.phys.Vec3;
 @Environment(EnvType.CLIENT)
 public class AdventurersCompassAngleState extends NeedleDirectionHelper {
 	
+	// One instance renders every compass and a wobbler updates once per tick,
+	// so a spinning needle and a pointing needle must not share a wobbler
 	private final NeedleDirectionHelper.Wobbler wobbler;
+	private final NeedleDirectionHelper.Wobbler spinWobbler;
 	private final RandomSource random = RandomSource.create();
 	
 	public AdventurersCompassAngleState() {
 		super(true);
 		wobbler = newWobbler(0.8F);
+		spinWobbler = newWobbler(0.8F);
 	}
 	
 	/**
@@ -42,13 +47,11 @@ public class AdventurersCompassAngleState extends NeedleDirectionHelper {
 		GlobalPos pos = level.getRespawnData().globalPos();
 		if (stack.getItem() == AdventurersCompass.ADVENTURERS_COMPASS_ITEM) {
 			CompassState state = CompassStacks.read(stack);
-			String dimension = LevelUtils.dimensionId(level);
-			boolean targetHere = state.target() != null && state.target().dimension().equals(dimension);
-			if (state.isSearching() || state.target() != null && !targetHere) {
+			Needle needle = state.needle(LevelUtils.dimensionId(level));
+			if (needle == Needle.SPIN) {
 				return getRandomlySpinningRotation(seed, gameTime);
 			}
-			// A kept Target is pointed at even while the HUD shows "nothing found"
-			if (targetHere) {
+			if (needle == Needle.TARGET) {
 				pos = new GlobalPos(level.dimension(), new BlockPos(state.target().pos().x(), 0, state.target().pos().z()));
 			}
 		}
@@ -56,11 +59,11 @@ public class AdventurersCompassAngleState extends NeedleDirectionHelper {
 	}
 
 	private float getRandomlySpinningRotation(int seed, long gameTime) {
-		if (wobbler.shouldUpdate(gameTime)) {
-			wobbler.update(gameTime, random.nextFloat());
+		if (spinWobbler.shouldUpdate(gameTime)) {
+			spinWobbler.update(gameTime, random.nextFloat());
 		}
 		
-		float f = wobbler.rotation() + (float) hash(seed) / 2.1474836E9F;
+		float f = spinWobbler.rotation() + (float) hash(seed) / 2.1474836E9F;
 		return Mth.positiveModulo(f, 1.0F);
 	}
 	
