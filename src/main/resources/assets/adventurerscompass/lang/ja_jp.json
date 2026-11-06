@@ -9,8 +9,6 @@
     "string.adventurerscompass.teleport": "テレポート",
 
     "_comment": "STRINGS - GUI",
-    "string.adventurerscompass.structure": "構造物",
-    "string.adventurerscompass.group": "グループ",
 
     "_comment": "STRINGS - STRUCTURES",
     "structure.minecraft.bastion_remnant": "砦の遺跡",

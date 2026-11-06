@@ -2,8 +2,11 @@ package io.github.frequin.adventurerscompass.domain.selection;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
+
+import io.github.frequin.adventurerscompass.domain.selection.IgnoredElement.Reason;
 
 /**
  * The Structures and Groups ticked on a compass. Immutable: every operation
@@ -57,16 +60,34 @@ public record Selection(Set<String> structures, Set<String> groups) {
 		return new Selection(structures, next);
 	}
 
-	/** The ✕ of a chip: takes that Group or Structure out, nothing else. */
-	public Selection remove(Chip chip) {
-		return switch (chip.kind()) {
-			case GROUP -> untickGroup(chip.id());
-			case STRUCTURE -> {
-				Set<String> next = new TreeSet<>(structures);
-				next.remove(chip.id());
-				yield new Selection(next, groups);
+	/**
+	 * "Select all": ticks what the tree lists, {@code listed} being the tree of
+	 * {@code dimension} once filtered. A Group listed whole is ticked as its
+	 * checkbox would; of a Group the filter narrowed, only the listed Structures
+	 * are. Nothing already in the Selection goes out.
+	 */
+	public Selection tickAll(List<TreeEntry> listed, Catalogue catalogue, String dimension) {
+		List<TreeEntry> wholeTree = catalogue.tree(dimension);
+		Selection next = this;
+		for (TreeEntry entry : listed) {
+			next = switch (entry) {
+				case TreeEntry.GroupEntry group when wholeTree.contains(group) -> next.tickGroup(group.groupId(), catalogue);
+				case TreeEntry.GroupEntry group -> next.tickUncovered(group.structureIds(), catalogue);
+				case TreeEntry.StructureEntry structure -> next.tickUncovered(List.of(structure.structureId()), catalogue);
+			};
+		}
+		return next;
+	}
+
+	/** Ticks those Structures, leaving alone the ones a ticked Group already covers. */
+	private Selection tickUncovered(List<String> structureIds, Catalogue catalogue) {
+		Selection next = this;
+		for (String structureId : structureIds) {
+			if (structureState(structureId, catalogue) == StructureState.EMPTY) {
+				next = next.tickStructure(structureId);
 			}
-		};
+		}
+		return next;
 	}
 
 	public Selection clear() {
@@ -125,35 +146,46 @@ public record Selection(Set<String> structures, Set<String> groups) {
 	}
 
 	/**
-	 * The Selection as chips for {@code dimension}: Groups first, then
-	 * Structures, each sorted by id. A chip is greyed when nothing it stands for
-	 * generates in the dimension, or when what it stands for is Hidden; it stays
-	 * on the compass but the search ignores it. Hidden wins over absent.
+	 * The elements of the Selection a search in {@code dimension} leaves out:
+	 * Groups first, then Structures, each sorted by id. An element is ignored when
+	 * nothing it stands for generates in the dimension, or when what it stands for
+	 * is Hidden; it stays on the compass. Hidden wins over absent.
 	 */
-	public List<Chip> chips(Catalogue catalogue, String dimension) {
-		List<Chip> chips = new ArrayList<>();
+	public List<IgnoredElement> ignored(Catalogue catalogue, String dimension) {
+		List<IgnoredElement> ignored = new ArrayList<>();
 		for (String groupId : new TreeSet<>(groups)) {
-			chips.add(new Chip(Chip.Kind.GROUP, groupId, groupChipState(groupId, catalogue, dimension)));
+			ignoredGroupReason(groupId, catalogue, dimension).ifPresent(reason -> ignored.add(new IgnoredElement(groupId, reason)));
 		}
 		for (String structureId : new TreeSet<>(structures)) {
-			chips.add(new Chip(Chip.Kind.STRUCTURE, structureId, catalogue.entry(structureId).map(entry -> entry.hidden() ? ChipState.HIDDEN : entry.generatesIn(dimension) ? ChipState.ACTIVE : ChipState.ABSENT_FROM_DIMENSION).orElse(ChipState.ABSENT_FROM_DIMENSION)));
+			ignoredStructureReason(structureId, catalogue, dimension).ifPresent(reason -> ignored.add(new IgnoredElement(structureId, reason)));
 		}
-		return chips;
+		return ignored;
+	}
+
+	private static Optional<Reason> ignoredStructureReason(String structureId, Catalogue catalogue, String dimension) {
+		Optional<CatalogueEntry> entry = catalogue.entry(structureId);
+		if (entry.isEmpty()) {
+			return Optional.of(Reason.ABSENT_FROM_DIMENSION);
+		}
+		if (entry.get().hidden()) {
+			return Optional.of(Reason.HIDDEN);
+		}
+		return entry.get().generatesIn(dimension) ? Optional.empty() : Optional.of(Reason.ABSENT_FROM_DIMENSION);
 	}
 
 	/**
-	 * ACTIVE when a non-Hidden member generates in the dimension. Otherwise
+	 * Not ignored when a non-Hidden member generates in the dimension. Otherwise
 	 * HIDDEN when the members that generate there (or, if none does, all its
 	 * members) are Hidden, else ABSENT_FROM_DIMENSION.
 	 */
-	private static ChipState groupChipState(String groupId, Catalogue catalogue, String dimension) {
+	private static Optional<Reason> ignoredGroupReason(String groupId, Catalogue catalogue, String dimension) {
 		List<CatalogueEntry> members = catalogue.members(groupId).stream().map(id -> catalogue.entry(id).get()).toList();
 		if (members.stream().anyMatch(entry -> entry.listedIn(dimension))) {
-			return ChipState.ACTIVE;
+			return Optional.empty();
 		}
 		List<CatalogueEntry> here = members.stream().filter(entry -> entry.generatesIn(dimension)).toList();
 		List<CatalogueEntry> considered = here.isEmpty() ? members : here;
-		return !considered.isEmpty() && considered.stream().allMatch(CatalogueEntry::hidden) ? ChipState.HIDDEN : ChipState.ABSENT_FROM_DIMENSION;
+		return Optional.of(!considered.isEmpty() && considered.stream().allMatch(CatalogueEntry::hidden) ? Reason.HIDDEN : Reason.ABSENT_FROM_DIMENSION);
 	}
 
 }

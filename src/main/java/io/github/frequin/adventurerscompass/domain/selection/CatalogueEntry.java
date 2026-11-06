@@ -10,8 +10,8 @@ import java.util.Set;
  * @param dimensions  ids of the dimensions that can generate it
  * @param source      display name of the mod or datapack that adds it
  * @param hidden      whether it is Hidden (see {@link HiddenRule}): kept in the
- *                    catalogue so a Selection that holds it can grey its chip,
- *                    but neither listed in the tree nor searched
+ *                    catalogue so a Selection that holds it can count it as
+ *                    ignored, but neither listed in the tree nor searched
  */
 public record CatalogueEntry(String structureId, String groupId, Set<String> dimensions, String source, boolean hidden) {
 

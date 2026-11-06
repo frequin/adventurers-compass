@@ -55,7 +55,7 @@ public class SelectionTree extends ObjectSelectionList<SelectionTree.Row> {
 	public void refresh(Catalogue catalogue, String dimension) {
 		double scroll = scrollAmount();
 		clearEntries();
-		List<TreeEntry> tree = new ArrayList<TreeEntry>(filter.apply(catalogue.tree(dimension), catalogue, SelectionTree::name));
+		List<TreeEntry> tree = new ArrayList<TreeEntry>(listed(catalogue, dimension));
 		tree.sort(Comparator.comparing(SelectionTree::displayName, String.CASE_INSENSITIVE_ORDER));
 		for (TreeEntry entry : tree) {
 			switch (entry) {
@@ -69,6 +69,11 @@ public class SelectionTree extends ObjectSelectionList<SelectionTree.Row> {
 			}
 		}
 		setScrollAmount(scroll);
+	}
+
+	/** What the tree lists, the filter included. */
+	public List<TreeEntry> listed(Catalogue catalogue, String dimension) {
+		return filter.apply(catalogue.tree(dimension), catalogue, SelectionTree::name);
 	}
 
 	@Override
