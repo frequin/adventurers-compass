@@ -38,10 +38,10 @@ public final class TreeFilter {
 
 	/**
 	 * Narrows a tree. {@code displayName} gives the name shown for a Structure
-	 * or Group id. Groups keep only their matching Structures and disappear when
-	 * none match.
+	 * id, {@code groupName} the one shown for a Group id. Groups keep only their
+	 * matching Structures and disappear when none match.
 	 */
-	public List<TreeEntry> apply(List<TreeEntry> tree, Catalogue catalogue, Function<String, String> displayName) {
+	public List<TreeEntry> apply(List<TreeEntry> tree, Catalogue catalogue, Function<String, String> displayName, Function<String, String> groupName) {
 		if (isNone()) {
 			return tree;
 		}
@@ -49,7 +49,7 @@ public final class TreeFilter {
 		for (TreeEntry entry : tree) {
 			switch (entry) {
 				case TreeEntry.GroupEntry group -> {
-					if (!bySource && matchesName(group.groupId(), displayName)) {
+					if (!bySource && matchesName(group.groupId(), groupName)) {
 						kept.add(group);
 					} else {
 						List<String> members = group.structureIds().stream().filter(id -> matches(id, catalogue, displayName)).toList();

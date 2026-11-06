@@ -3,6 +3,7 @@ package io.github.frequin.adventurerscompass.gui;
 import java.util.List;
 import java.util.function.Consumer;
 
+import io.github.frequin.adventurerscompass.domain.Ellipsis;
 import io.github.frequin.adventurerscompass.domain.InstanceKey;
 import io.github.frequin.adventurerscompass.domain.rows.InstanceRow;
 import io.github.frequin.adventurerscompass.domain.rows.RowLabels;
@@ -26,7 +27,6 @@ public class InstanceList extends TransparentList<InstanceList.Row> {
 
 	private static final int ROW_HEIGHT = 11;
 	private static final String CROSS = "✕";
-	private static final String ELLIPSIS = "…";
 	private static final int CROSS_MARGIN = 3;
 	private static final int TEXT_GAP = 6;
 	private static final int HOVER_COLOR = 0x40ffffff;
@@ -83,13 +83,6 @@ public class InstanceList extends TransparentList<InstanceList.Row> {
 		}
 	}
 
-	private static String ellipsized(Font font, String text, int maxWidth) {
-		if (font.width(text) <= maxWidth) {
-			return text;
-		}
-		return font.plainSubstrByWidth(text, Math.max(0, maxWidth - font.width(ELLIPSIS))) + ELLIPSIS;
-	}
-
 	public class Row extends ObjectSelectionList.Entry<Row> {
 
 		private final InstanceRow row;
@@ -109,7 +102,7 @@ public class InstanceList extends TransparentList<InstanceList.Row> {
 			}
 			int crossX = crossX(font);
 			int detailsX = crossX - TEXT_GAP - font.width(details);
-			guiGraphics.text(font, ellipsized(font, row.name(), detailsX - TEXT_GAP - getX() - 1), getX() + 1, textY, 0xffffffff);
+			guiGraphics.text(font, Ellipsis.fit(row.name(), detailsX - TEXT_GAP - getX() - 1, font::width), getX() + 1, textY, 0xffffffff);
 			guiGraphics.text(font, details, detailsX, textY, 0xff909090);
 			guiGraphics.text(font, CROSS, crossX, textY, 0xffff5555);
 			if (isHovering && isOverCross(font, mouseX)) {

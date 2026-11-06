@@ -194,7 +194,7 @@ public class AdventurersCompassConfig {
 			private final String displayWithChatOpenComment = "Displays compass information even while chat is open.";
 			private final boolean displayWithChatOpen;
 			
-			private final String translateStructureNamesComment = "Attempts to translate structure names before fixing the unlocalized names. Translations may not be available for all structures.";
+			private final String translateStructureNamesComment = "Attempts to translate structure and Group names before fixing the unlocalized names. Translations may not be available for all of them.";
 			private final boolean translateStructureNames;
 			
 			private final String overlayLineOffsetComment = "The line offset for information rendered on the HUD.";

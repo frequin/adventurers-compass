@@ -2,7 +2,6 @@ package io.github.frequin.adventurerscompass.gui;
 
 import io.github.frequin.adventurerscompass.util.RenderUtils;
 
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
 
@@ -18,12 +17,11 @@ public class TabButton extends TransparentButton {
 
 	@Override
 	public void extractContents(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTicks) {
-		Minecraft mc = Minecraft.getInstance();
 		guiGraphics.fill(getX(), getY(), getRight(), getBottom(), RenderUtils.getBackgroundColor(true, open || isHovered));
 		if (open) {
 			guiGraphics.fill(getX(), getBottom() - 1, getRight(), getBottom(), 0xffffffff);
 		}
-		guiGraphics.centeredText(mc.font, getMessage(), getX() + getWidth() / 2, getY() + (getHeight() - 8) / 2, open ? 0xffffffff : 0xffaaaaaa);
+		extractLabel(guiGraphics, mouseX, mouseY, open ? 0xffffffff : 0xffaaaaaa);
 	}
 
 }

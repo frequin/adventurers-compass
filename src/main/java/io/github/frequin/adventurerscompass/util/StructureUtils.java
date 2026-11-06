@@ -8,10 +8,9 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
 
-import org.apache.commons.lang3.text.WordUtils;
-
 import io.github.frequin.adventurerscompass.AdventurersCompass;
 import io.github.frequin.adventurerscompass.config.AdventurersCompassConfig;
+import io.github.frequin.adventurerscompass.domain.ReadableName;
 import io.github.frequin.adventurerscompass.domain.selection.Catalogue;
 import io.github.frequin.adventurerscompass.domain.selection.CatalogueEntry;
 import io.github.frequin.adventurerscompass.domain.selection.HiddenRule;
@@ -149,13 +148,20 @@ public class StructureUtils {
 			name = I18n.get(Util.makeDescriptionId("structure", id));
 		}
 		if (name.equals(Util.makeDescriptionId("structure", id)) || !AdventurersCompassConfig.translateStructureNames) {
-			name = id.toString();
-			if (name.contains(":")) {
-				name = name.substring(name.indexOf(":") + 1);
-			}
-			name = WordUtils.capitalize(name.replace('_', ' '));
+			name = ReadableName.of(id.toString());
 		}
 		return name;
+	}
+
+	/**
+	 * {@code group.<namespace>.<path>} from the language files, else the name of a
+	 * Structure with the same id, else the id made readable, as mods' Groups are.
+	 */
+	@Environment(EnvType.CLIENT)
+	public static String getGroupName(Identifier id) {
+		String key = Util.makeDescriptionId("group", id);
+		String name = I18n.get(key);
+		return AdventurersCompassConfig.translateStructureNames && !name.equals(key) ? name : getStructureName(id);
 	}
 
 	private static Optional<Registry<Structure>> getStructureRegistry(ServerLevel level) {

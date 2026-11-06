@@ -71,7 +71,7 @@ public class SelectionTree extends TransparentList<SelectionTree.Row> {
 
 	/** What the tree lists, the filter included. */
 	public List<TreeEntry> listed(Catalogue catalogue, String dimension) {
-		return filter.apply(catalogue.tree(dimension), catalogue, SelectionTree::name);
+		return filter.apply(catalogue.tree(dimension), catalogue, SelectionTree::name, SelectionTree::groupName);
 	}
 
 	private boolean isExpanded(String groupId) {
@@ -80,13 +80,17 @@ public class SelectionTree extends TransparentList<SelectionTree.Row> {
 
 	private static String displayName(TreeEntry entry) {
 		return switch (entry) {
-			case TreeEntry.GroupEntry group -> name(group.groupId());
+			case TreeEntry.GroupEntry group -> groupName(group.groupId());
 			case TreeEntry.StructureEntry structure -> name(structure.structureId());
 		};
 	}
 
 	private static String name(String id) {
 		return StructureUtils.getStructureName(Identifier.parse(id));
+	}
+
+	private static String groupName(String id) {
+		return StructureUtils.getGroupName(Identifier.parse(id));
 	}
 
 	private static void drawCheckbox(GuiGraphicsExtractor guiGraphics, int x, int y, Look look) {
@@ -128,7 +132,7 @@ public class SelectionTree extends TransparentList<SelectionTree.Row> {
 				case PARTIAL -> Look.PARTIAL;
 				case EMPTY -> Look.EMPTY;
 			});
-			String label = name(group.groupId());
+			String label = groupName(group.groupId());
 			guiGraphics.text(mc.font, label, getX() + 12 + BOX + 4, textY, isHovering ? 0xffffffa0 : 0xffffffff);
 			guiGraphics.text(mc.font, "(" + group.structureIds().size() + ")", getX() + 12 + BOX + 8 + mc.font.width(label), textY, 0xff808080);
 		}
@@ -150,7 +154,7 @@ public class SelectionTree extends TransparentList<SelectionTree.Row> {
 
 		@Override
 		public Component getNarration() {
-			return Component.literal(name(group.groupId()));
+			return Component.literal(groupName(group.groupId()));
 		}
 
 	}

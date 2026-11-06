@@ -32,9 +32,10 @@ import net.minecraft.world.item.ItemStack;
 /**
  * The search part of the compass screen's right column: "Search", which turns
  * into "Cancel" while a search runs, "Pass", then the Target panel (name,
- * distance and dimension) with "Clear Target", "Mark Visited" and "Teleport". Starting a search closes the
- * screen. It reads the held compass every frame, so it follows the state the
- * server syncs.
+ * distance and dimension) with "Clear Target", "Mark Visited" and, when allowed,
+ * "Teleport" on its own row, so that each label has the whole column. Starting
+ * a search closes the screen. It reads the held compass every frame, so it
+ * follows the state the server syncs.
  */
 @Environment(EnvType.CLIENT)
 final class SearchPanel {
@@ -46,7 +47,10 @@ final class SearchPanel {
 	private static final int CLEAR_TARGET_HEIGHT = 12;
 
 	/** Height of the panel, for the screen to place what comes below. */
-	static final int HEIGHT = 2 * (BUTTON_HEIGHT + GAP) + TARGET_TEXT_LINES * LINE + GAP + BUTTON_HEIGHT;
+	static int height(boolean canTeleport) {
+		int height = 2 * (BUTTON_HEIGHT + GAP) + TARGET_TEXT_LINES * LINE + GAP + BUTTON_HEIGHT;
+		return canTeleport ? height + BUTTON_HEIGHT + GAP : height;
+	}
 
 	private final Minecraft minecraft;
 	private final Player player;
@@ -85,16 +89,18 @@ final class SearchPanel {
 			ClientPlayNetworking.send(new PassPacket());
 			minecraft.gui.setScreen(null);
 		});
-		teleportButton = new TransparentButton(x, targetTextTop() + TARGET_TEXT_LINES * LINE + GAP, width, BUTTON_HEIGHT, Component.translatable("string.adventurerscompass.teleport"), (onPress) -> {
+		int targetButtonsTop = targetTextTop() + TARGET_TEXT_LINES * LINE + GAP;
+		teleportButton = new TransparentButton(x, targetButtonsTop + BUTTON_HEIGHT + GAP, width, BUTTON_HEIGHT, Component.translatable("string.adventurerscompass.teleport"), (onPress) -> {
 			ClientPlayNetworking.send(new TeleportPacket());
 			minecraft.gui.setScreen(null);
 		});
-		markVisitedButton = new TransparentButton(x, targetTextTop() + TARGET_TEXT_LINES * LINE + GAP, width, BUTTON_HEIGHT, Component.translatable("string.adventurerscompass.markVisited"), (onPress) -> {
+		markVisitedButton = new TransparentButton(x, targetButtonsTop, width, BUTTON_HEIGHT, Component.translatable("string.adventurerscompass.markVisited"), (onPress) -> {
 			ClientPlayNetworking.send(new MarkVisitedPacket());
 		});
 		// On the "Target" caption line, right-aligned, so it takes no room from the rest of the column
 		Component clearTarget = Component.translatable("string.adventurerscompass.clearTarget");
-		int clearTargetWidth = minecraft.font.width(clearTarget) + 8;
+		int captionWidth = minecraft.font.width(Component.translatable("string.adventurerscompass.target"));
+		int clearTargetWidth = ScreenLayout.buttonWidth(minecraft.font.width(clearTarget), ScreenLayout.clearTargetRoom(width, captionWidth));
 		clearTargetButton = new TransparentButton(x + width - clearTargetWidth, targetTextTop() - 2, clearTargetWidth, CLEAR_TARGET_HEIGHT, clearTarget, (onPress) -> {
 			ClientPlayNetworking.send(new ClearTargetPacket());
 		});
@@ -130,11 +136,6 @@ final class SearchPanel {
 		passButton.active = searchAllowed && state.target() != null;
 		teleportButton.visible = AdventurersCompass.canTeleport;
 		teleportButton.active = state.target() != null && state.target().dimension().equals(CompassTexts.currentDimension(player));
-		// "Mark Visited" shares the row with "Teleport" when teleporting is allowed
-		int half = (width - GAP) / 2;
-		markVisitedButton.setWidth(teleportButton.visible ? half : width);
-		teleportButton.setX(teleportButton.visible ? x + half + GAP : x);
-		teleportButton.setWidth(teleportButton.visible ? width - half - GAP : width);
 		markVisitedButton.active = state.target() != null && !targetVisited(state);
 		clearTargetButton.visible = state.target() != null;
 	}
