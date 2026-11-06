@@ -1,0 +1,330 @@
+<!doctype html>
+<!--
+  PROTOTYPE JETABLE — ne pas fusionner dans fabric-26.3.
+  Question (#37) : comment afficher les onglets Search / Visited / Skipped avec une longue liste,
+  distinguer deux Instances de la même Structure, agir sur une ligne, trier ou filtrer ?
+  Cinq variantes, ?variant=A|B|C|D|E (D et E = A révisée après retour du mainteneur), barre flottante en bas (← → au clavier). Tout est en mémoire.
+  Le cadre est à l'échelle : 1 pixel GUI = 2 pixels ici, lignes de 11 px GUI comme VisitedList.
+-->
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>PROTOTYPE — onglets de la boussole</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 17px/18px Menlo, Consolas, monospace; background: #111; color: #eee; }
+  #banner { background: #b8860b; color: #000; padding: 2px 10px; font: bold 13px/20px Menlo, monospace; }
+  #layout { display: flex; height: calc(100vh - 24px); }
+  #stage { flex: 1; overflow: auto; padding: 12px 12px 70px; }
+  #frame { position: relative; overflow: hidden; margin: 0 auto; padding: 8px 10px; display: flex; flex-direction: column;
+    background: linear-gradient(rgba(16,16,16,.8), rgba(16,16,16,.8)), linear-gradient(#6b9bd1 0 45%, #5d8a3a 45% 60%, #6b4a2b 60%); }
+  #frame, #frame * { text-shadow: 2px 2px #2a2a2a; }
+  .tabs { display: flex; gap: 4px; flex: none; margin-bottom: 6px; }
+  .tab { padding: 5px 10px; background: #333; border: 2px solid #000; border-bottom: 0; cursor: pointer; color: #aaa; white-space: nowrap; }
+  .tab.on { background: #6f6f6f; color: #fff; }
+  .cols { flex: 1; min-height: 0; display: flex; gap: 12px; }
+  .col { min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+  .left { flex: 11; }
+  .right { flex: 8; }
+  .full { flex: 1; }
+  .btn { background: #6f6f6f; border: 2px solid #000; box-shadow: inset 2px 2px #a8a8a8, inset -2px -2px #4a4a4a; color: #fff;
+    padding: 7px 6px; margin-bottom: 6px; cursor: pointer; text-align: center; user-select: none; white-space: nowrap; overflow: hidden; }
+  .btn:hover { background: #7f8fbf; }
+  .btn.off { background: #444; color: #888; pointer-events: none; box-shadow: none; }
+  .btn.s { padding: 3px 6px; margin: 0; flex: none; }
+  .btn.danger { background: #8a2d2d; }
+  .modal { position: absolute; inset: 0; background: rgba(0,0,0,.7); display: flex; align-items: center; justify-content: center; z-index: 5; }
+  .modal .box { width: 70%; border: 2px solid #a0a0a0; background: #1c1c1c; padding: 12px; text-align: center; }
+  .modal .duo { margin-top: 12px; }
+  .modal .btn { margin: 0; }
+  .duo { display: flex; gap: 6px; }
+  .duo .btn { flex: 1; }
+  .spacer { flex: 1; }
+  input.q { flex: 1; min-width: 0; background: #000; border: 2px solid #a0a0a0; color: #fff; padding: 3px 6px; font: inherit; }
+  .bar { display: flex; gap: 6px; margin-bottom: 6px; flex: none; }
+  .list { flex: 1; min-height: 0; overflow-y: scroll; }
+  .row { display: flex; gap: 10px; height: 22px; align-items: center; padding: 0 4px; cursor: pointer; white-space: nowrap; }
+  .row:hover { background: rgba(255,255,255,.14); }
+  .row.sel { background: rgba(120,160,255,.3); }
+  .two { display: flex; height: 44px; align-items: center; padding: 0 4px; gap: 8px; }
+  .two:hover { background: rgba(255,255,255,.14); }
+  .two .txt { flex: 1; min-width: 0; }
+  .ell { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .m { color: #9a9a9a; }
+  .w { flex: 1; min-width: 0; }
+  .x { color: #f55; cursor: pointer; flex: none; padding: 0 4px; }
+  .sub { padding-left: 30px; }
+  .empty { color: #8a8a8a; padding: 8px 4px; white-space: normal; }
+  .panel { border: 2px solid #555; background: rgba(0,0,0,.3); padding: 6px; margin-bottom: 6px; }
+  .th { display: flex; gap: 10px; padding: 0 4px; height: 22px; align-items: center; border-bottom: 2px solid #777; flex: none; margin-right: 15px; }
+  .th span { cursor: pointer; color: #ccc; }
+  .th span.on { color: #ff8; }
+  .c-n { flex: 1; min-width: 0; } .c-d { width: 100px; flex: none; } .c-j { width: 70px; flex: none; }
+  .c-c { width: 140px; flex: none; text-align: right; } .c-m { width: 90px; flex: none; text-align: right; } .c-x { width: 24px; flex: none; }
+  .foot { display: flex; gap: 10px; align-items: center; flex: none; margin-top: 6px; }
+  #sim { width: 230px; flex: none; background: #1c1c1c; border-left: 1px solid #333; padding: 10px; overflow: auto; font: 12px/16px Menlo, monospace; }
+  #sim h3 { margin: 10px 0 4px; font-size: 13px; color: #b8860b; }
+  #sim select { width: 100%; margin-bottom: 4px; }
+  #sim button { width: 100%; margin-bottom: 4px; }
+  #sim pre { white-space: pre-wrap; font-size: 11px; color: #aaa; margin: 0; }
+  #switcher { position: fixed; bottom: 14px; left: calc(50% - 115px); transform: translateX(-50%); z-index: 10; background: #fff; color: #000;
+    border-radius: 999px; padding: 6px 12px; display: flex; gap: 12px; align-items: center; box-shadow: 0 4px 16px rgba(0,0,0,.6);
+    font: 600 14px system-ui, sans-serif; white-space: nowrap; }
+  #switcher button { border: 0; background: #eee; border-radius: 999px; width: 28px; height: 28px; cursor: pointer; font-size: 16px; }
+</style>
+</head>
+<body>
+<div id="banner">PROTOTYPE jetable · « Prototype des onglets Search / Visited / Skipped » · simulation en mémoire</div>
+<div id="layout">
+  <div id="stage"><div id="frame"></div></div>
+  <aside id="sim"></aside>
+</div>
+<div id="switcher"><button data-sw="-1">←</button><span id="swlabel"></span><button data-sw="1">→</button></div>
+
+<script>
+// ---------- Données simulées ----------
+const OW = 'Overworld', NE = 'Nether', EN = 'End';
+const STRUCTS = [ // id, nom, dimension, source, poids (les villages reviennent souvent : ce sont les doublons à distinguer)
+  ['village_plains', 'Village (plaines)', OW, 'minecraft', 9], ['village_desert', 'Village (désert)', OW, 'minecraft', 5],
+  ['village_taiga', 'Village (taïga)', OW, 'minecraft', 4], ['pillager_outpost', 'Avant-poste pillard', OW, 'minecraft', 5],
+  ['mineshaft', 'Mine abandonnée', OW, 'minecraft', 6], ['ruined_portal', 'Portail en ruine', OW, 'minecraft', 6],
+  ['ocean_ruin_warm', 'Ruines océaniques (chaudes)', OW, 'minecraft', 3], ['shipwreck_beached', 'Épave échouée', OW, 'minecraft', 3],
+  ['trial_chambers', 'Chambres des épreuves', OW, 'minecraft', 2], ['mansion', 'Manoir', OW, 'minecraft', 1],
+  ['towers:mage_tower', 'Tour du mage', OW, 'towers', 3],
+  ['dungeons:abandoned_elven_sanctuary', 'Sanctuaire elfique abandonné des profondeurs', OW, 'dungeons', 2],
+  ['fortress', 'Forteresse du Nether', NE, 'minecraft', 4], ['bastion_remnant', 'Vestiges de bastion', NE, 'minecraft', 3],
+  ['end_city', 'Cité de l\'End', EN, 'minecraft', 2],
+];
+const byId = Object.fromEntries(STRUCTS.map(s => [s[0], { id: s[0], name: s[1], dim: s[2], src: s[3] }]));
+const GROUPS = [['Villages', ['village_plains', 'village_desert', 'village_taiga']], ['Avant-postes', ['pillager_outpost']], ['Mines', ['mineshaft']],
+  ['Portails en ruine', ['ruined_portal']], ['Ruines océaniques', ['ocean_ruin_warm']], ['Épaves', ['shipwreck_beached']], ['Chambres', ['trial_chambers']],
+  ['Manoirs', ['mansion']], ['Tours (towers)', ['towers:mage_tower']], ['Sanctuaires (dungeons)', ['dungeons:abandoned_elven_sanctuary']]];
+let seed, nextId;
+const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+function pick() {
+  const total = STRUCTS.reduce((n, s) => n + s[4], 0); let r = rnd() * total;
+  for (const s of STRUCTS) if ((r -= s[4]) < 0) return s[0];
+  return STRUCTS[0][0];
+}
+function instance(sid = pick()) { // X/Z = centre du chunk de départ, seule position que la clé d'Instance permet de retrouver
+  const c = () => Math.round((rnd() * 6000 - 3000) / 16) * 16 + 8;
+  return { key: 'i' + nextId++, s: sid, x: c(), z: c(), dim: byId[sid].dim };
+}
+
+// ---------- État ----------
+let S;
+function reset(volume = 60, gui = '427x240') {
+  seed = 1234; nextId = 1;
+  S = { dim: OW, pos: { x: 120, z: -340 }, day: 431, volume, gui, levels: 30, log: [],
+    visited: [], skipped: [], target: null, ticked: new Set(['Villages']),
+    ui: { tab: 'visited', q: '', here: false, sort: { visited: 'recent', skipped: 'near' }, open: new Set(['village_plains']), sel: null } };
+  for (let i = 0; i < volume; i++) S.visited.push({ ...instance(), day: Math.round(12 + (419 * i) / Math.max(volume, 1)) });
+  for (let i = 0; i < 6; i++) S.skipped.push(instance(i < 3 ? 'village_plains' : undefined));
+  S.target = newTarget();
+}
+function newTarget() {
+  const pool = GROUPS.filter(g => S.ticked.has(g[0])).flatMap(g => g[1]);
+  return pool.length ? instance(pool[Math.floor(rnd() * pool.length)]) : null;
+}
+const log = m => { S.log.unshift(m); S.log = S.log.slice(0, 8); };
+const dist = i => Math.round(Math.hypot(i.x - S.pos.x, i.z - S.pos.z));
+const name = i => byId[i.s].name;
+const here = i => i.dim === S.dim;
+const where = i => here(i) ? dist(i) + ' m' : i.dim;
+const coords = i => `${i.x}, ${i.z}`;
+
+function rows(kind) {
+  const q = S.ui.q.trim().toLowerCase();
+  const hit = i => !q || (q[0] === '@' ? byId[i.s].src.includes(q.slice(1)) : name(i).toLowerCase().includes(q));
+  const list = S[kind].filter(i => hit(i) && (!S.ui.here || here(i)));
+  const near = (a, b) => (here(b) - here(a)) || dist(a) - dist(b);
+  const by = {
+    recent: (a, b) => (b.day ?? 0) - (a.day ?? 0), near,
+    name: (a, b) => name(a).localeCompare(name(b)) || near(a, b),
+    dim: (a, b) => a.dim.localeCompare(b.dim) || near(a, b),
+  };
+  return list.sort(by[S.ui.sort[kind]]);
+}
+const SORTS = { visited: [['recent', 'Récentes'], ['near', 'Proches'], ['name', 'Nom']], skipped: [['near', 'Proches'], ['name', 'Nom']] };
+const sortLabel = kind => SORTS[kind].find(s => s[0] === S.ui.sort[kind])[1];
+
+// ---------- Morceaux partagés ----------
+const tabsHtml = () => `<div class="tabs">${[['search', 'Recherche'], ['visited', `Visitées (${S.visited.length})`], ['skipped', `Passées (${S.skipped.length})`]]
+  .map(([k, l]) => `<div class="tab ${S.ui.tab === k ? 'on' : ''}" data-a="tab" data-id="${k}">${l}</div>`).join('')}</div>`;
+const filterBox = hint => `<input id="q" class="q" placeholder="${hint}" value="${S.ui.q}">`;
+const treeHtml = () => `<div class="bar">${filterBox('Filtrer… (@mod)')}</div><div class="list">${GROUPS.map(g =>
+  `<div class="row" data-a="tick" data-id="${g[0]}"><span>${S.ticked.has(g[0]) ? '[✓]' : '[ ]'}</span><span class="ell">${g[0]}</span></div>`).join('')}</div>`;
+const targetHtml = () => !S.target ? '<div class="panel m">Pas de Target</div>'
+  : `<div class="panel"><div class="ell">◎ ${name(S.target)}</div><div class="m ell">${where(S.target)} · ${S.target.dim}</div></div>`;
+const actionsHtml = () => `<div class="btn ${S.ticked.size ? '' : 'off'}" data-a="search">Chercher (≤ 5 niveaux)</div>
+  <div class="duo"><div class="btn ${S.target ? '' : 'off'}" data-a="pass">Passer</div><div class="btn" data-a="clearsel">Vider</div></div>
+  ${targetHtml()}
+  <div class="duo"><div class="btn ${S.target ? '' : 'off'}" data-a="mark">Marquer visitée</div><div class="btn ${S.target ? '' : 'off'}" data-a="cleartarget">Vider Target</div></div>`;
+const done = () => '<div class="spacer"></div><div class="btn" data-a="noop">Terminé</div>';
+const empty = kind => `<div class="empty">${S[kind].length ? 'Aucune ligne pour ce filtre'
+  : kind === 'visited' ? 'Aucune structure visitée pour l\'instant' : 'Rien de passé. « Chercher » et tout changement de Selection vident cette liste.'}</div>`;
+const act = kind => kind === 'visited' ? 'unmark' : 'unskip';
+const actHint = kind => kind === 'visited' ? 'Démarquer : elle redevient cherchable' : 'Retirer : elle redevient cherchable';
+
+// ---------- Variante A : onglets sur la colonne gauche, lignes sur deux niveaux ----------
+function renderA() {
+  const tab = S.ui.tab;
+  let left;
+  if (tab === 'search') left = treeHtml();
+  else {
+    const list = rows(tab).map(i => `<div class="two"><div class="txt"><div class="ell">${name(i)}</div>
+      <div class="m ell">${i.day ? 'Jour ' + i.day + ' · ' : ''}${coords(i)} · ${where(i)}</div></div>
+      <span class="x" title="${actHint(tab)}" data-a="${act(tab)}" data-id="${i.key}">✕</span></div>`).join('');
+    left = `<div class="bar">${filterBox('Filtrer…')}<div class="btn s" data-a="sort">${sortLabel(tab)}</div></div>
+      <div class="list">${list || empty(tab)}</div>`;
+  }
+  return `<div class="cols"><div class="col left">${tabsHtml()}${left}</div><div class="col right">${actionsHtml()}${done()}</div></div>`;
+}
+
+// ---------- Variante B : onglets pleine largeur, tableau triable ----------
+function renderB() {
+  const tab = S.ui.tab;
+  if (tab === 'search') return `${tabsHtml()}<div class="cols"><div class="col left">${treeHtml()}</div><div class="col right">${actionsHtml()}${done()}</div></div>`;
+  const on = k => S.ui.sort[tab] === k ? 'on' : '';
+  const day = tab === 'visited';
+  const head = `<div class="th"><span class="c-n ${on('name')}" data-a="sortby" data-id="name">Structure</span><span class="c-d ${on('dim')}" data-a="sortby" data-id="dim">Dim.</span>
+    ${day ? `<span class="c-j ${on('recent')}" data-a="sortby" data-id="recent">Jour</span>` : ''}
+    <span class="c-c">X, Z</span><span class="c-m ${on('near')}" data-a="sortby" data-id="near">Dist.</span><span class="c-x"></span></div>`;
+  const list = rows(tab).map(i => `<div class="row"><span class="c-n ell">${name(i)}</span><span class="c-d m">${i.dim}</span>
+    ${day ? `<span class="c-j m">${i.day}</span>` : ''}<span class="c-c m">${coords(i)}</span><span class="c-m m">${here(i) ? dist(i) + ' m' : '—'}</span>
+    <span class="c-x x" title="${actHint(tab)}" data-a="${act(tab)}" data-id="${i.key}">✕</span></div>`).join('');
+  return `${tabsHtml()}<div class="bar">${filterBox('Filtrer… (@mod)')}<div class="btn s" data-a="here">${S.ui.here ? '[✓]' : '[ ]'} Ici</div></div>
+    ${head}<div class="list">${list || empty(tab)}</div>
+    <div class="foot"><span class="w ell m">${S.target ? `◎ ${name(S.target)} · ${where(S.target)}` : 'Pas de Target'}</span><div class="btn s" data-a="noop">Terminé</div></div>`;
+}
+
+// ---------- Variante C : regroupé par Structure, fiche à droite ----------
+function renderC() {
+  const tab = S.ui.tab;
+  if (tab === 'search') return `${tabsHtml()}<div class="cols"><div class="col left">${treeHtml()}</div><div class="col right">${actionsHtml()}${done()}</div></div>`;
+  const groups = new Map();
+  for (const i of rows(tab)) groups.set(i.s, [...(groups.get(i.s) ?? []), i]);
+  const list = [...groups].sort((a, b) => b[1].length - a[1].length || byId[a[0]].name.localeCompare(byId[b[0]].name)).map(([sid, is]) => {
+    const open = S.ui.open.has(sid) || S.ui.q.trim();
+    return `<div class="row" data-a="fold" data-id="${sid}"><span>${open ? '▾' : '▸'}</span><span class="w ell">${byId[sid].name}</span><span class="m">×${is.length}</span></div>`
+      + (open ? is.map(i => `<div class="row sub ${S.ui.sel === i.key ? 'sel' : ''}" data-a="pick" data-id="${i.key}"><span class="w ell m">${coords(i)}</span><span class="m">${where(i)}</span></div>`).join('') : '');
+  }).join('');
+  const i = S[tab].find(v => v.key === S.ui.sel);
+  const card = i ? `<div class="panel"><div>${name(i)}</div><div class="m">${byId[i.s].src} · ${i.dim}</div>
+      ${i.day ? `<div class="m">Visitée le jour ${i.day}</div>` : ''}<div class="m">X ${i.x}, Z ${i.z}</div><div class="m">${here(i) ? dist(i) + ' m d\'ici' : 'Autre dimension'}</div></div>
+      <div class="btn" data-a="${act(tab)}" data-id="${i.key}">${tab === 'visited' ? 'Démarquer' : 'Retirer des passées'}</div>`
+    : '<div class="panel m" style="white-space:normal">Choisissez une Instance dans la liste</div>';
+  return `${tabsHtml()}<div class="cols"><div class="col left"><div class="bar">${filterBox('Filtrer…')}</div><div class="list">${list || empty(tab)}</div></div>
+    <div class="col right">${card}${done()}</div></div>`;
+}
+
+// ---------- Variantes D et E : A révisée. La colonne de recherche n'existe que sur l'onglet Recherche ----------
+// D garde les lignes doubles de A, E les met sur une seule ligne : la liste a toute la largeur.
+function renderRevised(oneLine) {
+  const tab = S.ui.tab;
+  if (tab === 'search') return `${tabsHtml()}<div class="cols"><div class="col left">${treeHtml()}</div><div class="col right">${actionsHtml()}${done()}</div></div>`;
+  const x = i => `<span class="x" title="${actHint(tab)}" data-a="${act(tab)}" data-id="${i.key}">✕</span>`;
+  const meta = i => `${i.day ? 'Jour ' + i.day + ' · ' : ''}${coords(i)} · ${where(i)}`;
+  const list = rows(tab).map(i => oneLine
+    ? `<div class="row"><span class="w ell">${name(i)}</span><span class="m">${meta(i)}</span>${x(i)}</div>`
+    : `<div class="two"><div class="txt"><div class="ell">${name(i)}</div><div class="m ell">${meta(i)}</div></div>${x(i)}</div>`).join('');
+  const n = S[tab].length, verb = tab === 'visited' ? 'Tout démarquer' : 'Tout retirer';
+  const label = `${verb} (${n})`;
+  return `${tabsHtml()}<div class="bar">${filterBox('Filtrer…')}<div class="btn s" data-a="sort">${sortLabel(tab)}</div><div class="btn s ${n ? '' : 'off'}" data-a="clearall">${label}</div></div>
+    <div class="list">${list || empty(tab)}</div>
+    <div class="foot"><span class="w ell m">${S.target ? `◎ ${name(S.target)} · ${where(S.target)}` : 'Pas de Target'}</span><div class="btn s" data-a="noop">Terminé</div></div>`;
+}
+
+// Modale de confirmation, sur le modèle du ConfirmScreen vanilla : fond assombri, question, deux boutons
+function modalHtml() {
+  const v = S.ui.tab === 'visited', n = S[S.ui.tab].length;
+  return `<div class="modal"><div class="box"><div>${v ? `Démarquer les ${n} Instances Visitées ?` : `Retirer les ${n} Instances Passées ?`}</div>
+    <div class="m">${v ? 'Elles redeviendront cherchables et l\'historique sera perdu.' : 'Elles redeviendront cherchables.'}</div>
+    <div class="m">Cette action est définitive.</div>
+    <div class="duo"><div class="btn" data-a="clearno">Annuler</div><div class="btn danger" data-a="clearyes">${v ? 'Tout démarquer' : 'Tout retirer'}</div></div></div></div>`;
+}
+
+// ---------- Rendu ----------
+const VARIANTS = { A: 'Colonne gauche, lignes doubles', B: 'Pleine largeur, tableau', C: 'Par Structure + fiche', D: 'A révisée, lignes doubles', E: 'A révisée, une ligne' };
+let variant = VARIANTS[new URLSearchParams(location.search).get('variant')] ? new URLSearchParams(location.search).get('variant') : 'E';
+function render() {
+  const frame = document.getElementById('frame');
+  const [w, h] = S.gui.split('x').map(n => n * 2);
+  frame.style.width = w + 'px'; frame.style.height = h + 'px';
+  frame.style.zoom = Math.min(1, (document.getElementById('stage').clientWidth - 24) / w); // tient dans une fenêtre étroite, proportions gardées
+  const focused = document.activeElement && document.activeElement.id === 'q';
+  const list = frame.querySelector('.list'), top = list ? list.scrollTop : 0;
+  frame.innerHTML = { A: renderA, B: renderB, C: renderC, D: () => renderRevised(false), E: () => renderRevised(true) }[variant]() + (S.ui.confirm ? modalHtml() : '');
+  const after = frame.querySelector('.list'); if (after) after.scrollTop = top;
+  if (focused) { const q = document.getElementById('q'); if (q) { q.focus(); q.setSelectionRange(q.value.length, q.value.length); } }
+  const opt = (v, cur, l = v) => `<option value="${v}" ${v == cur ? 'selected' : ''}>${l}</option>`;
+  const tab = S.ui.tab === 'search' ? null : S.ui.tab;
+  document.getElementById('sim').innerHTML = `
+    <h3>À regarder</h3><div>Retrouver « le village du jour ~200 », démarquer une Instance sans se tromper, puis Chercher : les Passées se vident.</div>
+    <h3>Taille de l'écran (px GUI)</h3><select id="gui">${opt('427x240', S.gui, '427×240 · 720p, échelle 3')}${opt('480x270', S.gui, '480×270 · 1080p, échelle 4')}${opt('640x360', S.gui, '640×360 · 1080p, échelle 3')}</select>
+    <h3>Nombre de Visited</h3><select id="vol">${[0, 8, 60, 300].map(n => opt(n, S.volume)).join('')}</select>
+    <h3>Monde</h3><select id="dim">${[OW, NE, EN].map(d => opt(d, S.dim)).join('')}</select>
+    <div>Joueur (${S.pos.x}, ${S.pos.z}) · jour ${S.day}</div>
+    <button data-sim="walk">Marcher 500 blocs</button><button data-sim="reset">Réinitialiser</button>
+    <h3>Journal</h3>${S.log.map(l => `<div>${l}</div>`).join('') || '<div>—</div>'}
+    <h3>État</h3><pre>${JSON.stringify({ onglet: S.ui.tab, variante: variant, visited: S.visited.length, skipped: S.skipped.length,
+      lignes: tab ? rows(tab).length : undefined, tri: tab ? S.ui.sort[tab] : undefined, filtre: S.ui.q, target: S.target && name(S.target) + ' ' + coords(S.target) }, null, 1)}</pre>`;
+  document.getElementById('swlabel').textContent = `${variant} (${VARIANTS[variant]})`;
+}
+
+// ---------- Actions ----------
+const ACTIONS = {
+  noop() {},
+  tab: id => { S.ui.tab = id; S.ui.q = ''; S.ui.sel = null; const l = document.querySelector('.list'); if (l) l.scrollTop = 0; },
+  tick: id => { S.ticked.has(id) ? S.ticked.delete(id) : S.ticked.add(id); S.skipped = []; log('Selection changée : Passées vidées'); },
+  search() { S.skipped = []; S.target = newTarget(); log('Chercher : Passées vidées, nouvelle Target'); },
+  pass() { S.skipped.push(S.target); log('Passée : ' + name(S.target)); S.target = newTarget(); },
+  clearsel() { S.ticked.clear(); S.skipped = []; log('Selection vidée : Passées vidées'); },
+  cleartarget() { S.target = null; log('Target vidée'); },
+  mark() { S.visited.push({ ...S.target, day: S.day }); log('Marquée visitée : ' + name(S.target)); },
+  unmark(id) { const i = S.visited.find(v => v.key === id); S.visited = S.visited.filter(v => v.key !== id); if (S.ui.sel === id) S.ui.sel = null; log(`Démarquée : ${name(i)} (${coords(i)})`); },
+  unskip(id) { const i = S.skipped.find(v => v.key === id); S.skipped = S.skipped.filter(v => v.key !== id); if (S.ui.sel === id) S.ui.sel = null; log(`Retirée des Passées : ${name(i)}`); },
+  sort() { const k = S.ui.tab, o = SORTS[k].map(s => s[0]); S.ui.sort[k] = o[(o.indexOf(S.ui.sort[k]) + 1) % o.length]; },
+  sortby: id => { S.ui.sort[S.ui.tab] = id; },
+  here() { S.ui.here = !S.ui.here; },
+  fold: id => { S.ui.open.has(id) ? S.ui.open.delete(id) : S.ui.open.add(id); },
+  pick: id => { S.ui.sel = id; },
+  clearall() { S.ui.confirm = true; },
+  clearno() { S.ui.confirm = false; },
+  clearyes() { const k = S.ui.tab; log(`Tout vidé : ${S[k].length} ${k === 'visited' ? 'démarquées' : 'retirées'}`); S[k] = []; S.ui.confirm = false; },
+};
+document.getElementById('frame').addEventListener('click', e => {
+  const el = e.target.closest('[data-a]'); if (!el) return;
+  ACTIONS[el.dataset.a](el.dataset.id); render();
+});
+document.getElementById('frame').addEventListener('input', e => { if (e.target.id === 'q') { S.ui.q = e.target.value; render(); } });
+document.getElementById('sim').addEventListener('click', e => {
+  const a = e.target.dataset.sim; if (!a) return;
+  if (a === 'walk') { S.pos = { x: S.pos.x + 400, z: S.pos.z + 300 }; log('Marche : les distances changent'); }
+  if (a === 'reset') reset(S.volume, S.gui);
+  render();
+});
+document.getElementById('sim').addEventListener('change', e => {
+  if (e.target.id === 'gui') S.gui = e.target.value;
+  if (e.target.id === 'vol') reset(+e.target.value, S.gui);
+  if (e.target.id === 'dim') { S.dim = e.target.value; log('Changement de dimension : Passées gardées'); }
+  render();
+});
+function cycle(d) {
+  S.ui.confirm = false;
+  const keys = Object.keys(VARIANTS); variant = keys[(keys.indexOf(variant) + d + keys.length) % keys.length];
+  render();
+  try { history.replaceState(null, '', '?variant=' + variant); } catch { /* le panneau d'aperçu sert le fichier en data: */ }
+}
+document.getElementById('switcher').addEventListener('click', e => { const d = e.target.dataset.sw; if (d) cycle(+d); });
+document.addEventListener('keydown', e => {
+  if (e.target.matches('input, textarea, select, [contenteditable]')) return;
+  if (e.key === 'Escape' && S.ui.confirm) { S.ui.confirm = false; render(); }
+  if (e.key === 'ArrowLeft') cycle(-1);
+  if (e.key === 'ArrowRight') cycle(1);
+});
+window.addEventListener('resize', render);
+reset(); render();
+</script>
+</body>
+</html>
