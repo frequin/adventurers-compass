@@ -62,6 +62,8 @@ public class AdventurersCompass implements ModInitializer {
 	public static final DataComponentType<Set<InstanceKey>> SKIPPED = DataComponentType.<Set<InstanceKey>>builder().persistent(CompassCodecs.SKIPPED).networkSynchronized(CompassCodecs.SKIPPED_STREAM).build();
 	/** The last search's "nothing found", shown by the HUD. */
 	public static final DataComponentType<SearchResult.NothingFound> NOTHING_FOUND = DataComponentType.<SearchResult.NothingFound>builder().persistent(CompassCodecs.NOTHING_FOUND).networkSynchronized(CompassCodecs.NOTHING_FOUND_STREAM).build();
+	/** When the server's clock showed {@link #NOTHING_FOUND}: read by the server only, to expire it. */
+	public static final DataComponentType<Long> NOTHING_FOUND_AT = DataComponentType.<Long>builder().persistent(Codec.LONG).networkSynchronized(ByteBufCodecs.VAR_LONG).build();
 	/** The server's {@code displayCoordinates}, copied on the compass when a Target is found, for the HUD. */
 	public static final DataComponentType<Boolean> DISPLAY_COORDS = DataComponentType.<Boolean>builder().persistent(Codec.BOOL).networkSynchronized(ByteBufCodecs.BOOL).build();
 	/** Wear: Targets found since the last repair. */
@@ -90,6 +92,7 @@ public class AdventurersCompass implements ModInitializer {
 		Registry.register(BuiltInRegistries.DATA_COMPONENT_TYPE, Identifier.fromNamespaceAndPath(MODID, "target"), TARGET);
 		Registry.register(BuiltInRegistries.DATA_COMPONENT_TYPE, Identifier.fromNamespaceAndPath(MODID, "skipped"), SKIPPED);
 		Registry.register(BuiltInRegistries.DATA_COMPONENT_TYPE, Identifier.fromNamespaceAndPath(MODID, "nothing_found"), NOTHING_FOUND);
+		Registry.register(BuiltInRegistries.DATA_COMPONENT_TYPE, Identifier.fromNamespaceAndPath(MODID, "nothing_found_at"), NOTHING_FOUND_AT);
 		Registry.register(BuiltInRegistries.DATA_COMPONENT_TYPE, Identifier.fromNamespaceAndPath(MODID, "display_coords"), DISPLAY_COORDS);
 		Registry.register(BuiltInRegistries.DATA_COMPONENT_TYPE, Identifier.fromNamespaceAndPath(MODID, "damage"), DAMAGE);
 		Registry.register(BuiltInRegistries.DATA_COMPONENT_TYPE, Identifier.fromNamespaceAndPath(MODID, "durability"), DURABILITY);
