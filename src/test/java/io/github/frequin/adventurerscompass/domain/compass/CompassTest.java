@@ -143,22 +143,62 @@ class CompassTest {
 	}
 
 	@Test
-	void changingTheSelectionDuringASearchCancelsItClearsTheTargetAndSkippedWithoutRestarting() {
+	void changingTheSelectionDuringASearchCancelsItKeepsTheTargetAndClearsSkippedWithoutRestarting() {
 		var id = UUID.randomUUID();
-		var searching = accepted(compass.search(withTarget(), overworld(), id)).state().withSkipped(Set.of(village(1, 1)));
+		var target = withTarget();
+		var searching = accepted(compass.search(target, overworld(), id)).state().withSkipped(Set.of(village(1, 1)));
 
 		var outcome = accepted(compass.selectionChanged(searching));
 
 		assertEquals(List.of(new Effect.CancelSearch(id)), outcome.effects());
-		assertEquals(CompassState.EMPTY, outcome.state());
+		assertEquals(target, outcome.state());
 	}
 
 	@Test
-	void changingTheSelectionWithoutASearchClearsTheTargetAndSkipped() {
-		var outcome = accepted(compass.selectionChanged(withTarget().withSkipped(Set.of(village(1, 1)))));
+	void changingTheSelectionWithoutASearchKeepsTheTargetAndClearsSkipped() {
+		var target = withTarget();
+
+		var outcome = accepted(compass.selectionChanged(target.withSkipped(Set.of(village(1, 1)))));
 
 		assertEquals(List.of(), outcome.effects());
-		assertEquals(CompassState.EMPTY, outcome.state());
+		assertEquals(target, outcome.state());
+		assertEquals(Status.TARGET, outcome.state().status(OVERWORLD));
+	}
+
+	@Test
+	void clearingTheTargetRemovesItAndKeepsSkipped() {
+		var skipped = Set.of(village(1, 1));
+
+		var outcome = accepted(compass.clearTarget(withTarget().withSkipped(skipped)));
+
+		assertEquals(List.of(), outcome.effects());
+		assertEquals(null, outcome.state().target());
+		assertEquals(skipped, outcome.state().skipped());
+		assertEquals(Status.IDLE, outcome.state().status(OVERWORLD));
+	}
+
+	@Test
+	void clearingTheTargetLeavesARunningSearchGoing() {
+		var id = UUID.randomUUID();
+		var searching = accepted(compass.search(withTarget(), overworld(), id)).state();
+
+		var outcome = accepted(compass.clearTarget(searching));
+
+		assertEquals(List.of(), outcome.effects());
+		assertEquals(id, outcome.state().search());
+		assertEquals(new Target(village(5, 6), new BlockXZ(80, 96)), compass.searchEnded(outcome.state(), id, new SearchResult.Found(village(5, 6), new BlockXZ(80, 96))).target());
+	}
+
+	@Test
+	void clearingTheTargetWorksFromAnotherDimension() {
+		var outcome = accepted(compass.clearTarget(withTarget()));
+
+		assertEquals(Status.IDLE, outcome.state().status(NETHER));
+	}
+
+	@Test
+	void clearingWithoutATargetIsRefused() {
+		assertEquals(new Outcome.Refused(Refusal.NO_TARGET), compass.clearTarget(CompassState.EMPTY));
 	}
 
 	@Test
