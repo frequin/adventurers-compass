@@ -144,7 +144,7 @@ public class AdventurersCompassConfig {
 			private final String dimensionXpMultipliersComment = "Per-dimension multipliers of the cost, by dimension id, applied to the dimension the player searches in. Ex: {\"minecraft:overworld\":1, \"minecraft:the_nether\":2, \"minecraft:the_end\":3}";
 			private final Map<String, Double> dimensionXpMultipliers;
 			
-			private final String hiddenStructuresComment = "Structures to Hide: they are not listed in the compass screen and never searched. Each entry is a structure id, where * matches any number of characters and ? one character, or a structure tag starting with #. Structures with the tag #c:hidden_from_locator_selection are always Hidden. A Hidden structure already in a compass Selection stays there as a greyed chip, and a Target already found is kept. Ex (ignore backslashes): [\"minecraft:stronghold\", \"minecraft:*village*\", \"#minecraft:village\"]";
+			private final String hiddenStructuresComment = "Structures to Hide: they are not listed in the compass screen and never searched. Each entry is a structure id, where * matches any number of characters and ? one character, or a structure tag starting with #. Structures with the tag #c:hidden_from_locator_selection are always Hidden. A Hidden structure already in a compass Selection stays there, ignored and counted in the screen, and a Target already found is kept. Ex (ignore backslashes): [\"minecraft:stronghold\", \"minecraft:*village*\", \"#minecraft:village\"]";
 			private final List<String> hiddenStructures;
 
 			private final String visitedMessageComment = "Shows a message above the hotbar the first time a player stands in a piece of a structure Instance, which then becomes Visited and is skipped by searches.";

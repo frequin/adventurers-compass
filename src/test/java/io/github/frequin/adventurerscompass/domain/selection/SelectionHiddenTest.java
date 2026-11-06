@@ -7,6 +7,8 @@ import java.util.Set;
 
 import org.junit.jupiter.api.Test;
 
+import io.github.frequin.adventurerscompass.domain.selection.IgnoredElement.Reason;
+
 class SelectionHiddenTest {
 
 	private static final String OVERWORLD = "minecraft:overworld";
@@ -69,33 +71,32 @@ class SelectionHiddenTest {
 	}
 
 	@Test
-	void aStructureHiddenAfterBeingSelectedStaysAsAGreyedHiddenChip() {
+	void aStructureHiddenAfterBeingSelectedStaysInTheSelectionAndIsIgnored() {
 		Selection selection = Selection.EMPTY.tickStructure(STRONGHOLD).tickStructure(OUTPOST);
 
-		assertEquals(List.of(
-				new Chip(Chip.Kind.STRUCTURE, OUTPOST, ChipState.ACTIVE),
-				new Chip(Chip.Kind.STRUCTURE, STRONGHOLD, ChipState.HIDDEN)), selection.chips(CATALOGUE, OVERWORLD));
+		assertEquals(List.of(new IgnoredElement(STRONGHOLD, Reason.HIDDEN)), selection.ignored(CATALOGUE, OVERWORLD));
+		assertEquals(Set.of(STRONGHOLD, OUTPOST), selection.structures());
 	}
 
 	@Test
-	void aHiddenChipIsGreyedAsHiddenEvenOutsideItsDimension() {
+	void aHiddenStructureIsIgnoredAsHiddenEvenOutsideItsDimension() {
 		Selection selection = Selection.EMPTY.tickStructure(STRONGHOLD);
 
-		assertEquals(List.of(new Chip(Chip.Kind.STRUCTURE, STRONGHOLD, ChipState.HIDDEN)), selection.chips(CATALOGUE, NETHER));
+		assertEquals(List.of(new IgnoredElement(STRONGHOLD, Reason.HIDDEN)), selection.ignored(CATALOGUE, NETHER));
 	}
 
 	@Test
-	void aGroupStaysActiveWhileOneOfItsMembersIsNotHidden() {
+	void aGroupIsNotIgnoredWhileOneOfItsMembersIsNotHidden() {
 		Selection selection = Selection.EMPTY.tickGroup(VILLAGES, CATALOGUE);
 
-		assertEquals(List.of(new Chip(Chip.Kind.GROUP, VILLAGES, ChipState.ACTIVE)), selection.chips(CATALOGUE, OVERWORLD));
+		assertEquals(List.of(), selection.ignored(CATALOGUE, OVERWORLD));
 	}
 
 	@Test
-	void aGroupWhoseMembersAreAllHiddenIsAGreyedHiddenChip() {
+	void aGroupWhoseMembersAreAllHiddenIsIgnoredAsHidden() {
 		Selection selection = Selection.EMPTY.tickGroup(STRONGHOLDS, CATALOGUE);
 
-		assertEquals(List.of(new Chip(Chip.Kind.GROUP, STRONGHOLDS, ChipState.HIDDEN)), selection.chips(CATALOGUE, OVERWORLD));
+		assertEquals(List.of(new IgnoredElement(STRONGHOLDS, Reason.HIDDEN)), selection.ignored(CATALOGUE, OVERWORLD));
 		assertEquals(false, selection.canSearchIn(CATALOGUE, OVERWORLD));
 	}
 

@@ -2,7 +2,8 @@
 #### Fabric 26.3
 - First release of Adventurer's Compass, based on Explorer's Compass 2.5.2 by ChaosTheDude
 - Renamed the mod (mod id `adventurerscompass`), so it can be installed alongside Explorer's Compass
-- Nomad mode: the compass holds a Selection of several Structures and Groups, composed in a tree screen (text and `@mod` filter, removable chips, Clear). Search finds the nearest Instance of the whole Selection in the Current dimension
+- Nomad mode: the compass holds a Selection of several Structures and Groups, composed in a tree screen (text and `@mod` filter, Select all, Clear). Search finds the nearest Instance of the whole Selection in the Current dimension
+- "Select all" ticks everything the tree lists, filter included. Selection elements missing from the Current dimension or Hidden stay on the compass, ignored by the search: the screen counts them and a tooltip names them
 - Visited: an Instance becomes Visited when you stand in one of its pieces, or with "Mark Visited" on the Target. Searches skip Visited Instances. Visited is held per player and per world, kept on death, listed in the screen and can be unmarked one by one
 - Pass: skips the Target for now and searches again. Skipped Instances are cleared by a new Search or a Selection change
 - Changing the Selection cancels a running search and keeps the Target. "Clear Target" in the screen removes the Target for free, without wear, even on a broken compass, and leaves the Selection, Skipped and a running search alone
