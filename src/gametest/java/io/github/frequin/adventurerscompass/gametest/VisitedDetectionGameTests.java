@@ -1,20 +1,34 @@
 package io.github.frequin.adventurerscompass.gametest;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
+import com.mojang.authlib.GameProfile;
+
+import io.github.frequin.adventurerscompass.AdventurersCompass;
+import io.github.frequin.adventurerscompass.config.AdventurersCompassConfig;
+import io.github.frequin.adventurerscompass.domain.BlockXZ;
 import io.github.frequin.adventurerscompass.domain.ChunkCoord;
 import io.github.frequin.adventurerscompass.domain.InstanceKey;
+import io.github.frequin.adventurerscompass.domain.compass.Target;
 import io.github.frequin.adventurerscompass.visited.PlayerVisited;
 import io.github.frequin.adventurerscompass.visited.VisitedDetection;
 import io.github.frequin.adventurerscompass.util.LevelUtils;
+import io.netty.channel.embedded.EmbeddedChannel;
 import net.fabricmc.fabric.api.gametest.v1.GameTest;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.Connection;
+import net.minecraft.network.protocol.PacketFlow;
+import net.minecraft.network.protocol.game.ClientboundSoundPacket;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.network.CommonListenerCookie;
 import net.minecraft.util.RandomSource;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.StructureManager;
@@ -40,22 +54,43 @@ public class VisitedDetectionGameTests {
 	private static final String VILLAGE_PLAINS = "minecraft:village_plains";
 
 	@GameTest
-	public void standingInAPieceMakesTheInstanceVisited(GameTestHelper helper) {
+	public void standingInAPieceMakesTheInstanceVisitedAndTheTargetChimesOnce(GameTestHelper helper) {
 		ServerLevel level = helper.getLevel();
 		BlockPos firstPiece = helper.absolutePos(new BlockPos(1, 1, 1));
 		BlockPos gap = firstPiece.east(3);
 		ChunkPos startChunk = registerVillage(level, firstPiece);
-		// The mock player in the level is in creative mode, where detection is active too
-		ServerPlayer player = helper.makeMockServerPlayerInLevel();
+		InstanceKey village = new InstanceKey(LevelUtils.dimensionId(level),VILLAGE_PLAINS, new ChunkCoord(startChunk.x(), startChunk.z()));
+		InstanceKey elsewhere = new InstanceKey(LevelUtils.dimensionId(level),VILLAGE_PLAINS, new ChunkCoord(startChunk.x() + 40, startChunk.z()));
+		Connection connection = new Connection(PacketFlow.SERVERBOUND);
+		EmbeddedChannel channel = new EmbeddedChannel(connection);
+		ServerPlayer player = connectPlayer(helper, connection);
+		ItemStack compass = new ItemStack(AdventurersCompass.ADVENTURERS_COMPASS_ITEM);
+		player.getInventory().setItem(0, compass);
 
+		compass.set(AdventurersCompass.TARGET, new Target(elsewhere, new BlockXZ(0, 0)));
 		stand(player, gap);
 		VisitedDetection.poll(player);
 		helper.assertTrue(PlayerVisited.get(player).list().isEmpty(), "standing between pieces, inside the start's box, should not mark the Instance");
 
 		stand(player, firstPiece);
 		VisitedDetection.poll(player);
-		InstanceKey expected = new InstanceKey(LevelUtils.dimensionId(level),VILLAGE_PLAINS, new ChunkCoord(startChunk.x(), startChunk.z()));
-		helper.assertValueEqual(List.of(expected), PlayerVisited.get(player).list(), "Visited Instances");
+		helper.assertValueEqual(List.of(village), PlayerVisited.get(player).list(), "Visited Instances");
+		helper.assertValueEqual(soundsSent(channel), List.of(), "sounds for a Structure that is not the Target");
+
+		compass.set(AdventurersCompass.TARGET, new Target(village, new BlockXZ(0, 0)));
+		PlayerVisited.unmark(player, village);
+		VisitedDetection.poll(player);
+		VisitedDetection.poll(player);
+		helper.assertValueEqual(soundsSent(channel), List.of("minecraft:block.note_block.chime at 1.0"), "sounds for the Target");
+
+		PlayerVisited.unmark(player, village);
+		AdventurersCompassConfig.targetVisitedSound = false;
+		try {
+			VisitedDetection.poll(player);
+		} finally {
+			AdventurersCompassConfig.targetVisitedSound = true;
+		}
+		helper.assertValueEqual(soundsSent(channel), List.of(), "sounds with targetVisitedSound off");
 		helper.succeed();
 	}
 
@@ -71,6 +106,26 @@ public class VisitedDetectionGameTests {
 
 		helper.assertTrue(PlayerVisited.get(player).list().isEmpty(), "a spectator should not mark any Instance");
 		helper.succeed();
+	}
+
+	/** A player joined over {@code connection}, unlike the mock players whose wire to the client the test cannot read. */
+	private static ServerPlayer connectPlayer(GameTestHelper helper, Connection connection) {
+		ServerLevel level = helper.getLevel();
+		CommonListenerCookie cookie = CommonListenerCookie.createInitial(new GameProfile(UUID.randomUUID(), "test-player"), false);
+		ServerPlayer player = new ServerPlayer(level.getServer(), level, cookie.gameProfile(), cookie.clientInformation());
+		level.getServer().getPlayerList().placeNewPlayer(connection, player, cookie);
+		return player;
+	}
+
+	/** The sounds sent to the client since the last call, as "sound id at volume". */
+	private static List<String> soundsSent(EmbeddedChannel channel) {
+		List<String> sounds = new ArrayList<>();
+		for (Object packet = channel.readOutbound(); packet != null; packet = channel.readOutbound()) {
+			if (packet instanceof ClientboundSoundPacket sound) {
+				sounds.add(sound.getSound().value().location() + " at " + sound.getVolume());
+			}
+		}
+		return sounds;
 	}
 
 	private static void stand(ServerPlayer player, BlockPos pos) {

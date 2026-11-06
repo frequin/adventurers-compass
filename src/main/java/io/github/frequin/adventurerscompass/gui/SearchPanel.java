@@ -10,6 +10,7 @@ import io.github.frequin.adventurerscompass.domain.compass.Target;
 import io.github.frequin.adventurerscompass.item.AdventurersCompassItem;
 import io.github.frequin.adventurerscompass.domain.xp.XpThreshold;
 import io.github.frequin.adventurerscompass.network.CancelPacket;
+import io.github.frequin.adventurerscompass.network.ClearTargetPacket;
 import io.github.frequin.adventurerscompass.network.MarkVisitedPacket;
 import io.github.frequin.adventurerscompass.network.PassPacket;
 import io.github.frequin.adventurerscompass.network.SearchPacket;
@@ -31,7 +32,7 @@ import net.minecraft.world.item.ItemStack;
 /**
  * The search part of the compass screen's right column: "Search", which turns
  * into "Cancel" while a search runs, "Pass", then the Target panel (name,
- * distance and dimension) with "Mark Visited" and "Teleport". Starting a search closes the
+ * distance and dimension) with "Clear Target", "Mark Visited" and "Teleport". Starting a search closes the
  * screen. It reads the held compass every frame, so it follows the state the
  * server syncs.
  */
@@ -42,6 +43,7 @@ final class SearchPanel {
 	private static final int GAP = 5;
 	private static final int LINE = 10;
 	private static final int TARGET_TEXT_LINES = 3;
+	private static final int CLEAR_TARGET_HEIGHT = 12;
 
 	/** Height of the panel, for the screen to place what comes below. */
 	static final int HEIGHT = 2 * (BUTTON_HEIGHT + GAP) + TARGET_TEXT_LINES * LINE + GAP + BUTTON_HEIGHT;
@@ -55,6 +57,7 @@ final class SearchPanel {
 	private Button passButton;
 	private Button teleportButton;
 	private Button markVisitedButton;
+	private Button clearTargetButton;
 	private int width;
 	private boolean searchAllowed;
 	private Component searchRefusal;
@@ -89,10 +92,17 @@ final class SearchPanel {
 		markVisitedButton = new TransparentButton(x, targetTextTop() + TARGET_TEXT_LINES * LINE + GAP, width, BUTTON_HEIGHT, Component.translatable("string.adventurerscompass.markVisited"), (onPress) -> {
 			ClientPlayNetworking.send(new MarkVisitedPacket());
 		});
+		// On the "Target" caption line, right-aligned, so it takes no room from the rest of the column
+		Component clearTarget = Component.translatable("string.adventurerscompass.clearTarget");
+		int clearTargetWidth = minecraft.font.width(clearTarget) + 8;
+		clearTargetButton = new TransparentButton(x + width - clearTargetWidth, targetTextTop() - 2, clearTargetWidth, CLEAR_TARGET_HEIGHT, clearTarget, (onPress) -> {
+			ClientPlayNetworking.send(new ClearTargetPacket());
+		});
 		add.accept(searchButton);
 		add.accept(passButton);
 		add.accept(teleportButton);
 		add.accept(markVisitedButton);
+		add.accept(clearTargetButton);
 		update(searchAllowed, searchRefusal);
 	}
 
@@ -126,6 +136,7 @@ final class SearchPanel {
 		teleportButton.setX(teleportButton.visible ? x + half + GAP : x);
 		teleportButton.setWidth(teleportButton.visible ? width - half - GAP : width);
 		markVisitedButton.active = state.target() != null && !targetVisited(state);
+		clearTargetButton.visible = state.target() != null;
 	}
 
 	/**

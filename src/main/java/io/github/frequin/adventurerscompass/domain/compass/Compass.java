@@ -67,10 +67,21 @@ public final class Compass {
 		return new Outcome.Accepted(state.withSearch(null), cancelling(state));
 	}
 
-	/** The Selection changed: cancels the search, clears the Target and Skipped, and does not search again. */
+	/** The Selection changed: cancels the search, keeps the Target, clears Skipped, and does not search again. */
 	public Outcome selectionChanged(CompassState state) {
-		CompassState next = state.withSearch(null).withTarget(null).withSkipped(Set.of()).withNothingFound(null);
+		CompassState next = state.withSearch(null).withSkipped(Set.of()).withNothingFound(null);
 		return new Outcome.Accepted(next, cancelling(state));
+	}
+
+	/**
+	 * "Clear Target": removes the Target and nothing else, a running search goes
+	 * on. Free and without wear, so a broken compass can do it too.
+	 */
+	public Outcome clearTarget(CompassState state) {
+		if (state.target() == null) {
+			return new Outcome.Refused(Refusal.NO_TARGET);
+		}
+		return new Outcome.Accepted(state.withTarget(null), List.of());
 	}
 
 	/**

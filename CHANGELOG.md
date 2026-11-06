@@ -6,6 +6,7 @@
 - "Select all" ticks everything the tree lists, filter included. Selection elements missing from the Current dimension or Hidden stay on the compass, ignored by the search: the screen counts them and a tooltip names them
 - Visited: an Instance becomes Visited when you stand in one of its pieces, or with "Mark Visited" on the Target. Searches skip Visited Instances. Visited is held per player and per world, kept on death, listed in the screen and can be unmarked one by one
 - Pass: skips the Target for now and searches again. Skipped Instances are cleared by a new Search or a Selection change
+- Changing the Selection cancels a running search and keeps the Target. "Clear Target" in the screen removes the Target for free, without wear, even on a broken compass, and leaves the Selection, Skipped and a running search alone
 - The Target keeps its dimension: in another dimension the needle spins and the HUD says so; back in its dimension it points again with no new search
 - One-line HUD: "Structure · distance" or the search state, with an optional coordinates line
 - XP is paid only when a Target is found, at the found Structure's cost times the Current dimension's multiplier. Cancelled searches and searches that find nothing are free
@@ -17,7 +18,7 @@
 #### Breaking changes
 - The config file is not compatible with Explorer's Compass and is not migrated: delete `config/adventurerscompass.json` to get the new defaults. Unknown old keys are ignored and missing keys take their default
 - Compasses from Explorer's Compass or earlier builds are not migrated: their search data is dropped
-- New nomadic defaults: `maxRadius` 1000 (was 10000), `allowTeleport` false (was true; when on, only ops and creative players can teleport, never across dimensions), `compassDurability` 3 (was 0), `defaultXpLevel` 5 (was 0, and the 3-level cap is gone), `defaultDimensionXpMultiplier` 2 with `dimensionXpMultipliers` `{"minecraft:overworld": 1}`
+- New nomadic defaults: `maxRadius` 2500 (was 10000), about half a day's walk, `allowTeleport` false (was true; when on, only ops and creative players can teleport, never across dimensions), `compassDurability` 3 (was 0), `defaultXpLevel` 5 (was 0, and the 3-level cap is gone), `defaultDimensionXpMultiplier` 2 with `dimensionXpMultipliers` `{"minecraft:overworld": 1}`
 - `structureBlacklist` is renamed `hiddenStructures` and also accepts `#tag` entries
 - Removed options: `maxNextSearches`, `maxSamples`
 - The screen's "Sort By" button is gone: the tree lists Groups and their Structures alphabetically. The old sorts by source, Group and dimension no longer fit a tree that already nests Structures in their Groups and shows only the Current dimension; filtering by source is done with `@mod` in the search box

@@ -60,6 +60,17 @@ public record CompassState(UUID search, Target target, Set<InstanceKey> skipped,
 		return Status.IDLE;
 	}
 
+	/** What the needle does for a player standing in {@code currentDimension}. A kept Target is pointed at even while the HUD shows "nothing found". */
+	public Needle needle(String currentDimension) {
+		if (isSearching()) {
+			return Needle.SPIN;
+		}
+		if (target == null) {
+			return Needle.WORLD_SPAWN;
+		}
+		return target.dimension().equals(currentDimension) ? Needle.TARGET : Needle.SPIN;
+	}
+
 	/** Searches left before the compass breaks; {@code durability} 0 or less means it never wears. */
 	public int searchesLeft(int durability) {
 		return Math.max(0, durability - wear);

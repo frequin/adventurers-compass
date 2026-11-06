@@ -25,7 +25,7 @@ public class AdventurersCompassConfig {
 	
 	public static boolean allowTeleport = false;
 	public static boolean displayCoordinates = true;
-	public static int maxRadius = 1000;
+	public static int maxRadius = 2500;
 	public static int compassDurability = 3;
 	public static int defaultXpLevel = 5;
 	public static Map<String, Integer> perStructureXpLevels = new HashMap<String, Integer>();
@@ -124,7 +124,7 @@ public class AdventurersCompassConfig {
 			private final String displayCoordinatesComment = "Shows the Target's X and Z on a second HUD line. The distance is always shown.";
 			private final boolean displayCoordinates;
 			
-			private final String maxRadiusComment = "The maximum horizontal distance, in blocks, from where the search started to a structure the compass can find. Raising it makes searches that find nothing more expensive.";
+			private final String maxRadiusComment = "The maximum horizontal distance, in blocks, from where the search started to a structure the compass can find. The default of 2500 is about half a day's walk, sunrise to sunset. Raising it makes searches that find nothing more expensive.";
 			private final int maxRadius;
 			
 			private final String compassDurabilityComment = "The number of Targets a compass can find (Pass included) before it breaks. A broken compass keeps its Target but cannot search until repaired by crafting it with a compass, which keeps its Selection and Target. Creative players never wear it. Set to 0 to disable wear.";
@@ -159,7 +159,7 @@ public class AdventurersCompassConfig {
 			private Common() {
 				allowTeleport = false;
 				displayCoordinates = true;
-				maxRadius = 1000;
+				maxRadius = 2500;
 				compassDurability = 3;
 				defaultXpLevel = 5;
 				perStructureXpLevels = new HashMap<String, Integer>();

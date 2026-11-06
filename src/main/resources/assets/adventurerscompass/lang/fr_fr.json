@@ -48,6 +48,7 @@
     "_comment": "STRINGS - VISITED",
     "string.adventurerscompass.hud.targetVisited": "%s · Visitée — Chercher la suivante",
     "string.adventurerscompass.markVisited": "Marquer visitée",
+    "string.adventurerscompass.clearTarget": "Vider la cible",
     "string.adventurerscompass.targetVisited": "%s (visitée)",
     "string.adventurerscompass.visitedList": "Visitées (%s)",
     "string.adventurerscompass.noVisited": "Aucune structure visitée pour l'instant",
