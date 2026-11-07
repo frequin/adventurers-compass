@@ -7,6 +7,9 @@ import io.github.frequin.adventurerscompass.domain.Ellipsis;
 import io.github.frequin.adventurerscompass.domain.InstanceKey;
 import io.github.frequin.adventurerscompass.domain.rows.InstanceRow;
 import io.github.frequin.adventurerscompass.domain.rows.RowLabels;
+import io.github.frequin.adventurerscompass.util.RenderUtils;
+
+import com.mojang.blaze3d.platform.InputConstants;
 
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
@@ -14,13 +17,15 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.ObjectSelectionList;
+import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 
 /**
  * The list of the Visited and Skipped tabs: one row per Instance, its name on
  * the left, its details in grey on the right, then a red ✕, the only part of
- * the row that acts.
+ * the row that acts with the mouse. With the keyboard, Space, Enter or Delete
+ * on the focused row act as its ✕.
  */
 @Environment(EnvType.CLIENT)
 public class InstanceList extends TransparentList<InstanceList.Row> {
@@ -62,17 +67,27 @@ public class InstanceList extends TransparentList<InstanceList.Row> {
 		this.onCross = onCross;
 	}
 
-	/** Shows these rows, or {@code emptyMessage} when there are none, keeping the scroll position. */
+	/**
+	 * Shows these rows, or {@code emptyMessage} when there are none, keeping the
+	 * scroll position. The focus stays on its Instance; once that one is gone, it
+	 * goes to the row that took its place, or to the last row.
+	 */
 	public void setRows(List<InstanceRow> next, Component emptyMessage) {
 		this.emptyMessage = emptyMessage;
 		if (next.equals(rows)) {
 			return;
 		}
+		InstanceRow focused = isFocused() && getFocused() != null ? getFocused().row : null;
+		int focusedIndex = rows.indexOf(focused);
 		rows = next;
 		double scroll = scrollAmount();
 		clearEntries();
 		next.forEach(row -> addEntry(new Row(row)));
 		setScrollAmount(scroll);
+		if (focused != null && !next.isEmpty()) {
+			int index = next.stream().map(InstanceRow::instance).toList().indexOf(focused.instance());
+			setFocused(children().get(index >= 0 ? index : Math.min(focusedIndex, next.size() - 1)));
+		}
 	}
 
 	@Override
@@ -107,7 +122,18 @@ public class InstanceList extends TransparentList<InstanceList.Row> {
 			guiGraphics.text(font, CROSS, crossX, textY, 0xffff5555);
 			if (isHovering && isOverCross(font, mouseX)) {
 				guiGraphics.setTooltipForNextFrame(font, crossTooltip, mouseX, mouseY);
+			} else if (RenderUtils.hasKeyboardFocus(InstanceList.this.isFocused() && getFocused() == this)) {
+				guiGraphics.setTooltipForNextFrame(font, crossTooltip, crossX, getBottom());
 			}
+		}
+
+		@Override
+		public boolean keyPressed(KeyEvent event) {
+			if (!event.isSelection() && event.input() != InputConstants.KEY_DELETE) {
+				return false;
+			}
+			onCross.accept(row.instance());
+			return true;
 		}
 
 		@Override

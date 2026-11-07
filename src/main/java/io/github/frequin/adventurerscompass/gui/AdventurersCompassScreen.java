@@ -40,12 +40,14 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.ConfirmScreen;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -127,6 +129,9 @@ public class AdventurersCompassScreen extends Screen {
 	private SelectionTree tree;
 	private Button clearButton;
 	private Button selectAllButton;
+	private FocusableText unsearchableText;
+	/** What the tooltip of {@link #unsearchableText} names, so that it is only rebuilt when it changes. */
+	private List<UnsearchableElement> shownUnsearchable;
 	private InstanceList instanceList;
 	private Button sortButton;
 	private Button clearAllButton;
@@ -207,12 +212,19 @@ public class AdventurersCompassScreen extends Screen {
 		};
 	}
 
-	/** Opens a tab with an empty filter; each tab keeps its sort and the tree stays open as it was. */
+	/**
+	 * Opens a tab with an empty filter; each tab keeps its sort and the tree stays
+	 * open as it was. The focus goes to the filter, or stays on the tab when it was
+	 * opened from the keyboard.
+	 */
 	private void showTab(Tab next) {
 		if (next != tab) {
 			tab = next;
 			filterBox = null;
 			rebuildWidgets();
+			if (minecraft.getLastInputType().isKeyboard()) {
+				setFocused(tabButtons.get(next.ordinal()));
+			}
 		}
 	}
 
@@ -240,6 +252,8 @@ public class AdventurersCompassScreen extends Screen {
 		clearButton = addRenderableWidget(new TransparentButton(MARGIN + selectAllWidth + GAP, treeBottom + 3, font.width(clear) + SMALL_BUTTON_PADDING, BUTTON_HEIGHT, clear, (onPress) -> {
 			updateSelection(selection.clear());
 		}));
+		unsearchableText = addRenderableWidget(new FocusableText(font, MARGIN, height - MARGIN - 8 - FOOTER_LINE, 0xffaaaaaa));
+		shownUnsearchable = null;
 
 		// The right column stacks from the top, so "Done" can only be pushed down, never over it
 		int doneTop = Math.max(height - 30, TREE_TOP + SearchPanel.height(AdventurersCompass.canTeleport) + GAP);
@@ -303,7 +317,11 @@ public class AdventurersCompassScreen extends Screen {
 		});
 	}
 
-	/** Asks before clearing the whole list, filter or not. Both answers come back to this screen, on this tab. */
+	/**
+	 * Asks before clearing the whole list, filter or not. Both answers come back to
+	 * this screen, on this tab, with the focus back on the button when the player
+	 * answered from the keyboard.
+	 */
 	private void confirmClearAll() {
 		ListTab list = listTab();
 		Component question = Component.translatable(list.confirmClearAll, list.size.getAsInt());
@@ -314,6 +332,9 @@ public class AdventurersCompassScreen extends Screen {
 				list.removeAll.run();
 			}
 			minecraft.gui.setScreen(this);
+			if (minecraft.getLastInputType().isKeyboard()) {
+				setFocused(clearAllButton);
+			}
 		}, question, warning, action, CommonComponents.GUI_CANCEL));
 	}
 
@@ -356,7 +377,6 @@ public class AdventurersCompassScreen extends Screen {
 			String text = Component.translatable("string.adventurerscompass.otherDimensionsHidden", outside).getString();
 			guiGraphics.text(font, font.plainSubstrByWidth(text, leftColumnRight() - MARGIN), MARGIN, height - MARGIN - 8, 0xff808080);
 		}
-		renderUnsearchable(guiGraphics, mouseX, mouseY);
 	}
 
 	/** The Target as text, left of "Done": "◎ Structure · distance", or its dimension when elsewhere. */
@@ -373,28 +393,29 @@ public class AdventurersCompassScreen extends Screen {
 		return CompassTexts.dimensionName(target.dimension());
 	}
 
-	/** The count of Selection elements unsearchable here, under "Select all"; its tooltip names them. */
-	private void renderUnsearchable(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY) {
+	/** The count of Selection elements unsearchable here, under "Select all"; its tooltip, on hover or focus, names them. */
+	private void updateUnsearchable() {
 		List<UnsearchableElement> unsearchable = selection.unsearchable(catalogue, dimension);
-		if (unsearchable.isEmpty()) {
+		if (unsearchable.equals(shownUnsearchable)) {
 			return;
 		}
+		shownUnsearchable = unsearchable;
+		unsearchableText.visible = !unsearchable.isEmpty();
 		String text = Component.translatable("string.adventurerscompass.unsearchableHere", unsearchable.size()).getString();
-		String count = font.plainSubstrByWidth(text, ScreenLayout.leftColumnWidth(width));
-		int y = height - MARGIN - 8 - FOOTER_LINE;
-		guiGraphics.text(font, count, MARGIN, y, 0xffaaaaaa);
-		if (mouseX >= MARGIN && mouseX < MARGIN + font.width(count) && mouseY >= y - 1 && mouseY < y + font.lineHeight) {
-			guiGraphics.setComponentTooltipForNextFrame(font, unsearchableTooltip(unsearchable), mouseX, mouseY);
-		}
+		unsearchableText.setText(font.plainSubstrByWidth(text, ScreenLayout.leftColumnWidth(width)));
+		unsearchableText.setTooltip(unsearchable.isEmpty() ? null : Tooltip.create(unsearchableTooltip(unsearchable)));
 	}
 
-	private List<Component> unsearchableTooltip(List<UnsearchableElement> unsearchable) {
-		List<Component> lines = new ArrayList<>();
+	private static Component unsearchableTooltip(List<UnsearchableElement> unsearchable) {
+		MutableComponent lines = Component.empty();
 		for (UnsearchableElement.Reason reason : UnsearchableElement.Reason.values()) {
 			List<UnsearchableElement> elements = unsearchable.stream().filter(element -> element.reason() == reason).toList();
 			if (!elements.isEmpty()) {
-				lines.add(Component.translatable(reason == UnsearchableElement.Reason.HIDDEN ? "string.adventurerscompass.unsearchableHidden" : "string.adventurerscompass.unsearchableAbsent").withColor(0xffaaaaaa));
-				elements.forEach(element -> lines.add(Component.literal(unsearchableName(element))));
+				if (!lines.getSiblings().isEmpty()) {
+					lines.append("\n");
+				}
+				lines.append(Component.translatable(reason == UnsearchableElement.Reason.HIDDEN ? "string.adventurerscompass.unsearchableHidden" : "string.adventurerscompass.unsearchableAbsent").withColor(0xffaaaaaa));
+				elements.forEach(element -> lines.append("\n" + unsearchableName(element)));
 			}
 		}
 		return lines;
@@ -488,6 +509,7 @@ public class AdventurersCompassScreen extends Screen {
 		searchPanel.update(canSearch && affordable, refusal);
 		clearButton.active = !selection.equals(Selection.EMPTY);
 		selectAllButton.active = !selectAll().equals(selection);
+		updateUnsearchable();
 	}
 
 }

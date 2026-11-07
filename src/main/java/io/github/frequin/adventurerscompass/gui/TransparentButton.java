@@ -10,7 +10,7 @@ import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.network.chat.Component;
 
-/** A flat button. A label too wide for it is cut with "…" and shown in full in a tooltip. */
+/** A flat button. A label too wide for it is cut with "…" and shown in full in a tooltip, on hover or keyboard focus. */
 public class TransparentButton extends Button {
 
 	private boolean hasOwnTooltip;
@@ -43,8 +43,13 @@ public class TransparentButton extends Button {
 		String label = getMessage().getString();
 		String shown = Ellipsis.fit(label, ScreenLayout.labelWidth(getWidth()), font::width);
 		guiGraphics.centeredText(font, Component.literal(shown).withStyle(getMessage().getStyle()), getX() + getWidth() / 2, getY() + (getHeight() - 8) / 2, color);
-		if (isHovered && !hasOwnTooltip && !shown.equals(label)) {
+		if (hasOwnTooltip || shown.equals(label)) {
+			return;
+		}
+		if (isHovered) {
 			guiGraphics.setTooltipForNextFrame(font, getMessage(), mouseX, mouseY);
+		} else if (RenderUtils.hasKeyboardFocus(isFocused())) {
+			guiGraphics.setTooltipForNextFrame(font, getMessage(), getX(), getBottom());
 		}
 	}
 
