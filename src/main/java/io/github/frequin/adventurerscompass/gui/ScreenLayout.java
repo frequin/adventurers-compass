@@ -10,7 +10,7 @@ final class ScreenLayout {
 	static final int BUTTON_HEIGHT = 20;
 	/** Kept free on each side of a button's label. */
 	static final int LABEL_PADDING = 2;
-	/** Added to a label to size the small buttons of the list bar. */
+	/** Added to a label to size the small buttons: those of the list bar, and "Select all" and "Clear" under the tree. */
 	static final int SMALL_BUTTON_PADDING = 12;
 
 	private ScreenLayout() {
