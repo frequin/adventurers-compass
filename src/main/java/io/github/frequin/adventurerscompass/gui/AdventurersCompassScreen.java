@@ -52,9 +52,9 @@ import net.minecraft.world.item.ItemStack;
 
 /**
  * The compass screen: three tabs across the top. The Search tab holds the
- * search box, the Selection tree of the Current dimension, "Select all", the
- * count of Selection elements unsearchable here and the count of Structures of
- * other dimensions on the left; the search actions and "Clear" on the right.
+ * search box, the Selection tree of the Current dimension, "Select all" and
+ * "Clear", the count of Selection elements unsearchable here and the count of
+ * Structures of other dimensions on the left; the search actions on the right.
  * The Visited and Skipped tabs hold a full-width list with a filter, a sort
  * button and a button that clears the whole list, over a footer with the Target
  * and "Done". Every change to the Selection is sent to the server, which stores
@@ -66,8 +66,9 @@ public class AdventurersCompassScreen extends Screen {
 	private static final int TABS_HEIGHT = 18;
 	private static final int TREE_TOP = 30;
 	private static final int FILTER_HEIGHT = 16;
-	/** Below the tree: the "Select all" row, then the line counting other dimensions. */
-	private static final int FOOTER_HEIGHT = 36;
+	/** Below the tree: the "Select all" and "Clear" row, then the unsearchable and other dimensions lines. */
+	private static final int FOOTER_HEIGHT = 46;
+	private static final int FOOTER_LINE = 10;
 	/** Below the list of the Visited and Skipped tabs: the Target and "Done". */
 	private static final int LIST_FOOTER_HEIGHT = 16;
 	private static final Component DONE = Component.translatable("gui.done");
@@ -122,8 +123,6 @@ public class AdventurersCompassScreen extends Screen {
 	private Selection selection;
 	private Catalogue catalogue;
 	private String dimension;
-	private int unsearchableX;
-	private int unsearchableY;
 	private TransparentEditBox filterBox;
 	private SelectionTree tree;
 	private Button clearButton;
@@ -233,19 +232,17 @@ public class AdventurersCompassScreen extends Screen {
 		setInitialFocus(filterBox);
 
 		Component selectAll = Component.translatable("string.adventurerscompass.selectAll");
-		int selectAllWidth = Math.min(font.width(selectAll) + 16, split - MARGIN);
+		int selectAllWidth = font.width(selectAll) + SMALL_BUTTON_PADDING;
 		selectAllButton = addRenderableWidget(new TransparentButton(MARGIN, treeBottom + 3, selectAllWidth, BUTTON_HEIGHT, selectAll, (onPress) -> {
 			updateSelection(selectAll());
 		}));
-		unsearchableX = MARGIN + selectAllWidth + GAP;
-		unsearchableY = treeBottom + 9;
-
-		// The right column stacks from the top, so "Done" can only be pushed down, never over it
-		int clearTop = TREE_TOP + SearchPanel.height(AdventurersCompass.canTeleport) + GAP;
-		int doneTop = Math.max(height - 30, clearTop + BUTTON_HEIGHT + GAP);
-		clearButton = addRenderableWidget(new TransparentButton(rightX, clearTop, rightWidth, BUTTON_HEIGHT, Component.translatable("string.adventurerscompass.clearSelection"), (onPress) -> {
+		Component clear = Component.translatable("string.adventurerscompass.clearSelection");
+		clearButton = addRenderableWidget(new TransparentButton(MARGIN + selectAllWidth + GAP, treeBottom + 3, font.width(clear) + SMALL_BUTTON_PADDING, BUTTON_HEIGHT, clear, (onPress) -> {
 			updateSelection(selection.clear());
 		}));
+
+		// The right column stacks from the top, so "Done" can only be pushed down, never over it
+		int doneTop = Math.max(height - 30, TREE_TOP + SearchPanel.height(AdventurersCompass.canTeleport) + GAP);
 
 		searchPanel.init(this::addRenderableWidget, rightX, TREE_TOP, rightWidth);
 		addDoneButton(rightX, doneTop, rightWidth, BUTTON_HEIGHT);
@@ -376,16 +373,17 @@ public class AdventurersCompassScreen extends Screen {
 		return CompassTexts.dimensionName(target.dimension());
 	}
 
-	/** The count of Selection elements unsearchable here, beside "Select all"; its tooltip names them. */
+	/** The count of Selection elements unsearchable here, under "Select all"; its tooltip names them. */
 	private void renderUnsearchable(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY) {
 		List<UnsearchableElement> unsearchable = selection.unsearchable(catalogue, dimension);
 		if (unsearchable.isEmpty()) {
 			return;
 		}
 		String text = Component.translatable("string.adventurerscompass.unsearchableHere", unsearchable.size()).getString();
-		String count = font.plainSubstrByWidth(text, leftColumnRight() - unsearchableX);
-		guiGraphics.text(font, count, unsearchableX, unsearchableY, 0xffaaaaaa);
-		if (mouseX >= unsearchableX && mouseX < unsearchableX + font.width(count) && mouseY >= unsearchableY - 1 && mouseY < unsearchableY + font.lineHeight) {
+		String count = font.plainSubstrByWidth(text, ScreenLayout.leftColumnWidth(width));
+		int y = height - MARGIN - 8 - FOOTER_LINE;
+		guiGraphics.text(font, count, MARGIN, y, 0xffaaaaaa);
+		if (mouseX >= MARGIN && mouseX < MARGIN + font.width(count) && mouseY >= y - 1 && mouseY < y + font.lineHeight) {
 			guiGraphics.setComponentTooltipForNextFrame(font, unsearchableTooltip(unsearchable), mouseX, mouseY);
 		}
 	}

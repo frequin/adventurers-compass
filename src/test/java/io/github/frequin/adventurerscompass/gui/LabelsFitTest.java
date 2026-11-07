@@ -72,7 +72,10 @@ class LabelsFitTest {
 			check(text("pass"), full);
 			check(text("markVisited"), full);
 			check(text("teleport"), full);
-			check(text("clearSelection"), full);
+
+			// "Select all" and "Clear" are sized to their labels and share a row of the left column
+			int row = ScreenLayout.leftColumnWidth(ScreenLayout.MIN_SCREEN_WIDTH) - ScreenLayout.GAP - 2 * ScreenLayout.SMALL_BUTTON_PADDING;
+			check(text("clearSelection"), row - WIDTH.of(text("selectAll")));
 
 			// "Clear Target" shares the "Target" caption line
 			check(text("clearTarget"), ScreenLayout.labelWidth(ScreenLayout.clearTargetRoom(column, WIDTH.of(text("target")))));

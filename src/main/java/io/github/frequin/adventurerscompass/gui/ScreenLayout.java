@@ -26,6 +26,11 @@ final class ScreenLayout {
 		return screenWidth * 3 / 5;
 	}
 
+	/** Width of the left column of the Search tab. */
+	static int leftColumnWidth(int screenWidth) {
+		return leftColumnRight(screenWidth) - MARGIN;
+	}
+
 	/** Width of the right column of the Search tab, and of its full-width buttons. */
 	static int rightColumnWidth(int screenWidth) {
 		return screenWidth - leftColumnRight(screenWidth) - 2 * MARGIN;
