@@ -36,7 +36,7 @@ abstract class TransparentList<E extends ObjectSelectionList.Entry<E>> extends O
 
 	@Override
 	protected void extractSelection(GuiGraphicsExtractor guiGraphics, E entry, int backgroundColor) {
-		RenderUtils.drawKeyboardFocus(guiGraphics, isFocused(), entry.getX(), entry.getY(), entry.getWidth(), entry.getHeight());
+		RenderUtils.drawKeyboardFocus(guiGraphics, isFocused(), entry);
 	}
 
 	@Override

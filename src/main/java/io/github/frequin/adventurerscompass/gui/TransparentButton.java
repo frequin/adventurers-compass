@@ -47,7 +47,7 @@ public class TransparentButton extends Button {
 			int color = RenderUtils.getBackgroundColor(active, isHovered);
 
 			guiGraphics.fill(getX(), getY(), getX() + getWidth(), getY() + getHeight(), color);
-			RenderUtils.drawKeyboardFocus(guiGraphics, isFocused(), getX(), getY(), getWidth(), getHeight());
+			RenderUtils.drawKeyboardFocus(guiGraphics, isFocused(), this);
 			extractLabel(guiGraphics, mouseX, mouseY, 0xffffffff);
 		}
 	}
