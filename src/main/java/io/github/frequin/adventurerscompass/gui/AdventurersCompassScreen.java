@@ -456,7 +456,7 @@ public class AdventurersCompassScreen extends Screen {
 			tabButtons.get(each.ordinal()).setMessage(tabLabel(each));
 		}
 		if (tab == Tab.SEARCH) {
-			updateSearchButtons();
+			updateSearchTab();
 		} else {
 			updateListBar();
 			refreshRows();
@@ -485,7 +485,8 @@ public class AdventurersCompassScreen extends Screen {
 		instanceList.setRows(shown, Component.translatable(list.size.getAsInt() > 0 ? "string.adventurerscompass.noRows" : list.emptyMessage));
 	}
 
-	private void updateSearchButtons() {
+	/** What the Search tab shows of the Selection, the levels and the compass: the search panel, "Select all", "Clear" and the Unsearchable count. */
+	private void updateSearchTab() {
 		Set<String> searchable = selection.resolve(catalogue, dimension);
 		boolean canSearch = selection.canSearchIn(catalogue, dimension);
 		// The server sent each Structure's real cost in the Current dimension
