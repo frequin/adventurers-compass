@@ -231,14 +231,15 @@ public class AdventurersCompassScreen extends Screen {
 	private void initSearchTab(String filterText) {
 		laidOutForTeleport = AdventurersCompass.canTeleport;
 		int split = leftColumnRight();
+		int leftWidth = ScreenLayout.leftColumnWidth(width);
 		int rightX = split + MARGIN;
 		int rightWidth = ScreenLayout.rightColumnWidth(width);
 
-		filterBox = addRenderableWidget(new TransparentEditBox(font, MARGIN, TREE_TOP, split - MARGIN, FILTER_HEIGHT, Component.translatable("string.adventurerscompass.filterHint").withColor(0xff808080)));
+		filterBox = addRenderableWidget(new TransparentEditBox(font, MARGIN, TREE_TOP, leftWidth, FILTER_HEIGHT, Component.translatable("string.adventurerscompass.filterHint").withColor(0xff808080)));
 		filterBox.setValue(filterText);
 		int treeTop = TREE_TOP + FILTER_HEIGHT + 4;
 		int treeBottom = height - MARGIN - FOOTER_HEIGHT;
-		tree = addRenderableWidget(new SelectionTree(this, minecraft, MARGIN, treeTop, split - MARGIN, treeBottom - treeTop, expandedGroups));
+		tree = addRenderableWidget(new SelectionTree(this, minecraft, MARGIN, treeTop, leftWidth, treeBottom - treeTop, expandedGroups));
 		tree.setFilter(TreeFilter.of(filterText), catalogue, dimension);
 		filterBox.setResponder(text -> tree.setFilter(TreeFilter.of(text), catalogue, dimension));
 		setInitialFocus(filterBox);
@@ -319,8 +320,7 @@ public class AdventurersCompassScreen extends Screen {
 
 	/**
 	 * Asks before clearing the whole list, filter or not. Both answers come back to
-	 * this screen, on this tab, with the focus back on the button when the player
-	 * answered from the keyboard.
+	 * this screen, on this tab, with the focus back on the button.
 	 */
 	private void confirmClearAll() {
 		ListTab list = listTab();
@@ -332,9 +332,7 @@ public class AdventurersCompassScreen extends Screen {
 				list.removeAll.run();
 			}
 			minecraft.gui.setScreen(this);
-			if (minecraft.getLastInputType().isKeyboard()) {
-				setFocused(clearAllButton);
-			}
+			setFocused(clearAllButton);
 		}, question, warning, action, CommonComponents.GUI_CANCEL));
 	}
 
@@ -375,7 +373,7 @@ public class AdventurersCompassScreen extends Screen {
 		int outside = catalogue.countOutside(dimension);
 		if (outside > 0) {
 			String text = Component.translatable("string.adventurerscompass.otherDimensionsHidden", outside).getString();
-			guiGraphics.text(font, font.plainSubstrByWidth(text, leftColumnRight() - MARGIN), MARGIN, height - MARGIN - 8, 0xff808080);
+			guiGraphics.text(font, font.plainSubstrByWidth(text, ScreenLayout.leftColumnWidth(width)), MARGIN, height - MARGIN - 8, 0xff808080);
 		}
 	}
 
@@ -401,6 +399,10 @@ public class AdventurersCompassScreen extends Screen {
 		}
 		shownUnsearchable = unsearchable;
 		unsearchableText.visible = !unsearchable.isEmpty();
+		if (!unsearchableText.visible && getFocused() == unsearchableText) {
+			// A hidden count cannot take the focus again; it must not keep it either
+			clearFocus();
+		}
 		String text = Component.translatable("string.adventurerscompass.unsearchableHere", unsearchable.size()).getString();
 		unsearchableText.setText(font.plainSubstrByWidth(text, ScreenLayout.leftColumnWidth(width)));
 		unsearchableText.setTooltip(unsearchable.isEmpty() ? null : Tooltip.create(unsearchableTooltip(unsearchable)));
@@ -458,7 +460,7 @@ public class AdventurersCompassScreen extends Screen {
 			tabButtons.get(each.ordinal()).setMessage(tabLabel(each));
 		}
 		if (tab == Tab.SEARCH) {
-			updateSearchButtons();
+			updateSearchTab();
 		} else {
 			updateListBar();
 			refreshRows();
@@ -487,7 +489,8 @@ public class AdventurersCompassScreen extends Screen {
 		instanceList.setRows(shown, Component.translatable(list.size.getAsInt() > 0 ? "string.adventurerscompass.noRows" : list.emptyMessage));
 	}
 
-	private void updateSearchButtons() {
+	/** What the Search tab shows of the Selection, the levels and the compass: the search panel, "Select all", "Clear" and the Unsearchable count. */
+	private void updateSearchTab() {
 		Set<String> searchable = selection.resolve(catalogue, dimension);
 		boolean canSearch = selection.canSearchIn(catalogue, dimension);
 		// The server sent each Structure's real cost in the Current dimension

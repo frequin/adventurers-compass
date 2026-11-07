@@ -36,7 +36,17 @@ abstract class TransparentList<E extends ObjectSelectionList.Entry<E>> extends O
 
 	@Override
 	protected void extractSelection(GuiGraphicsExtractor guiGraphics, E entry, int backgroundColor) {
-		RenderUtils.drawKeyboardFocus(guiGraphics, isFocused(), entry.getX(), entry.getY(), entry.getWidth(), entry.getHeight());
+		RenderUtils.drawKeyboardFocus(guiGraphics, hasFocus(entry), entry);
+	}
+
+	/** The row that has the focus, or null when the focus is outside the list. */
+	E focusedEntry() {
+		return isFocused() ? getFocused() : null;
+	}
+
+	/** Whether this row has the focus, the list having it too. */
+	boolean hasFocus(E entry) {
+		return entry != null && focusedEntry() == entry;
 	}
 
 	@Override

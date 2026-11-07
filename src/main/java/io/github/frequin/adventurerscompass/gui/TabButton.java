@@ -21,8 +21,18 @@ public class TabButton extends TransparentButton {
 		if (open) {
 			guiGraphics.fill(getX(), getBottom() - 1, getRight(), getBottom(), 0xffffffff);
 		}
-		RenderUtils.drawKeyboardFocus(guiGraphics, isFocused(), getX(), getY(), getWidth(), getHeight());
+		RenderUtils.drawKeyboardFocus(guiGraphics, isFocused(), this);
 		extractLabel(guiGraphics, mouseX, mouseY, open ? 0xffffffff : 0xffaaaaaa);
+	}
+
+	/**
+	 * A click opens the tab, which rebuilds the screen and puts the focus in the
+	 * new filter; taking the focus after the click would hand it to this button,
+	 * already gone.
+	 */
+	@Override
+	public boolean shouldTakeFocusAfterInteraction() {
+		return false;
 	}
 
 }

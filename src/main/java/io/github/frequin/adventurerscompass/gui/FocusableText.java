@@ -40,7 +40,7 @@ final class FocusableText extends AbstractWidget {
 	@Override
 	protected void extractWidgetRenderState(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTicks) {
 		guiGraphics.text(font, getMessage(), getX() + PADDING, getY() + PADDING, color);
-		RenderUtils.drawKeyboardFocus(guiGraphics, isFocused(), getX(), getY(), getWidth(), getHeight());
+		RenderUtils.drawKeyboardFocus(guiGraphics, isFocused(), this);
 	}
 
 	/** A click neither acts nor takes the focus. */

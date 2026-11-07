@@ -4,10 +4,12 @@ import io.github.frequin.adventurerscompass.domain.Ellipsis;
 import io.github.frequin.adventurerscompass.util.RenderUtils;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.ComponentPath;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.Tooltip;
+import net.minecraft.client.gui.navigation.FocusNavigationEvent;
 import net.minecraft.network.chat.Component;
 
 /** A flat button. A label too wide for it is cut with "…" and shown in full in a tooltip, on hover or keyboard focus. */
@@ -26,13 +28,26 @@ public class TransparentButton extends Button {
 		hasOwnTooltip = tooltip != null;
 	}
 
+	/**
+	 * A greyed button with a tooltip of its own, such as why it is greyed, still
+	 * takes the keyboard focus so that the tooltip can show; it does nothing when
+	 * activated. Other greyed buttons are skipped, as vanilla does.
+	 */
+	@Override
+	public ComponentPath nextFocusPath(FocusNavigationEvent event) {
+		if (visible && !active && hasOwnTooltip) {
+			return isFocused() ? null : ComponentPath.leaf(this);
+		}
+		return super.nextFocusPath(event);
+	}
+
 	@Override
 	public void extractContents(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTicks) {
 		if (visible) {
 			int color = RenderUtils.getBackgroundColor(active, isHovered);
 
 			guiGraphics.fill(getX(), getY(), getX() + getWidth(), getY() + getHeight(), color);
-			RenderUtils.drawKeyboardFocus(guiGraphics, isFocused(), getX(), getY(), getWidth(), getHeight());
+			RenderUtils.drawKeyboardFocus(guiGraphics, isFocused(), this);
 			extractLabel(guiGraphics, mouseX, mouseY, 0xffffffff);
 		}
 	}

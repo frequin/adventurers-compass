@@ -70,7 +70,7 @@ public class SelectionTree extends TransparentList<SelectionTree.Row> {
 	/** Rebuilds the rows from the catalogue and the Selection, keeping the scroll position and the focused row. */
 	public void refresh(Catalogue catalogue, String dimension) {
 		double scroll = scrollAmount();
-		String focused = isFocused() && getFocused() != null ? getFocused().key() : null;
+		String focused = focusedEntry() != null ? focusedEntry().key() : null;
 		clearEntries();
 		List<TreeEntry> tree = new ArrayList<TreeEntry>(listed(catalogue, dimension));
 		tree.sort(Comparator.comparing(SelectionTree::displayName, String.CASE_INSENSITIVE_ORDER));
@@ -131,7 +131,7 @@ public class SelectionTree extends TransparentList<SelectionTree.Row> {
 
 	public abstract static class Row extends ObjectSelectionList.Entry<Row> {
 
-		/** Finds the same row again once the tree is rebuilt. */
+		/** Finds the same row again once the tree is rebuilt. A Group and a Structure may share an id, so the kind is part of it. */
 		abstract String key();
 
 		abstract void toggleTick();
@@ -193,7 +193,15 @@ public class SelectionTree extends TransparentList<SelectionTree.Row> {
 			if (super.keyPressed(event)) {
 				return true;
 			}
-			boolean changed = filter.isNone() && (event.isRight() ? expandedGroups.add(group.groupId()) : event.isLeft() && expandedGroups.remove(group.groupId()));
+			if (!filter.isNone()) {
+				return false;
+			}
+			boolean changed = false;
+			if (event.isRight()) {
+				changed = expandedGroups.add(group.groupId());
+			} else if (event.isLeft()) {
+				changed = expandedGroups.remove(group.groupId());
+			}
 			if (changed) {
 				refresh(screen.catalogue(), screen.dimension());
 			}
@@ -202,7 +210,7 @@ public class SelectionTree extends TransparentList<SelectionTree.Row> {
 
 		@Override
 		String key() {
-			return group.groupId();
+			return "group:" + group.groupId();
 		}
 
 		@Override
@@ -252,7 +260,7 @@ public class SelectionTree extends TransparentList<SelectionTree.Row> {
 
 		@Override
 		String key() {
-			return structureId;
+			return "structure:" + structureId;
 		}
 
 		@Override
