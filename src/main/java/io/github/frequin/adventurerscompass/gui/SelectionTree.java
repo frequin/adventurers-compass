@@ -17,6 +17,7 @@ import io.github.frequin.adventurerscompass.util.StructureUtils;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.ObjectSelectionList;
+import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
@@ -25,6 +26,8 @@ import net.minecraft.resources.Identifier;
  * The left part of the compass screen: the Groups of the Current dimension,
  * each with a three-state checkbox and, once expanded, its Structures of that
  * dimension. A Group with a single Structure there is shown as that Structure.
+ * Space and Enter tick the focused row; the Right and Left arrows expand and
+ * collapse the focused Group.
  */
 public class SelectionTree extends TransparentList<SelectionTree.Row> {
 
@@ -64,9 +67,10 @@ public class SelectionTree extends TransparentList<SelectionTree.Row> {
 		setScrollAmount(0);
 	}
 
-	/** Rebuilds the rows from the catalogue and the Selection, keeping the scroll position. */
+	/** Rebuilds the rows from the catalogue and the Selection, keeping the scroll position and the focused row. */
 	public void refresh(Catalogue catalogue, String dimension) {
 		double scroll = scrollAmount();
+		String focused = isFocused() && getFocused() != null ? getFocused().key() : null;
 		clearEntries();
 		List<TreeEntry> tree = new ArrayList<TreeEntry>(listed(catalogue, dimension));
 		tree.sort(Comparator.comparing(SelectionTree::displayName, String.CASE_INSENSITIVE_ORDER));
@@ -82,6 +86,7 @@ public class SelectionTree extends TransparentList<SelectionTree.Row> {
 			}
 		}
 		setScrollAmount(scroll);
+		children().stream().filter(row -> row.key().equals(focused)).findFirst().ifPresent(this::setFocused);
 	}
 
 	/** What the tree lists, the filter included. */
@@ -125,6 +130,21 @@ public class SelectionTree extends TransparentList<SelectionTree.Row> {
 	}
 
 	public abstract static class Row extends ObjectSelectionList.Entry<Row> {
+
+		/** Finds the same row again once the tree is rebuilt. */
+		abstract String key();
+
+		abstract void toggleTick();
+
+		@Override
+		public boolean keyPressed(KeyEvent event) {
+			if (event.isSelection()) {
+				toggleTick();
+				return true;
+			}
+			return false;
+		}
+
 	}
 
 	private class GroupRow extends Row {
@@ -162,9 +182,32 @@ public class SelectionTree extends TransparentList<SelectionTree.Row> {
 				}
 				refresh(screen.catalogue(), screen.dimension());
 			} else {
-				screen.updateSelection(screen.selection().toggleGroup(group.groupId(), screen.catalogue(), screen.dimension()));
+				toggleTick();
 			}
 			return true;
+		}
+
+		/** An arrow that changes nothing is left to move the focus, as it does everywhere else. */
+		@Override
+		public boolean keyPressed(KeyEvent event) {
+			if (super.keyPressed(event)) {
+				return true;
+			}
+			boolean changed = filter.isNone() && (event.isRight() ? expandedGroups.add(group.groupId()) : event.isLeft() && expandedGroups.remove(group.groupId()));
+			if (changed) {
+				refresh(screen.catalogue(), screen.dimension());
+			}
+			return changed;
+		}
+
+		@Override
+		String key() {
+			return group.groupId();
+		}
+
+		@Override
+		void toggleTick() {
+			screen.updateSelection(screen.selection().toggleGroup(group.groupId(), screen.catalogue(), screen.dimension()));
 		}
 
 		@Override
@@ -203,8 +246,18 @@ public class SelectionTree extends TransparentList<SelectionTree.Row> {
 
 		@Override
 		public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
-			screen.updateSelection(screen.selection().toggleStructure(structureId, screen.catalogue()));
+			toggleTick();
 			return true;
+		}
+
+		@Override
+		String key() {
+			return structureId;
+		}
+
+		@Override
+		void toggleTick() {
+			screen.updateSelection(screen.selection().toggleStructure(structureId, screen.catalogue()));
 		}
 
 		@Override

@@ -22,6 +22,7 @@
 - Group names come from the language files (`group.<namespace>.<path>`), in all 12 languages. A mod's Group with no translation shows its id in readable form ("Small Village Plains"), and the filter searches the name shown
 - Every button label of the screen fits on the narrowest screen of the automatic GUI scale, in every language: "Search (≤ 10 levels)", "Chercher (≤ 10 niv.)", "Annuler", and "Teleport" has its own row. A label still too long for its button ends in "…" and shows in full in a tooltip
 - A white frame shows the keyboard focus on the buttons, tabs and list rows of the screen
+- In the tree, Space and Enter tick the focused row, and the Right and Left arrows expand and collapse the focused Group
 
 #### Breaking changes
 - The config file is not compatible with Explorer's Compass and is not migrated: delete `config/adventurerscompass.json` to get the new defaults. Unknown old keys are ignored and missing keys take their default
