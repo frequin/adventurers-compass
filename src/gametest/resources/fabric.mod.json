@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "id": "adventurerscompass-gametest",
+  "version": "1.0.0",
+  "name": "Adventurer's Compass game tests",
+  "environment": "*",
+  "entrypoints": {
+    "fabric-gametest": [
+      "io.github.frequin.adventurerscompass.gametest.VisitedDetectionGameTests"
+    ]
+  },
+  "depends": {
+    "adventurerscompass": "*",
+    "fabric-gametest-api-v1": "*"
+  }
+}

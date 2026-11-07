@@ -7,6 +7,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -22,16 +23,20 @@ public class AdventurersCompassConfig {
 	private static Path configFilePath;
 	private static Gson gson = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
 	
-	public static boolean allowTeleport = true;
-	public static int maxNextSearches = 100;
+	public static boolean allowTeleport = false;
 	public static boolean displayCoordinates = true;
-	public static int maxRadius = 10000;
-	public static int maxSamples = 100000;
-	public static int compassDurability = 0;
-	public static int defaultXpLevel = 0;
+	public static int maxRadius = 2500;
+	public static int compassDurability = 3;
+	public static int defaultXpLevel = 5;
 	public static Map<String, Integer> perStructureXpLevels = new HashMap<String, Integer>();
-	public static List<String> structureBlacklist = new ArrayList<String>();
+	public static double defaultDimensionXpMultiplier = 2;
+	public static Map<String, Double> dimensionXpMultipliers = defaultDimensionXpMultipliers();
+	public static List<String> hiddenStructures = new ArrayList<String>();
+	public static boolean visitedMessage = true;
+	public static List<String> disabledDimensions = new ArrayList<String>();
+	public static boolean targetVisitedSound = true;
 	
+	public static boolean hudEnabled = true;
 	public static boolean displayWithChatOpen = true;
 	public static boolean translateStructureNames = true;
 	public static int overlayLineOffset = 1;
@@ -46,15 +51,19 @@ public class AdventurersCompassConfig {
 				Data data = gson.fromJson(reader, Data.class);
 				
 				allowTeleport = data.common.allowTeleport;
-				maxNextSearches = data.common.maxNextSearches;
 				displayCoordinates = data.common.displayCoordinates;
 				maxRadius = data.common.maxRadius;
-				maxSamples = data.common.maxSamples;
 				compassDurability = data.common.compassDurability;
 				defaultXpLevel = data.common.defaultXpLevel;
 				perStructureXpLevels = data.common.perStructureXpLevels;
-				structureBlacklist = data.common.structureBlacklist;
+				defaultDimensionXpMultiplier = data.common.defaultDimensionXpMultiplier;
+				dimensionXpMultipliers = data.common.dimensionXpMultipliers;
+				hiddenStructures = data.common.hiddenStructures;
+				visitedMessage = data.common.visitedMessage;
+				disabledDimensions = data.common.disabledDimensions == null ? new ArrayList<String>() : data.common.disabledDimensions;
+				targetVisitedSound = data.common.targetVisitedSound;
 				
+				hudEnabled = data.client.hudEnabled;
 				displayWithChatOpen = data.client.displayWithChatOpen;
 				translateStructureNames = data.client.translateStructureNames;
 				overlayLineOffset = data.client.overlayLineOffset;
@@ -71,7 +80,7 @@ public class AdventurersCompassConfig {
 	public static void save() {
 		try {
 			Writer writer = Files.newBufferedWriter(getFilePath());
-			Data data = new Data(new Data.Common(allowTeleport, maxNextSearches, displayCoordinates, maxRadius, maxSamples, compassDurability, defaultXpLevel, perStructureXpLevels, structureBlacklist), new Data.Client(displayWithChatOpen, translateStructureNames, overlayLineOffset, overlaySide));
+			Data data = new Data(new Data.Common(allowTeleport, displayCoordinates, maxRadius, compassDurability, defaultXpLevel, perStructureXpLevels, defaultDimensionXpMultiplier, dimensionXpMultipliers, hiddenStructures, visitedMessage, disabledDimensions, targetVisitedSound), new Data.Client(hudEnabled, displayWithChatOpen, translateStructureNames, overlayLineOffset, overlaySide));
 			gson.toJson(data, writer);
 			writer.close();
 		} catch (IOException e) {
@@ -79,6 +88,18 @@ public class AdventurersCompassConfig {
 		}
 	}
 	
+	/** The default multipliers: the Overworld costs the base price, every other dimension uses defaultDimensionXpMultiplier. */
+	private static Map<String, Double> defaultDimensionXpMultipliers() {
+		Map<String, Double> multipliers = new LinkedHashMap<String, Double>();
+		multipliers.put("minecraft:overworld", 1.0);
+		return multipliers;
+	}
+
+	/** Whether the compass refuses to search in this dimension id ({@code disabledDimensions}). */
+	public static boolean isDisabledDimension(String dimension) {
+		return disabledDimensions.contains(dimension);
+	}
+
 	private static Path getFilePath() {
 		if(configFilePath == null) {
 			configFilePath = FabricLoader.getInstance().getConfigDir().resolve(AdventurersCompass.MODID + ".json");
@@ -97,63 +118,83 @@ public class AdventurersCompassConfig {
 		}
 		
 		private static class Common {
-			private final String allowTeleportComment = "Allows a player to teleport to a located structure when in creative mode, opped, or in cheat mode.";
+			private final String allowTeleportComment = "Allows ops (or the single player with cheats on) and creative players to teleport to the Target. Teleporting never crosses dimensions, does not wear the compass and does not mark the Target Visited.";
 			private final boolean allowTeleport;
 
-			private final String maxNextSearchesComment = "The maximum number of times a player can search for the next instance of a located structure, excluding already-found locations. Set to 0 to disable searching for additional structure instances and make the compass always locate the nearest instance.";
-			private final int maxNextSearches;
-
-			private final String displayCoordinatesComment = "Allows players to view the precise coordinates and distance of a located structure on the HUD, rather than relying on the direction the compass is pointing.";
+			private final String displayCoordinatesComment = "Shows the Target's X and Z on a second HUD line. The distance is always shown.";
 			private final boolean displayCoordinates;
 			
-			private final String maxRadiusComment = "The maximum radius that will be searched for a structure. Raising this value will increase search accuracy but will potentially make the process more resource intensive.";
+			private final String maxRadiusComment = "The maximum horizontal distance, in blocks, from where the search started to a structure the compass can find. The default of 2500 is about half a day's walk, sunrise to sunset. Raising it makes searches that find nothing more expensive.";
 			private final int maxRadius;
 			
-			private final String maxSamplesComment = "The maximum number of samples to be taken when searching for a structure.";
-			private final int maxSamples;
-
-			private final String compassDurabilityComment = "The number of successful structure searches before the compass breaks and must be repaired. Set to 0 to disable durability.";
+			private final String compassDurabilityComment = "The number of Targets a compass can find (Pass included) before it breaks. A broken compass keeps its Target but cannot search until repaired by crafting it with a compass, which keeps its Selection and Target. Creative players never wear it. Set to 0 to disable wear.";
 			private final int compassDurability;
 
-			private final String defaultXpLevelComment = "The default number of XP levels consumed when searching for a structure. Individual structures can be configured via xpLevelOverrides. Max of 3 levels.";
+			private final String xpCostComment = "XP cost of a search. Levels are taken only when a Target is found: a cancelled search or one that finds nothing is free. Cost paid = ceil(Structure cost x multiplier of the Current dimension), where the Structure cost is its perStructureXpLevels entry, else defaultXpLevel, and the multiplier is the dimensionXpMultipliers entry of the dimension the player searches in, else defaultDimensionXpMultiplier. Ex with the defaults: a village costs 5 levels in the Overworld (5 x 1) and a fortress 10 in the Nether (5 x 2); with a multiplier of 1.5, 5 levels become ceil(7.5) = 8. Search and Pass need as many levels as the most expensive Structure the Selection can find here; if the player spends levels during the search, only the levels left are taken. Creative players pay nothing.";
+
+			private final String defaultXpLevelComment = "The XP levels a Structure costs when perStructureXpLevels has no entry for it, before the dimension multiplier. No upper bound; 0 makes searches free.";
 			private final int defaultXpLevel;
 			
-			private final String perStructureXpLevelsComment = "A map of per-structure XP level costs that override defaultXpLevels. Structures not listed here use defaultXpLevels. Max of 3 levels. The wildcard character * can be used to match any number of characters, and ? can be used to match one character. Ex: {\"minecraft:buried_treasure\":3, \"minecraft:end*\":2, \"minecraft:*village*\":1}";
+			private final String perStructureXpLevelsComment = "Per-Structure XP levels that replace defaultXpLevel, before the dimension multiplier. No upper bound; 0 makes the Structure free. The first matching entry wins. The wildcard character * matches any number of characters and ? matches one character. Ex: {\"minecraft:stronghold\":15, \"minecraft:*village*\":2, \"minecraft:buried_treasure\":0}";
 			private final Map<String, Integer> perStructureXpLevels;
+
+			private final String defaultDimensionXpMultiplierComment = "Multiplies the cost of a search in a dimension that dimensionXpMultipliers does not list. Decimals are allowed; the result is rounded up.";
+			private final double defaultDimensionXpMultiplier;
+
+			private final String dimensionXpMultipliersComment = "Per-dimension multipliers of the cost, by dimension id, applied to the dimension the player searches in. Ex: {\"minecraft:overworld\":1, \"minecraft:the_nether\":2, \"minecraft:the_end\":3}";
+			private final Map<String, Double> dimensionXpMultipliers;
 			
-			private final String structureBlacklistComment = "A list of structures that the compass will not display in the GUI and will not be able to search for. The wildcard character * can be used to match any number of characters, and ? can be used to match one character. Ex (ignore backslashes): [\"minecraft:stronghold\", \"minecraft:endcity\", \"minecraft:*village*\"]";
-			private final List<String> structureBlacklist;
+			private final String hiddenStructuresComment = "Structures to Hide: they are not listed in the compass screen and never searched. Each entry is a structure id, where * matches any number of characters and ? one character, or a structure tag starting with #. Structures with the tag #c:hidden_from_locator_selection are always Hidden. A Hidden structure already in a compass Selection stays there, ignored and counted in the screen, and a Target already found is kept. Ex (ignore backslashes): [\"minecraft:stronghold\", \"minecraft:*village*\", \"#minecraft:village\"]";
+			private final List<String> hiddenStructures;
+
+			private final String visitedMessageComment = "Shows a message above the hotbar the first time a player stands in a piece of a structure Instance, which then becomes Visited and is skipped by searches.";
+			private final boolean visitedMessage;
+
+			private final String disabledDimensionsComment = "Dimension ids where the compass does not work: the screen lists nothing and Search and Pass are refused, with no XP taken. A Target found in another dimension is kept. Ex: [\"minecraft:the_end\"]";
+			private final List<String> disabledDimensions;
+
+			private final String targetVisitedSoundComment = "Plays a soft sound to the player when the Target of a compass they carry becomes Visited (by walking into it or with \"Mark Visited\"). Other Structures stay silent.";
+			private final boolean targetVisitedSound;
 			
 			private Common() {
-				allowTeleport = true;
-				maxNextSearches = 100;
+				allowTeleport = false;
 				displayCoordinates = true;
-				maxRadius = 10000;
-				maxSamples = 100000;
-				compassDurability = 0;
-				defaultXpLevel = 0;
+				maxRadius = 2500;
+				compassDurability = 3;
+				defaultXpLevel = 5;
 				perStructureXpLevels = new HashMap<String, Integer>();
-				structureBlacklist = new ArrayList<String>();
+				defaultDimensionXpMultiplier = 2;
+				dimensionXpMultipliers = defaultDimensionXpMultipliers();
+				hiddenStructures = new ArrayList<String>();
+				visitedMessage = true;
+				disabledDimensions = new ArrayList<String>();
+				targetVisitedSound = true;
 			}
 
-			private Common(boolean allowTeleport, int maxNextSearches, boolean displayCoordinates, int maxRadius, int maxSamples, int compassDurability, int defaultXpLevel, Map<String, Integer> perStructureXpLevels, List<String> structureBlacklist) {
+			private Common(boolean allowTeleport, boolean displayCoordinates, int maxRadius, int compassDurability, int defaultXpLevel, Map<String, Integer> perStructureXpLevels, double defaultDimensionXpMultiplier, Map<String, Double> dimensionXpMultipliers, List<String> hiddenStructures, boolean visitedMessage, List<String> disabledDimensions, boolean targetVisitedSound) {
 				this.allowTeleport = allowTeleport;
-				this.maxNextSearches = maxNextSearches;
 				this.displayCoordinates = displayCoordinates;
 				this.maxRadius = maxRadius;
-				this.maxSamples = maxSamples;
 				this.compassDurability = compassDurability;
 				this.defaultXpLevel = defaultXpLevel;
 				this.perStructureXpLevels = perStructureXpLevels;
-				this.structureBlacklist = structureBlacklist;
+				this.defaultDimensionXpMultiplier = defaultDimensionXpMultiplier;
+				this.dimensionXpMultipliers = dimensionXpMultipliers;
+				this.hiddenStructures = hiddenStructures;
+				this.visitedMessage = visitedMessage;
+				this.disabledDimensions = disabledDimensions;
+				this.targetVisitedSound = targetVisitedSound;
 			}
 		}
 		
 		private static class Client {
+			private final String hudEnabledComment = "Shows the Target (or the search state) on the HUD while the compass is held in either hand.";
+			private final boolean hudEnabled;
+
 			private final String displayWithChatOpenComment = "Displays compass information even while chat is open.";
 			private final boolean displayWithChatOpen;
 			
-			private final String translateStructureNamesComment = "Attempts to translate structure names before fixing the unlocalized names. Translations may not be available for all structures.";
+			private final String translateStructureNamesComment = "Attempts to translate structure and Group names before fixing the unlocalized names. Translations may not be available for all of them.";
 			private final boolean translateStructureNames;
 			
 			private final String overlayLineOffsetComment = "The line offset for information rendered on the HUD.";
@@ -163,13 +204,15 @@ public class AdventurersCompassConfig {
 			private final OverlaySide overlaySide;
 			
 			private Client() {
+				hudEnabled = true;
 				displayWithChatOpen = true;
 				translateStructureNames = true;
 				overlayLineOffset = 1;
 				overlaySide = OverlaySide.LEFT;
 			}
 			
-			private Client(boolean displayWithChatOpen, boolean translateStructureNames, int overlayLineOffset, OverlaySide overlaySide) {
+			private Client(boolean hudEnabled, boolean displayWithChatOpen, boolean translateStructureNames, int overlayLineOffset, OverlaySide overlaySide) {
+				this.hudEnabled = hudEnabled;
 				this.displayWithChatOpen = displayWithChatOpen;
 				this.translateStructureNames = translateStructureNames;
 				this.overlayLineOffset = overlayLineOffset;

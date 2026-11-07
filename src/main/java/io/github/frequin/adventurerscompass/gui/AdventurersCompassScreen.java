@@ -1,217 +1,518 @@
 package io.github.frequin.adventurerscompass.gui;
 
+import static io.github.frequin.adventurerscompass.gui.ScreenLayout.BUTTON_HEIGHT;
+import static io.github.frequin.adventurerscompass.gui.ScreenLayout.GAP;
+import static io.github.frequin.adventurerscompass.gui.ScreenLayout.MARGIN;
+import static io.github.frequin.adventurerscompass.gui.ScreenLayout.SMALL_BUTTON_PADDING;
+
 import java.util.ArrayList;
-import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.function.Consumer;
+import java.util.function.IntSupplier;
 
 import io.github.frequin.adventurerscompass.AdventurersCompass;
+import io.github.frequin.adventurerscompass.compass.CompassStacks;
+import io.github.frequin.adventurerscompass.domain.BlockXZ;
+import io.github.frequin.adventurerscompass.domain.InstanceKey;
+import io.github.frequin.adventurerscompass.domain.compass.Target;
+import io.github.frequin.adventurerscompass.domain.rows.InstanceRow;
+import io.github.frequin.adventurerscompass.domain.rows.InstanceRows;
+import io.github.frequin.adventurerscompass.domain.rows.InstanceSort;
+import io.github.frequin.adventurerscompass.domain.selection.Catalogue;
+import io.github.frequin.adventurerscompass.domain.selection.Selection;
+import io.github.frequin.adventurerscompass.domain.selection.TreeFilter;
+import io.github.frequin.adventurerscompass.domain.selection.UnsearchableElement;
+import io.github.frequin.adventurerscompass.domain.xp.PlayerXp;
+import io.github.frequin.adventurerscompass.domain.xp.XpThreshold;
 import io.github.frequin.adventurerscompass.item.AdventurersCompassItem;
-import io.github.frequin.adventurerscompass.network.SearchForNextPacket;
-import io.github.frequin.adventurerscompass.network.SearchPacket;
-import io.github.frequin.adventurerscompass.network.TeleportPacket;
-import io.github.frequin.adventurerscompass.sorting.ISorting;
-import io.github.frequin.adventurerscompass.sorting.NameSorting;
-import io.github.frequin.adventurerscompass.util.CompassState;
+import io.github.frequin.adventurerscompass.network.ClearSkippedPacket;
+import io.github.frequin.adventurerscompass.network.ClearVisitedPacket;
+import io.github.frequin.adventurerscompass.network.RemoveSkippedPacket;
+import io.github.frequin.adventurerscompass.network.UnmarkVisitedPacket;
+import io.github.frequin.adventurerscompass.network.UpdateSelectionPacket;
+import io.github.frequin.adventurerscompass.util.ItemUtils;
 import io.github.frequin.adventurerscompass.util.StructureUtils;
 
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
+import net.minecraft.ChatFormatting;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.Tooltip;
+import net.minecraft.client.gui.screens.ConfirmScreen;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.input.CharacterEvent;
 import net.minecraft.client.input.KeyEvent;
-import net.minecraft.client.resources.sounds.SimpleSoundInstance;
+import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.Identifier;
-import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.Level;
 
+/**
+ * The compass screen: three tabs across the top. The Search tab holds the
+ * search box, the Selection tree of the Current dimension, "Select all" and
+ * "Clear", the count of Selection elements unsearchable here and the count of
+ * Structures of other dimensions on the left; the search actions on the right.
+ * The Visited and Skipped tabs hold a full-width list with a filter, a sort
+ * button and a button that clears the whole list, over a footer with the Target
+ * and "Done". Every change to the Selection is sent to the server, which stores
+ * it on the compass.
+ */
 public class AdventurersCompassScreen extends Screen {
 
-	private Level level;
-	private Player player;
-	private List<Identifier> allowedStructures;
-	private List<Identifier> structuresMatchingSearch;
-	private Identifier foundStructureId;
-	private Button searchButton;
-	private Button searchForNextButton;
-	private Button searchForGroupButton;
-	private Button sortByButton;
-	private Button teleportButton;
-	private Button cancelButton;
-	private TransparentEditBox searchBox;
-	private StructureSearchList selectionList;
-	private ISorting sortingCategory;
+	private static final int TABS_TOP = 8;
+	private static final int TABS_HEIGHT = 18;
+	private static final int TREE_TOP = 30;
+	private static final int FILTER_HEIGHT = 16;
+	/** Below the tree: the "Select all" and "Clear" row, then the unsearchable and other dimensions lines. */
+	private static final int FOOTER_HEIGHT = 46;
+	private static final int FOOTER_LINE = 10;
+	/** Below the list of the Visited and Skipped tabs: the Target and "Done". */
+	private static final int LIST_FOOTER_HEIGHT = 16;
+	private static final Component DONE = Component.translatable("gui.done");
 
-	public AdventurersCompassScreen(Level level, Player player, ItemStack stack, AdventurersCompassItem adventurersCompass, List<Identifier> allowedStructures) {
-		super(Component.translatable("string.adventurerscompass.selectStructure"));
-		this.level = level;
-		this.player = player;
+	private enum Tab {
+		SEARCH, VISITED, SKIPPED
+	}
 
-		this.allowedStructures = new ArrayList<Identifier>(allowedStructures);
-		structuresMatchingSearch = new ArrayList<Identifier>(this.allowedStructures);
-		sortingCategory = new NameSorting();
+	/** The rows of a list tab, filtered and sorted. */
+	private interface RowSource {
+		List<InstanceRow> rows(InstanceRows rows, TreeFilter filter, InstanceSort sort);
+	}
 
-		if (adventurersCompass.getCompassState(stack) == CompassState.FOUND) {
-			String foundStructureIdStr = stack.getOrDefault(AdventurersCompass.STRUCTURE_ID, null);
-			if (foundStructureIdStr != null) {
-				foundStructureId = Identifier.parse(foundStructureIdStr);
-			}
+	/** What the Visited and Skipped tabs do differently; the rest of a list tab is shared. Each keeps its sort. */
+	private static final class ListTab {
+
+		private final List<InstanceSort> orders;
+		private final String crossTooltip;
+		private final String clearAllLabel;
+		/** Also the start of the keys of its warning and its action. */
+		private final String confirmClearAll;
+		private final String emptyMessage;
+		private final IntSupplier size;
+		private final RowSource source;
+		private final Consumer<InstanceKey> removeOne;
+		private final Runnable removeAll;
+		private InstanceSort sort;
+
+		ListTab(List<InstanceSort> orders, String crossTooltip, String clearAllLabel, String confirmClearAll, String emptyMessage, IntSupplier size, RowSource source, Consumer<InstanceKey> removeOne, Runnable removeAll) {
+			this.orders = orders;
+			this.crossTooltip = crossTooltip;
+			this.clearAllLabel = clearAllLabel;
+			this.confirmClearAll = confirmClearAll;
+			this.emptyMessage = emptyMessage;
+			this.size = size;
+			this.source = source;
+			this.removeOne = removeOne;
+			this.removeAll = removeAll;
+			this.sort = orders.getFirst();
 		}
+
+	}
+
+	private final Player player;
+	private final SearchPanel searchPanel;
+	/** Kept here so that the tree stays open as it was when the player comes back to its tab. */
+	private final Set<String> expandedGroups = new HashSet<String>();
+	private final List<Button> tabButtons = new ArrayList<Button>();
+	private Tab tab = Tab.SEARCH;
+	private final ListTab visitedTab;
+	private final ListTab skippedTab;
+	private Selection selection;
+	private Catalogue catalogue;
+	private String dimension;
+	private TransparentEditBox filterBox;
+	private SelectionTree tree;
+	private Button clearButton;
+	private Button selectAllButton;
+	private FocusableText unsearchableText;
+	/** What the tooltip of {@link #unsearchableText} names, so that it is only rebuilt when it changes. */
+	private List<UnsearchableElement> shownUnsearchable;
+	private InstanceList instanceList;
+	private Button sortButton;
+	private Button clearAllButton;
+	private int footerTextWidth;
+	private boolean laidOutForTeleport;
+
+	public AdventurersCompassScreen(Player player, ItemStack stack, AdventurersCompassItem adventurersCompass) {
+		super(Component.translatable("string.adventurerscompass.composeSelection"));
+		this.player = player;
+		this.selection = stack.getOrDefault(AdventurersCompass.SELECTION, Selection.EMPTY);
+		this.searchPanel = new SearchPanel(Minecraft.getInstance(), player, this::compass);
+		// Last known catalogue until the SyncPacket sent on opening arrives
+		this.catalogue = AdventurersCompass.catalogue;
+		this.dimension = AdventurersCompass.currentDimension;
+		this.visitedTab = new ListTab(InstanceSort.VISITED_ORDERS,
+				"string.adventurerscompass.unmarkVisited", "string.adventurerscompass.unmarkAll", "string.adventurerscompass.confirmUnmarkAll", "string.adventurerscompass.noVisited",
+				this::visitedCount,
+				(rows, filter, sort) -> rows.visited(CompassTexts.visited(player), filter, sort),
+				instance -> ClientPlayNetworking.send(new UnmarkVisitedPacket(instance)),
+				() -> ClientPlayNetworking.send(new ClearVisitedPacket()));
+		this.skippedTab = new ListTab(InstanceSort.SKIPPED_ORDERS,
+				"string.adventurerscompass.removeSkipped", "string.adventurerscompass.removeAll", "string.adventurerscompass.confirmRemoveAll", "string.adventurerscompass.noSkipped",
+				() -> skipped().size(),
+				(rows, filter, sort) -> rows.skipped(skipped(), filter, sort),
+				instance -> ClientPlayNetworking.send(new RemoveSkippedPacket(instance)),
+				() -> ClientPlayNetworking.send(new ClearSkippedPacket()));
+	}
+
+	public Selection selection() {
+		return selection;
+	}
+
+	public Catalogue catalogue() {
+		return catalogue;
+	}
+
+	public String dimension() {
+		return dimension;
+	}
+
+	/** Applies a Selection edited in the tree, here and on the compass. */
+	public void updateSelection(Selection next) {
+		selection = next;
+		ClientPlayNetworking.send(new UpdateSelectionPacket(next));
+		// Rows read the Selection when drawn, so the tree needs no rebuild
+		updateButtons();
 	}
 
 	@Override
 	protected void init() {
-		setupWidgets();
+		clearWidgets();
+		addTabs();
+		String filterText = filterBox == null ? "" : filterBox.getValue();
+		if (tab == Tab.SEARCH) {
+			initSearchTab(filterText);
+		} else {
+			initListTab(filterText);
+		}
+		updateButtons();
+	}
+
+	private void addTabs() {
+		tabButtons.clear();
+		int tabWidth = ScreenLayout.tabWidth(width);
+		for (Tab each : Tab.values()) {
+			int x = MARGIN + each.ordinal() * (tabWidth + GAP);
+			tabButtons.add(addRenderableWidget(new TabButton(x, TABS_TOP, tabWidth, TABS_HEIGHT, tabLabel(each), each == tab, (onPress) -> {
+				showTab(each);
+			})));
+		}
+	}
+
+	private Component tabLabel(Tab each) {
+		return switch (each) {
+			case SEARCH -> Component.translatable("string.adventurerscompass.tabSearch");
+			case VISITED -> Component.translatable("string.adventurerscompass.visitedList", visitedCount());
+			case SKIPPED -> Component.translatable("string.adventurerscompass.skippedList", skipped().size());
+		};
+	}
+
+	/**
+	 * Opens a tab with an empty filter; each tab keeps its sort and the tree stays
+	 * open as it was. The focus goes to the filter, or stays on the tab when it was
+	 * opened from the keyboard.
+	 */
+	private void showTab(Tab next) {
+		if (next != tab) {
+			tab = next;
+			filterBox = null;
+			rebuildWidgets();
+			if (minecraft.getLastInputType().isKeyboard()) {
+				setFocused(tabButtons.get(next.ordinal()));
+			}
+		}
+	}
+
+	private void initSearchTab(String filterText) {
+		laidOutForTeleport = AdventurersCompass.canTeleport;
+		int split = leftColumnRight();
+		int leftWidth = ScreenLayout.leftColumnWidth(width);
+		int rightX = split + MARGIN;
+		int rightWidth = ScreenLayout.rightColumnWidth(width);
+
+		filterBox = addRenderableWidget(new TransparentEditBox(font, MARGIN, TREE_TOP, leftWidth, FILTER_HEIGHT, Component.translatable("string.adventurerscompass.filterHint").withColor(0xff808080)));
+		filterBox.setValue(filterText);
+		int treeTop = TREE_TOP + FILTER_HEIGHT + 4;
+		int treeBottom = height - MARGIN - FOOTER_HEIGHT;
+		tree = addRenderableWidget(new SelectionTree(this, minecraft, MARGIN, treeTop, leftWidth, treeBottom - treeTop, expandedGroups));
+		tree.setFilter(TreeFilter.of(filterText), catalogue, dimension);
+		filterBox.setResponder(text -> tree.setFilter(TreeFilter.of(text), catalogue, dimension));
+		setInitialFocus(filterBox);
+
+		Component selectAll = Component.translatable("string.adventurerscompass.selectAll");
+		int selectAllWidth = font.width(selectAll) + SMALL_BUTTON_PADDING;
+		selectAllButton = addRenderableWidget(new TransparentButton(MARGIN, treeBottom + 3, selectAllWidth, BUTTON_HEIGHT, selectAll, (onPress) -> {
+			updateSelection(selectAll());
+		}));
+		Component clear = Component.translatable("string.adventurerscompass.clearSelection");
+		clearButton = addRenderableWidget(new TransparentButton(MARGIN + selectAllWidth + GAP, treeBottom + 3, font.width(clear) + SMALL_BUTTON_PADDING, BUTTON_HEIGHT, clear, (onPress) -> {
+			updateSelection(selection.clear());
+		}));
+		unsearchableText = addRenderableWidget(new FocusableText(font, MARGIN, height - MARGIN - 8 - FOOTER_LINE, 0xffaaaaaa));
+		shownUnsearchable = null;
+
+		// The right column stacks from the top, so "Done" can only be pushed down, never over it
+		int doneTop = Math.max(height - 30, TREE_TOP + SearchPanel.height(AdventurersCompass.canTeleport) + GAP);
+
+		searchPanel.init(this::addRenderableWidget, rightX, TREE_TOP, rightWidth);
+		addDoneButton(rightX, doneTop, rightWidth, BUTTON_HEIGHT);
+	}
+
+	private void initListTab(String filterText) {
+		filterBox = addRenderableWidget(new TransparentEditBox(font, MARGIN, TREE_TOP, width - 2 * MARGIN, FILTER_HEIGHT, Component.translatable("string.adventurerscompass.filterRowsHint").withColor(0xff808080)));
+		filterBox.setValue(filterText);
+		filterBox.setResponder(text -> {
+			refreshRows();
+			instanceList.setScrollAmount(0);
+		});
+		setInitialFocus(filterBox);
+
+		ListTab list = listTab();
+		int sortWidth = list.orders.stream().mapToInt(order -> font.width(sortLabel(order))).max().orElse(0) + SMALL_BUTTON_PADDING;
+		sortButton = addRenderableWidget(new TransparentButton(0, TREE_TOP, sortWidth, FILTER_HEIGHT, sortLabel(list.sort), (onPress) -> {
+			cycleSort();
+		}));
+		clearAllButton = addRenderableWidget(new TransparentButton(0, TREE_TOP, 0, FILTER_HEIGHT, Component.empty(), (onPress) -> {
+			confirmClearAll();
+		}));
+
+		int listTop = TREE_TOP + FILTER_HEIGHT + 4;
+		int footerTop = height - MARGIN - LIST_FOOTER_HEIGHT;
+		instanceList = addRenderableWidget(new InstanceList(minecraft, MARGIN, listTop, width - 2 * MARGIN, footerTop - 4 - listTop, Component.translatable(list.crossTooltip), list.removeOne));
+
+		int doneWidth = font.width(DONE) + 2 * SMALL_BUTTON_PADDING;
+		int doneX = width - MARGIN - doneWidth;
+		footerTextWidth = doneX - GAP - MARGIN;
+		addDoneButton(doneX, footerTop, doneWidth, LIST_FOOTER_HEIGHT);
+	}
+
+	private void addDoneButton(int x, int y, int buttonWidth, int buttonHeight) {
+		addRenderableWidget(new TransparentButton(x, y, buttonWidth, buttonHeight, DONE, (onPress) -> {
+			minecraft.gui.setScreen(null);
+		}));
+	}
+
+	/** The open list tab; only call on one. */
+	private ListTab listTab() {
+		return tab == Tab.VISITED ? visitedTab : skippedTab;
+	}
+
+	private void cycleSort() {
+		ListTab list = listTab();
+		list.sort = list.sort.next(list.orders);
+		sortButton.setMessage(sortLabel(list.sort));
+		refreshRows();
+		instanceList.setScrollAmount(0);
+	}
+
+	private static Component sortLabel(InstanceSort order) {
+		return Component.translatable(switch (order) {
+			case RECENT -> "string.adventurerscompass.sortRecent";
+			case NEAREST -> "string.adventurerscompass.sortNearest";
+			case NAME -> "string.adventurerscompass.sortName";
+		});
+	}
+
+	/**
+	 * Asks before clearing the whole list, filter or not. Both answers come back to
+	 * this screen, on this tab, with the focus back on the button.
+	 */
+	private void confirmClearAll() {
+		ListTab list = listTab();
+		Component question = Component.translatable(list.confirmClearAll, list.size.getAsInt());
+		Component warning = Component.translatable(list.confirmClearAll + "Warning");
+		Component action = Component.translatable(list.confirmClearAll + "Action").withStyle(ChatFormatting.RED);
+		minecraft.gui.setScreen(new ConfirmScreen(confirmed -> {
+			if (confirmed) {
+				list.removeAll.run();
+			}
+			minecraft.gui.setScreen(this);
+			setFocused(clearAllButton);
+		}, question, warning, action, CommonComponents.GUI_CANCEL));
 	}
 
 	@Override
 	public void tick() {
-		searchForNextButton.active = teleportButton.active = selectionList.hasSelection() ? selectionList.getSelected().getStructureId().equals(foundStructureId) : false;
-		searchButton.active = searchForGroupButton.active = selectionList.hasSelection();
-
-		// Check if the allowed structure list has synced
 		if (AdventurersCompass.synced) {
-			removeWidget(selectionList);
-			allowedStructures = new ArrayList<Identifier>(AdventurersCompass.allowedStructures);
-			structuresMatchingSearch = new ArrayList<Identifier>(allowedStructures);
-			selectionList = addRenderableWidget(new StructureSearchList(this, minecraft, player, foundStructureId, 130, 40, width - 140, height - 50, 50));
-
-			teleportButton.visible = AdventurersCompass.canTeleport;
-			searchForNextButton.visible = AdventurersCompass.maxNextSearches > 0;
-			if (searchForNextButton.visible) {
-				sortByButton.setPosition(10, 125);
-			} else {
-				sortByButton.setPosition(10, 100);
-			}
-			
+			catalogue = AdventurersCompass.catalogue;
+			dimension = AdventurersCompass.currentDimension;
 			AdventurersCompass.synced = false;
+			if (tab == Tab.SEARCH && laidOutForTeleport != AdventurersCompass.canTeleport) {
+				// "Teleport" takes or gives back a row of the right column
+				rebuildWidgets();
+			} else if (tab == Tab.SEARCH) {
+				tree.refresh(catalogue, dimension);
+			}
 		}
+		// Levels, Visited and Skipped can change while the screen is open: re-read them every tick
+		updateButtons();
+	}
+
+	@Override
+	public boolean keyPressed(KeyEvent event) {
+		// Enter in the empty search box searches the Selection
+		if (tab == Tab.SEARCH && event.isConfirmation() && filterBox.isFocused() && filterBox.getValue().isEmpty() && searchPanel.searchFromKeyboard()) {
+			return true;
+		}
+		return super.keyPressed(event);
 	}
 
 	@Override
 	public void extractRenderState(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTicks) {
 		super.extractRenderState(guiGraphics, mouseX, mouseY, partialTicks);
-		guiGraphics.centeredText(font, title, 65, 15, 0xffffffff);
-	}
-	
-	@Override
-	public boolean keyPressed(KeyEvent event) {
-		boolean ret = super.keyPressed(event);
-		if (searchBox.isFocused()) {
-			processSearchTerm();
-			return true;
+		if (tab != Tab.SEARCH) {
+			renderTargetFooter(guiGraphics);
+			return;
 		}
-		return ret;
-	}
-	
-	@Override
-	public boolean charTyped(CharacterEvent event) {
-		boolean ret = super.charTyped(event);
-		if (searchBox.isFocused()) {
-			processSearchTerm();
-			return true;
+		searchPanel.render(guiGraphics, font);
+		int outside = catalogue.countOutside(dimension);
+		if (outside > 0) {
+			String text = Component.translatable("string.adventurerscompass.otherDimensionsHidden", outside).getString();
+			guiGraphics.text(font, font.plainSubstrByWidth(text, ScreenLayout.leftColumnWidth(width)), MARGIN, height - MARGIN - 8, 0xff808080);
 		}
-		return ret;
 	}
 
-	public void selectStructure(StructureSearchEntry entry) {
-		boolean enable = entry != null;
-		searchButton.active = enable;
-		searchForGroupButton.active = enable;
-		searchForNextButton.active = enable && foundStructureId != null && entry.getStructureId().equals(foundStructureId);
-		teleportButton.active = searchForNextButton.active;
+	/** The Target as text, left of "Done": "◎ Structure · distance", or its dimension when elsewhere. */
+	private void renderTargetFooter(GuiGraphicsExtractor guiGraphics) {
+		Target target = CompassStacks.read(compass()).target();
+		Component text = target == null ? Component.translatable("string.adventurerscompass.noTarget") : Component.translatable("string.adventurerscompass.targetFooter", CompassTexts.structureName(target), targetWhere(target));
+		guiGraphics.text(font, font.plainSubstrByWidth(text.getString(), footerTextWidth), MARGIN, height - MARGIN - (LIST_FOOTER_HEIGHT + font.lineHeight) / 2 + 1, 0xffaaaaaa);
 	}
 
-	public void searchForStructure(Identifier structureID) {
-		ClientPlayNetworking.send(new SearchPacket(structureID, false));
-		minecraft.gui.setScreen(null);
-	}
-	
-	public void searchForGroup(Identifier groupId) {
-		ClientPlayNetworking.send(new SearchPacket(groupId, true));
-		minecraft.gui.setScreen(null);
+	private Component targetWhere(Target target) {
+		if (target.dimension().equals(CompassTexts.currentDimension(player))) {
+			return Component.translatable("string.adventurerscompass.distance", CompassTexts.distance(target, player));
+		}
+		return CompassTexts.dimensionName(target.dimension());
 	}
 
-	public void searchForNext() {
-		minecraft.getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.0F));
-		ClientPlayNetworking.send(new SearchForNextPacket());
-		minecraft.gui.setScreen(null);
+	/** The count of Selection elements unsearchable here, under "Select all"; its tooltip, on hover or focus, names them. */
+	private void updateUnsearchable() {
+		List<UnsearchableElement> unsearchable = selection.unsearchable(catalogue, dimension);
+		if (unsearchable.equals(shownUnsearchable)) {
+			return;
+		}
+		shownUnsearchable = unsearchable;
+		unsearchableText.visible = !unsearchable.isEmpty();
+		if (!unsearchableText.visible && getFocused() == unsearchableText) {
+			// A hidden count cannot take the focus again; it must not keep it either
+			clearFocus();
+		}
+		String text = Component.translatable("string.adventurerscompass.unsearchableHere", unsearchable.size()).getString();
+		unsearchableText.setText(font.plainSubstrByWidth(text, ScreenLayout.leftColumnWidth(width)));
+		unsearchableText.setTooltip(unsearchable.isEmpty() ? null : Tooltip.create(unsearchableTooltip(unsearchable)));
 	}
 
-	public void teleport() {
-		ClientPlayNetworking.send(new TeleportPacket());
-		minecraft.gui.setScreen(null);
-	}
-
-	public void processSearchTerm() {
-		structuresMatchingSearch = new ArrayList<Identifier>();
-		String searchTerm = searchBox.getValue().toLowerCase();
-		for (Identifier structureId : allowedStructures) {
-			if (searchTerm.startsWith("@")) {
-				if (StructureUtils.getStructureSource(structureId).toLowerCase().contains(searchTerm.substring(1))) {
-					structuresMatchingSearch.add(structureId);
+	private static Component unsearchableTooltip(List<UnsearchableElement> unsearchable) {
+		MutableComponent lines = Component.empty();
+		for (UnsearchableElement.Reason reason : UnsearchableElement.Reason.values()) {
+			List<UnsearchableElement> elements = unsearchable.stream().filter(element -> element.reason() == reason).toList();
+			if (!elements.isEmpty()) {
+				if (!lines.getSiblings().isEmpty()) {
+					lines.append("\n");
 				}
-			} else if (StructureUtils.getStructureName(structureId).toLowerCase().contains(searchTerm)) {
-				structuresMatchingSearch.add(structureId);
+				lines.append(Component.translatable(reason == UnsearchableElement.Reason.HIDDEN ? "string.adventurerscompass.unsearchableHidden" : "string.adventurerscompass.unsearchableAbsent").withColor(0xffaaaaaa));
+				elements.forEach(element -> lines.append("\n" + unsearchableName(element)));
 			}
 		}
-		selectionList.refreshList(true);
+		return lines;
 	}
 
-	public List<Identifier> sortStructures() {
-		final List<Identifier> structures = structuresMatchingSearch;
-		Collections.sort(structures, new NameSorting());
-		Collections.sort(structures, sortingCategory);
-		return structures;
+	private static String unsearchableName(UnsearchableElement element) {
+		return switch (element.kind()) {
+			case GROUP -> StructureUtils.getGroupName(Identifier.parse(element.id()));
+			case STRUCTURE -> structureName(element.id());
+		};
 	}
 
-	private void setupWidgets() {
-		clearWidgets();
-		searchButton = addRenderableWidget(new TransparentButton(10, 40, 110, 20, Component.translatable("string.adventurerscompass.search"), (onPress) -> {
-			if (selectionList.hasSelection()) {
-				searchForStructure(selectionList.getSelected().getStructureId());
-			}
-		}));
-		searchButton.active = false;
-		
-		searchForGroupButton = addRenderableWidget(new TransparentButton(10, 65, 110, 20, Component.translatable("string.adventurerscompass.searchForGroup"), (onPress) -> {
-			if (selectionList.hasSelection()) {
-				searchForGroup(selectionList.getSelected().getGroupId());
-			}
-		}));
-		searchForGroupButton.active = false;
-		
-		searchForNextButton = addRenderableWidget(new TransparentButton(10, 90, 110, 20, Component.translatable("string.adventurerscompass.searchForNext"), (onPress) -> {
-			searchForNext();
-		}));
-		searchForNextButton.visible = AdventurersCompass.maxNextSearches > 0;
-		searchForNextButton.active = false;
-		
-		sortByButton = addRenderableWidget(new TransparentButton(10, 125, 110, 20, Component.translatable("string.adventurerscompass.sortBy").append(Component.literal(": " + sortingCategory.getLocalizedName())), (onPress) -> {
-			sortingCategory = sortingCategory.next();
-			sortByButton.setMessage(Component.translatable("string.adventurerscompass.sortBy").append(Component.literal(": " + sortingCategory.getLocalizedName())));
-			selectionList.refreshList(true);
-		}));
-		if (!searchForNextButton.visible) {
-			sortByButton.setPosition(10, 100);
+	private static String structureName(String id) {
+		return StructureUtils.getStructureName(Identifier.parse(id));
+	}
+
+	private int leftColumnRight() {
+		return ScreenLayout.leftColumnRight(width);
+	}
+
+	/** The Selection with everything the tree lists ticked. */
+	private Selection selectAll() {
+		return selection.tickAll(tree.listed(catalogue, dimension), catalogue, dimension);
+	}
+
+	private ItemStack compass() {
+		return ItemUtils.getHeldItem(player, AdventurersCompass.ADVENTURERS_COMPASS_ITEM);
+	}
+
+	private Set<InstanceKey> skipped() {
+		return CompassStacks.read(compass()).skipped();
+	}
+
+	private int visitedCount() {
+		return CompassTexts.visited(player).asSet().size();
+	}
+
+	private void updateButtons() {
+		for (Tab each : Tab.values()) {
+			tabButtons.get(each.ordinal()).setMessage(tabLabel(each));
 		}
-		
-		teleportButton = addRenderableWidget(new TransparentButton(width - 120, 10, 110, 20, Component.translatable("string.adventurerscompass.teleport"), (onPress) -> {
-			teleport();
-		}));
-		teleportButton.visible = AdventurersCompass.canTeleport;
-		teleportButton.active = false;
-		
-		cancelButton = addRenderableWidget(new TransparentButton(10, height - 30, 110, 20, Component.translatable("gui.cancel"), (onPress) -> {
-			minecraft.gui.setScreen(null);
-		}));
-		
-		searchBox = addRenderableWidget(new TransparentEditBox(font, 130, 10, 140, 20, Component.translatable("string.adventurerscompass.search").withColor(0xff808080)));
-		
-        selectionList = addRenderableWidget(new StructureSearchList(this, minecraft, player, foundStructureId, 130, 40, width - 140, height - 50, 50));
+		if (tab == Tab.SEARCH) {
+			updateSearchTab();
+		} else {
+			updateListBar();
+			refreshRows();
+		}
+	}
+
+	/** The bar of the list tabs: the filter takes what the sort button and "clear all", whose count changes, leave. */
+	private void updateListBar() {
+		ListTab list = listTab();
+		int count = list.size.getAsInt();
+		Component label = Component.translatable(list.clearAllLabel, count);
+		clearAllButton.setMessage(label);
+		clearAllButton.active = count > 0;
+		clearAllButton.setWidth(font.width(label) + SMALL_BUTTON_PADDING);
+		clearAllButton.setX(width - MARGIN - clearAllButton.getWidth());
+		sortButton.setX(clearAllButton.getX() - GAP - sortButton.getWidth());
+		filterBox.setWidth(sortButton.getX() - GAP - MARGIN);
+	}
+
+	private void refreshRows() {
+		BlockPos pos = player.blockPosition();
+		InstanceRows rows = new InstanceRows(CompassTexts.currentDimension(player), new BlockXZ(pos.getX(), pos.getZ()), catalogue, AdventurersCompassScreen::structureName);
+		ListTab list = listTab();
+		List<InstanceRow> shown = list.source.rows(rows, TreeFilter.of(filterBox.getValue()), list.sort);
+		// The count ignores the filter: an empty list and a filter that keeps nothing read differently
+		instanceList.setRows(shown, Component.translatable(list.size.getAsInt() > 0 ? "string.adventurerscompass.noRows" : list.emptyMessage));
+	}
+
+	/** What the Search tab shows of the Selection, the levels and the compass: the search panel, "Select all", "Clear" and the Unsearchable count. */
+	private void updateSearchTab() {
+		Set<String> searchable = selection.resolve(catalogue, dimension);
+		boolean canSearch = selection.canSearchIn(catalogue, dimension);
+		// The server sent each Structure's real cost in the Current dimension
+		XpThreshold threshold = AdventurersCompass.infiniteXp ? XpThreshold.FREE : XpThreshold.of(searchable.stream().map(id -> AdventurersCompass.xpLevels.getOrDefault(id, 0)).toList());
+		boolean affordable = new PlayerXp(player.experienceLevel, AdventurersCompass.infiniteXp).canLaunch(threshold);
+		Component refusal = null;
+		if (!canSearch && !selection.equals(Selection.EMPTY)) {
+			// Only unsearchable elements: say why nothing can be searched here
+			refusal = Component.translatable("string.adventurerscompass.nothingSearchableHere");
+		} else if (canSearch && !affordable) {
+			refusal = Component.translatable("string.adventurerscompass.notEnoughXp", threshold.levels());
+		}
+		searchPanel.setCost(threshold);
+		if (AdventurersCompass.dimensionDisabled) {
+			// disabledDimensions: Search and Pass greyed whatever the Selection
+			canSearch = false;
+			refusal = Component.translatable("string.adventurerscompass.disabledDimension");
+		}
+		searchPanel.update(canSearch && affordable, refusal);
+		clearButton.active = !selection.equals(Selection.EMPTY);
+		selectAllButton.active = !selectAll().equals(selection);
+		updateUnsearchable();
 	}
 
 }

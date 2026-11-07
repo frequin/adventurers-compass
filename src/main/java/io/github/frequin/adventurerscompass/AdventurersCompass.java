@@ -1,29 +1,46 @@
 package io.github.frequin.adventurerscompass;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 
 import net.fabricmc.fabric.api.creativetab.v1.CreativeModeTabEvents;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import io.github.frequin.adventurerscompass.codec.CompassCodecs;
+import io.github.frequin.adventurerscompass.codec.SelectionCodecs;
+import io.github.frequin.adventurerscompass.compass.ServerCompass;
+import io.github.frequin.adventurerscompass.domain.InstanceKey;
+import io.github.frequin.adventurerscompass.domain.compass.Target;
+import io.github.frequin.adventurerscompass.domain.search.SearchResult;
 import io.github.frequin.adventurerscompass.config.AdventurersCompassConfig;
+import io.github.frequin.adventurerscompass.domain.selection.Catalogue;
+import io.github.frequin.adventurerscompass.domain.selection.Selection;
 import io.github.frequin.adventurerscompass.item.AdventurersCompassItem;
-import io.github.frequin.adventurerscompass.network.SearchForNextPacket;
+import io.github.frequin.adventurerscompass.network.CancelPacket;
+import io.github.frequin.adventurerscompass.network.ClearSkippedPacket;
+import io.github.frequin.adventurerscompass.network.ClearTargetPacket;
+import io.github.frequin.adventurerscompass.network.ClearVisitedPacket;
+import io.github.frequin.adventurerscompass.network.MarkVisitedPacket;
+import io.github.frequin.adventurerscompass.network.PassPacket;
+import io.github.frequin.adventurerscompass.network.RemoveSkippedPacket;
 import io.github.frequin.adventurerscompass.network.SearchPacket;
 import io.github.frequin.adventurerscompass.network.SyncPacket;
 import io.github.frequin.adventurerscompass.network.TeleportPacket;
-import com.google.common.collect.ArrayListMultimap;
-import com.google.common.collect.ListMultimap;
+import io.github.frequin.adventurerscompass.network.UnmarkVisitedPacket;
+import io.github.frequin.adventurerscompass.network.UpdateSelectionPacket;
+import io.github.frequin.adventurerscompass.recipe.RepairCompassRecipe;
+import io.github.frequin.adventurerscompass.search.CompassSearches;
+import io.github.frequin.adventurerscompass.visited.PlayerVisited;
+import io.github.frequin.adventurerscompass.visited.VisitedDetection;
 import com.mojang.serialization.Codec;
 
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
-import net.minecraft.core.BlockPos;
 import net.minecraft.core.Registry;
+import net.minecraft.core.UUIDUtil;
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.codec.ByteBufCodecs;
@@ -38,25 +55,34 @@ public class AdventurersCompass implements ModInitializer {
 	
 	public static final AdventurersCompassItem ADVENTURERS_COMPASS_ITEM = new AdventurersCompassItem();
 	
-	public static final DataComponentType<String> STRUCTURE_ID = DataComponentType.<String>builder().persistent(Codec.STRING).networkSynchronized(ByteBufCodecs.STRING_UTF8).build();
-	public static final DataComponentType<Integer> COMPASS_STATE = DataComponentType.<Integer>builder().persistent(Codec.INT).networkSynchronized(ByteBufCodecs.VAR_INT).build();
-	public static final DataComponentType<Integer> FOUND_X = DataComponentType.<Integer>builder().persistent(Codec.INT).networkSynchronized(ByteBufCodecs.VAR_INT).build();
-	public static final DataComponentType<Integer> FOUND_Z = DataComponentType.<Integer>builder().persistent(Codec.INT).networkSynchronized(ByteBufCodecs.VAR_INT).build();
-	public static final DataComponentType<Integer> SEARCH_RADIUS = DataComponentType.<Integer>builder().persistent(Codec.INT).networkSynchronized(ByteBufCodecs.VAR_INT).build();
-	public static final DataComponentType<Integer> SAMPLES = DataComponentType.<Integer>builder().persistent(Codec.INT).networkSynchronized(ByteBufCodecs.VAR_INT).build();
+	/** The Selection of this compass; absent means empty. */
+	public static final DataComponentType<Selection> SELECTION = DataComponentType.<Selection>builder().persistent(SelectionCodecs.SELECTION).networkSynchronized(SelectionCodecs.SELECTION_STREAM).build();
+	/** The compass state ({@link io.github.frequin.adventurerscompass.compass.CompassStacks}): the running search, absent when none runs. */
+	public static final DataComponentType<UUID> SEARCH = DataComponentType.<UUID>builder().persistent(UUIDUtil.CODEC).networkSynchronized(UUIDUtil.STREAM_CODEC).build();
+	/** The Target: dimension, Structure, start chunk and the X/Z the needle points at. */
+	public static final DataComponentType<Target> TARGET = DataComponentType.<Target>builder().persistent(CompassCodecs.TARGET).networkSynchronized(CompassCodecs.TARGET_STREAM).build();
+	/** Instances passed over with "Pass"; absent means none. */
+	public static final DataComponentType<Set<InstanceKey>> SKIPPED = DataComponentType.<Set<InstanceKey>>builder().persistent(CompassCodecs.SKIPPED).networkSynchronized(CompassCodecs.SKIPPED_STREAM).build();
+	/** The last search's "nothing found", shown by the HUD. */
+	public static final DataComponentType<SearchResult.NothingFound> NOTHING_FOUND = DataComponentType.<SearchResult.NothingFound>builder().persistent(CompassCodecs.NOTHING_FOUND).networkSynchronized(CompassCodecs.NOTHING_FOUND_STREAM).build();
+	/** When the server's clock showed {@link #NOTHING_FOUND}: read by the server only, to expire it. */
+	public static final DataComponentType<Long> NOTHING_FOUND_AT = DataComponentType.<Long>builder().persistent(Codec.LONG).networkSynchronized(ByteBufCodecs.VAR_LONG).build();
+	/** The server's {@code displayCoordinates}, copied on the compass when a Target is found, for the HUD. */
 	public static final DataComponentType<Boolean> DISPLAY_COORDS = DataComponentType.<Boolean>builder().persistent(Codec.BOOL).networkSynchronized(ByteBufCodecs.BOOL).build();
-	public static final DataComponentType<Boolean> IS_GROUP = DataComponentType.<Boolean>builder().persistent(Codec.BOOL).networkSynchronized(ByteBufCodecs.BOOL).build();
-	public static final DataComponentType<List<BlockPos>> PREV_POS = DataComponentType.<List<BlockPos>>builder().persistent(BlockPos.CODEC.listOf().xmap(ArrayList::new, list -> list)).networkSynchronized(ByteBufCodecs.collection(ArrayList::new, BlockPos.STREAM_CODEC)).build();
+	/** Wear: Targets found since the last repair. */
 	public static final DataComponentType<Integer> DAMAGE = DataComponentType.<Integer>builder().persistent(Codec.INT).networkSynchronized(ByteBufCodecs.VAR_INT).build();
+	/** The server's {@code compassDurability}, copied on the compass while it ticks in an inventory, for the wear bar and tooltip. */
+	public static final DataComponentType<Integer> DURABILITY = DataComponentType.<Integer>builder().persistent(Codec.INT).networkSynchronized(ByteBufCodecs.VAR_INT).build();
 	
 	public static boolean synced;
 	public static boolean canTeleport;
-	public static int maxNextSearches;
 	public static boolean infiniteXp;
-	public static List<Identifier> allowedStructures;
-	public static Map<Identifier, Integer> xpLevelsForAllowedStructures;
-	public static ListMultimap<Identifier, Identifier> dimensionsForAllowedStructures;
-	public static Map<Identifier, Identifier> structureIdsToGroupIds;
+	/** Client side: the Current dimension is in the server's {@code disabledDimensions}. */
+	public static boolean dimensionDisabled;
+	/** Client side: the Current dimension and the catalogue last sent by the server. */
+	public static String currentDimension = "";
+	public static Catalogue catalogue = Catalogue.EMPTY;
+	public static Map<String, Integer> xpLevels = Map.of();
 
 	@Override
 	public void onInitialize() {
@@ -64,32 +90,48 @@ public class AdventurersCompass implements ModInitializer {
 		
 		Registry.register(BuiltInRegistries.ITEM, AdventurersCompassItem.KEY, ADVENTURERS_COMPASS_ITEM);
 		
-		Registry.register(BuiltInRegistries.DATA_COMPONENT_TYPE, Identifier.fromNamespaceAndPath(MODID, "structure_id"), STRUCTURE_ID);
-		Registry.register(BuiltInRegistries.DATA_COMPONENT_TYPE, Identifier.fromNamespaceAndPath(MODID, "compass_state"), COMPASS_STATE);
-		Registry.register(BuiltInRegistries.DATA_COMPONENT_TYPE, Identifier.fromNamespaceAndPath(MODID, "found_x"), FOUND_X);
-		Registry.register(BuiltInRegistries.DATA_COMPONENT_TYPE, Identifier.fromNamespaceAndPath(MODID, "found_z"), FOUND_Z);
-		Registry.register(BuiltInRegistries.DATA_COMPONENT_TYPE, Identifier.fromNamespaceAndPath(MODID, "search_radius"), SEARCH_RADIUS);
-		Registry.register(BuiltInRegistries.DATA_COMPONENT_TYPE, Identifier.fromNamespaceAndPath(MODID, "samples"), SAMPLES);
+		Registry.register(BuiltInRegistries.DATA_COMPONENT_TYPE, Identifier.fromNamespaceAndPath(MODID, "selection"), SELECTION);
+		Registry.register(BuiltInRegistries.DATA_COMPONENT_TYPE, Identifier.fromNamespaceAndPath(MODID, "search"), SEARCH);
+		Registry.register(BuiltInRegistries.DATA_COMPONENT_TYPE, Identifier.fromNamespaceAndPath(MODID, "target"), TARGET);
+		Registry.register(BuiltInRegistries.DATA_COMPONENT_TYPE, Identifier.fromNamespaceAndPath(MODID, "skipped"), SKIPPED);
+		Registry.register(BuiltInRegistries.DATA_COMPONENT_TYPE, Identifier.fromNamespaceAndPath(MODID, "nothing_found"), NOTHING_FOUND);
+		Registry.register(BuiltInRegistries.DATA_COMPONENT_TYPE, Identifier.fromNamespaceAndPath(MODID, "nothing_found_at"), NOTHING_FOUND_AT);
 		Registry.register(BuiltInRegistries.DATA_COMPONENT_TYPE, Identifier.fromNamespaceAndPath(MODID, "display_coords"), DISPLAY_COORDS);
-		Registry.register(BuiltInRegistries.DATA_COMPONENT_TYPE, Identifier.fromNamespaceAndPath(MODID, "is_group"), IS_GROUP);
-		Registry.register(BuiltInRegistries.DATA_COMPONENT_TYPE, Identifier.fromNamespaceAndPath(MODID, "prev_pos"), PREV_POS);
 		Registry.register(BuiltInRegistries.DATA_COMPONENT_TYPE, Identifier.fromNamespaceAndPath(MODID, "damage"), DAMAGE);
+		Registry.register(BuiltInRegistries.DATA_COMPONENT_TYPE, Identifier.fromNamespaceAndPath(MODID, "durability"), DURABILITY);
+		Registry.register(BuiltInRegistries.RECIPE_SERIALIZER, Identifier.fromNamespaceAndPath(MODID, "repair_compass"), RepairCompassRecipe.SERIALIZER);
 
 		CreativeModeTabEvents.modifyOutputEvent(CreativeModeTabs.TOOLS_AND_UTILITIES).register(entries -> entries.accept(ADVENTURERS_COMPASS_ITEM));
 
 		PayloadTypeRegistry.serverboundPlay().register(SearchPacket.TYPE, SearchPacket.CODEC);
-		PayloadTypeRegistry.serverboundPlay().register(SearchForNextPacket.TYPE, SearchForNextPacket.CODEC);
+		PayloadTypeRegistry.serverboundPlay().register(PassPacket.TYPE, PassPacket.CODEC);
+		PayloadTypeRegistry.serverboundPlay().register(CancelPacket.TYPE, CancelPacket.CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(TeleportPacket.TYPE, TeleportPacket.CODEC);
+		PayloadTypeRegistry.serverboundPlay().register(UpdateSelectionPacket.TYPE, UpdateSelectionPacket.CODEC);
+		PayloadTypeRegistry.serverboundPlay().register(MarkVisitedPacket.TYPE, MarkVisitedPacket.CODEC);
+		PayloadTypeRegistry.serverboundPlay().register(UnmarkVisitedPacket.TYPE, UnmarkVisitedPacket.CODEC);
+		PayloadTypeRegistry.serverboundPlay().register(ClearTargetPacket.TYPE, ClearTargetPacket.CODEC);
+		PayloadTypeRegistry.serverboundPlay().register(ClearVisitedPacket.TYPE, ClearVisitedPacket.CODEC);
+		PayloadTypeRegistry.serverboundPlay().register(RemoveSkippedPacket.TYPE, RemoveSkippedPacket.CODEC);
+		PayloadTypeRegistry.serverboundPlay().register(ClearSkippedPacket.TYPE, ClearSkippedPacket.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(SyncPacket.TYPE, SyncPacket.CODEC);
 
 		ServerPlayNetworking.registerGlobalReceiver(SearchPacket.TYPE, SearchPacket::handle);
-		ServerPlayNetworking.registerGlobalReceiver(SearchForNextPacket.TYPE, SearchForNextPacket::handle);
+		ServerPlayNetworking.registerGlobalReceiver(PassPacket.TYPE, PassPacket::handle);
+		ServerPlayNetworking.registerGlobalReceiver(CancelPacket.TYPE, CancelPacket::handle);
 		ServerPlayNetworking.registerGlobalReceiver(TeleportPacket.TYPE, TeleportPacket::handle);
-		
-		allowedStructures = new ArrayList<Identifier>();
-		xpLevelsForAllowedStructures = new HashMap<Identifier, Integer>();
-		dimensionsForAllowedStructures = ArrayListMultimap.create();
-		structureIdsToGroupIds = new HashMap<Identifier, Identifier>();
+		ServerPlayNetworking.registerGlobalReceiver(UpdateSelectionPacket.TYPE, UpdateSelectionPacket::handle);
+		ServerPlayNetworking.registerGlobalReceiver(MarkVisitedPacket.TYPE, MarkVisitedPacket::handle);
+		ServerPlayNetworking.registerGlobalReceiver(UnmarkVisitedPacket.TYPE, UnmarkVisitedPacket::handle);
+		ServerPlayNetworking.registerGlobalReceiver(ClearTargetPacket.TYPE, ClearTargetPacket::handle);
+		ServerPlayNetworking.registerGlobalReceiver(ClearVisitedPacket.TYPE, ClearVisitedPacket::handle);
+		ServerPlayNetworking.registerGlobalReceiver(RemoveSkippedPacket.TYPE, RemoveSkippedPacket::handle);
+		ServerPlayNetworking.registerGlobalReceiver(ClearSkippedPacket.TYPE, ClearSkippedPacket::handle);
+
+		CompassSearches.register();
+		ServerCompass.register();
+		PlayerVisited.register();
+		VisitedDetection.register();
 	}
 
 }

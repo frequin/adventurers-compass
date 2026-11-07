@@ -1,0 +1,170 @@
+package io.github.frequin.adventurerscompass.gametest;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
+import java.util.UUID;
+
+import com.mojang.authlib.GameProfile;
+
+import io.github.frequin.adventurerscompass.AdventurersCompass;
+import io.github.frequin.adventurerscompass.config.AdventurersCompassConfig;
+import io.github.frequin.adventurerscompass.domain.BlockXZ;
+import io.github.frequin.adventurerscompass.domain.ChunkCoord;
+import io.github.frequin.adventurerscompass.domain.InstanceKey;
+import io.github.frequin.adventurerscompass.domain.compass.Target;
+import io.github.frequin.adventurerscompass.visited.PlayerVisited;
+import io.github.frequin.adventurerscompass.visited.VisitedDetection;
+import io.github.frequin.adventurerscompass.util.LevelUtils;
+import io.netty.channel.embedded.EmbeddedChannel;
+import net.fabricmc.fabric.api.gametest.v1.GameTest;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.Connection;
+import net.minecraft.network.protocol.PacketFlow;
+import net.minecraft.network.protocol.game.ClientboundSoundPacket;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.network.CommonListenerCookie;
+import net.minecraft.util.RandomSource;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.GameType;
+import net.minecraft.world.level.StructureManager;
+import net.minecraft.world.level.WorldGenLevel;
+import net.minecraft.world.level.chunk.ChunkGenerator;
+import net.minecraft.world.level.levelgen.structure.BoundingBox;
+import net.minecraft.world.level.levelgen.structure.BuiltinStructures;
+import net.minecraft.world.level.levelgen.structure.Structure;
+import net.minecraft.world.level.levelgen.structure.StructurePiece;
+import net.minecraft.world.level.levelgen.structure.StructureStart;
+import net.minecraft.world.level.levelgen.structure.pieces.PiecesContainer;
+import net.minecraft.world.level.levelgen.structure.pieces.StructurePieceSerializationContext;
+import net.minecraft.world.level.levelgen.structure.pieces.StructurePieceType;
+
+/**
+ * Visited detection against the real {@link StructureManager}. Vanilla
+ * {@code /place structure} registers no start nor reference, so each test
+ * registers a hand-made plains village Instance in the arena itself: two
+ * small pieces with a gap between them, inside one start.
+ */
+public class VisitedDetectionGameTests {
+
+	private static final String VILLAGE_PLAINS = "minecraft:village_plains";
+
+	@GameTest
+	public void standingInAPieceMakesTheInstanceVisitedAndTheTargetChimesOnce(GameTestHelper helper) {
+		ServerLevel level = helper.getLevel();
+		BlockPos firstPiece = helper.absolutePos(new BlockPos(1, 1, 1));
+		BlockPos gap = firstPiece.east(3);
+		ChunkPos startChunk = registerVillage(level, firstPiece);
+		InstanceKey village = new InstanceKey(LevelUtils.dimensionId(level),VILLAGE_PLAINS, new ChunkCoord(startChunk.x(), startChunk.z()));
+		InstanceKey elsewhere = new InstanceKey(LevelUtils.dimensionId(level),VILLAGE_PLAINS, new ChunkCoord(startChunk.x() + 40, startChunk.z()));
+		Connection connection = new Connection(PacketFlow.SERVERBOUND);
+		EmbeddedChannel channel = new EmbeddedChannel(connection);
+		ServerPlayer player = connectPlayer(helper, connection);
+		ItemStack compass = new ItemStack(AdventurersCompass.ADVENTURERS_COMPASS_ITEM);
+		player.getInventory().setItem(0, compass);
+
+		compass.set(AdventurersCompass.TARGET, new Target(elsewhere, new BlockXZ(0, 0)));
+		stand(player, gap);
+		VisitedDetection.poll(player);
+		helper.assertTrue(PlayerVisited.get(player).asSet().isEmpty(), "standing between pieces, inside the start's box, should not mark the Instance");
+
+		stand(player, firstPiece);
+		VisitedDetection.poll(player);
+		helper.assertValueEqual(Set.of(village), PlayerVisited.get(player).asSet(), "Visited Instances");
+		helper.assertValueEqual(soundsSent(channel), List.of(), "sounds for a Structure that is not the Target");
+
+		compass.set(AdventurersCompass.TARGET, new Target(village, new BlockXZ(0, 0)));
+		PlayerVisited.unmark(player, village);
+		VisitedDetection.poll(player);
+		VisitedDetection.poll(player);
+		helper.assertValueEqual(soundsSent(channel), List.of("minecraft:block.note_block.chime at 0.5"), "sounds for the Target");
+
+		PlayerVisited.unmark(player, village);
+		AdventurersCompassConfig.targetVisitedSound = false;
+		try {
+			VisitedDetection.poll(player);
+		} finally {
+			AdventurersCompassConfig.targetVisitedSound = true;
+		}
+		helper.assertValueEqual(soundsSent(channel), List.of(), "sounds with targetVisitedSound off");
+		helper.succeed();
+	}
+
+	@GameTest
+	public void aSpectatorMarksNothing(GameTestHelper helper) {
+		BlockPos piece = helper.absolutePos(new BlockPos(1, 1, 1));
+		registerVillage(helper.getLevel(), piece);
+		ServerPlayer player = (ServerPlayer) helper.makeMockServerPlayer(GameType.SPECTATOR);
+		helper.assertTrue(player.isSpectator(), "the player should be a spectator");
+
+		stand(player, piece);
+		VisitedDetection.poll(player);
+
+		helper.assertTrue(PlayerVisited.get(player).asSet().isEmpty(), "a spectator should not mark any Instance");
+		helper.succeed();
+	}
+
+	/** A player joined over {@code connection}, unlike the mock players whose wire to the client the test cannot read. */
+	private static ServerPlayer connectPlayer(GameTestHelper helper, Connection connection) {
+		ServerLevel level = helper.getLevel();
+		CommonListenerCookie cookie = CommonListenerCookie.createInitial(new GameProfile(UUID.randomUUID(), "test-player"), false);
+		ServerPlayer player = new ServerPlayer(level.getServer(), level, cookie.gameProfile(), cookie.clientInformation());
+		level.getServer().getPlayerList().placeNewPlayer(connection, player, cookie);
+		return player;
+	}
+
+	/** The sounds sent to the client since the last call, as "sound id at volume". */
+	private static List<String> soundsSent(EmbeddedChannel channel) {
+		List<String> sounds = new ArrayList<>();
+		for (Object packet = channel.readOutbound(); packet != null; packet = channel.readOutbound()) {
+			if (packet instanceof ClientboundSoundPacket sound) {
+				sounds.add(sound.getSound().value().location() + " at " + sound.getVolume());
+			}
+		}
+		return sounds;
+	}
+
+	private static void stand(ServerPlayer player, BlockPos pos) {
+		player.setPos(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5);
+	}
+
+	/**
+	 * Registers a plains village start in the chunk of {@code firstPiece}, with a
+	 * 1-block piece there and another 4 blocks east, and references it from every
+	 * chunk its box overlaps, as worldgen would.
+	 */
+	private static ChunkPos registerVillage(ServerLevel level, BlockPos firstPiece) {
+		Structure village = level.registryAccess().lookupOrThrow(Registries.STRUCTURE).getValueOrThrow(BuiltinStructures.VILLAGE_PLAINS);
+		ChunkPos startChunk = ChunkPos.containing(firstPiece);
+		BlockPos secondPiece = firstPiece.east(4);
+		StructureStart start = new StructureStart(village, startChunk, 0, new PiecesContainer(List.of(piece(firstPiece), piece(secondPiece))));
+		StructureManager structures = level.structureManager();
+		structures.setStartForStructure(village, start, level.getChunk(startChunk.x(), startChunk.z()));
+		BoundingBox box = start.getBoundingBox();
+		for (int x = box.minX() >> 4; x <= box.maxX() >> 4; x++) {
+			for (int z = box.minZ() >> 4; z <= box.maxZ() >> 4; z++) {
+				structures.addReferenceForStructure(village, startChunk.pack(), level.getChunk(x, z));
+			}
+		}
+		return startChunk;
+	}
+
+	/** A piece two blocks high (feet and head) that builds nothing. */
+	private static StructurePiece piece(BlockPos pos) {
+		return new StructurePiece(StructurePieceType.JIGSAW, 0, new BoundingBox(pos.getX(), pos.getY(), pos.getZ(), pos.getX(), pos.getY() + 1, pos.getZ())) {
+			@Override
+			protected void addAdditionalSaveData(StructurePieceSerializationContext context, CompoundTag tag) {
+			}
+
+			@Override
+			public void postProcess(WorldGenLevel level, StructureManager structureManager, ChunkGenerator generator, RandomSource random, BoundingBox chunkBox, ChunkPos chunkPos, BlockPos referencePos) {
+			}
+		};
+	}
+
+}

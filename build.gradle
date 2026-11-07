@@ -27,7 +27,15 @@ dependencies {
 
 	// Fabric API. This is technically optional, but you probably want it anyway.
 	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
-	
+
+	// Unit tests (src/test): plain JUnit 5, no Minecraft runtime.
+	testImplementation platform("org.junit:junit-bom:${project.junit_version}")
+	testImplementation "org.junit.jupiter:junit-jupiter"
+	testRuntimeOnly "org.junit.platform:junit-platform-launcher"
+}
+
+test {
+	useJUnitPlatform()
 }
 
 processResources {
@@ -102,4 +110,17 @@ tasks.modrinth.dependsOn(tasks.modrinthSyncBody)
 
 loom {
     accessWidenerPath = file("src/main/resources/adventurerscompass.accesswidener")
+}
+
+// Fabric game tests (src/gametest): a separate source set and mod, run on a headless
+// server by the runGameTest task, which `check` (and so `build`) depends on.
+// Not part of the mod jar.
+fabricApi {
+	configureTests {
+		createSourceSet = true
+		modId = "adventurerscompass-gametest"
+		enableGameTests = true
+		enableClientGameTests = false
+		eula = true
+	}
 }

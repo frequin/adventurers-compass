@@ -1,11 +1,7 @@
 package io.github.frequin.adventurerscompass.network;
 
 import io.github.frequin.adventurerscompass.AdventurersCompass;
-import io.github.frequin.adventurerscompass.config.AdventurersCompassConfig;
-import io.github.frequin.adventurerscompass.item.AdventurersCompassItem;
-import io.github.frequin.adventurerscompass.util.CompassState;
-import io.github.frequin.adventurerscompass.util.ItemUtils;
-import io.github.frequin.adventurerscompass.util.PlayerUtils;
+import io.github.frequin.adventurerscompass.compass.ServerCompass;
 
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.core.BlockPos;
@@ -15,7 +11,6 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.tags.BlockTags;
-import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 
 public record TeleportPacket() implements CustomPacketPayload {
@@ -32,38 +27,28 @@ public record TeleportPacket() implements CustomPacketPayload {
 	}
 
 	public static void handle(TeleportPacket packet, ServerPlayNetworking.Context context) {
-		context.server().execute(() -> {
-			final ItemStack stack = ItemUtils.getHeldItem(context.player(), AdventurersCompass.ADVENTURERS_COMPASS_ITEM);
-			if (!stack.isEmpty()) {
-				final AdventurersCompassItem adventurersCompass = (AdventurersCompassItem) stack.getItem();
-				final ServerPlayer player = (ServerPlayer) context.player();
-				if (AdventurersCompassConfig.allowTeleport && PlayerUtils.canTeleport(player.level().getServer(), player)) {
-					if (adventurersCompass.getCompassState(stack) == CompassState.FOUND) {
-						final int x = stack.getOrDefault(AdventurersCompass.FOUND_X, 0);
-						final int z = stack.getOrDefault(AdventurersCompass.FOUND_Z, 0);
-						final int y = packet.findValidTeleportHeight(player.level(), x, z);
-
-						player.stopRiding();
-						player.connection.teleport(x, y, z, player.getYRot(), player.getXRot());
-
-						if (!player.isFallFlying()) {
-							player.setDeltaMovement(player.getDeltaMovement().x(), 0, player.getDeltaMovement().z());
-							player.setOnGround(true);
-						}
-					}
-				} else {
-					AdventurersCompass.LOGGER.warn("Player " + player.getDisplayName().getString() + " tried to teleport but does not have permission.");
-				}
-			}
-		});
+		HeldCompass.run(context, ServerCompass::teleport);
 	}
-	
+
+	/** Moves the player to the first free height at X/Z of the Current dimension. */
+	public static void teleport(ServerPlayer player, int x, int z) {
+		final int y = findValidTeleportHeight(player.level(), x, z);
+
+		player.stopRiding();
+		player.connection.teleport(x, y, z, player.getYRot(), player.getXRot());
+
+		if (!player.isFallFlying()) {
+			player.setDeltaMovement(player.getDeltaMovement().x(), 0, player.getDeltaMovement().z());
+			player.setOnGround(true);
+		}
+	}
+
 	@Override
 	public Type<TeleportPacket> type() {
 		return TYPE;
 	}
 	
-	private int findValidTeleportHeight(Level level, int x, int z) {
+	private static int findValidTeleportHeight(Level level, int x, int z) {
 		int upY = level.getSeaLevel();
 		int downY = level.getSeaLevel();
 		while ((!level.isOutsideBuildHeight(upY) || !level.isOutsideBuildHeight(downY)) && !(isValidTeleportPosition(level, new BlockPos(x, upY, z)) || isValidTeleportPosition(level, new BlockPos(x, downY, z)))) {
@@ -81,11 +66,11 @@ public record TeleportPacket() implements CustomPacketPayload {
 		return 256;
 	}
 	
-	private boolean isValidTeleportPosition(Level level, BlockPos pos) {
+	private static boolean isValidTeleportPosition(Level level, BlockPos pos) {
 		return isFree(level, pos) && isFree(level, pos.above()) && !isFree(level, pos.below());
 	}
 	
-	private boolean isFree(Level level, BlockPos pos) {
+	private static boolean isFree(Level level, BlockPos pos) {
 		return level.getBlockState(pos).isAir() || level.getBlockState(pos).is(BlockTags.FIRE) || level.getBlockState(pos).liquid() || level.getBlockState(pos).canBeReplaced();
 	}
 

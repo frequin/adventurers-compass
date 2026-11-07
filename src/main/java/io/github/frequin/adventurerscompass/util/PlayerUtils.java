@@ -9,7 +9,8 @@ import net.minecraft.world.level.storage.ServerLevelData;
 
 public class PlayerUtils {
 
-	public static boolean canTeleport(MinecraftServer server, Player player) {
+	/** An op, or the single player with cheats on. */
+	public static boolean isOperator(MinecraftServer server, Player player) {
 		return cheatModeEnabled(server, player) || isOp(player);
 	}
 

@@ -7,6 +7,7 @@ import net.fabricmc.api.Environment;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.layouts.LayoutElement;
 
 @Environment(EnvType.CLIENT)
 public class RenderUtils {
@@ -31,6 +32,21 @@ public class RenderUtils {
 		}
 	}
 	
+	/**
+	 * Frames an element that has the focus while the player moves with the keyboard.
+	 * A click leaves the focus on what was clicked, so the frame goes with the mouse.
+	 */
+	public static void drawKeyboardFocus(GuiGraphicsExtractor guiGraphics, boolean focused, LayoutElement element) {
+		if (hasKeyboardFocus(focused)) {
+			guiGraphics.outline(element.getX(), element.getY(), element.getWidth(), element.getHeight(), 0xffffffff);
+		}
+	}
+
+	/** Whether an element that has the focus got it from the keyboard, so that it shows its frame and tooltip. */
+	public static boolean hasKeyboardFocus(boolean focused) {
+		return focused && mc.getLastInputType().isKeyboard();
+	}
+
 	public static int getBackgroundColor(boolean active, boolean hovered) {
 		float state = 2;
 		if (!active) {
