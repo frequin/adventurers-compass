@@ -3,8 +3,11 @@ package io.github.frequin.adventurerscompass.gui;
 import io.github.frequin.adventurerscompass.util.RenderUtils;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.ComponentPath;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.ObjectSelectionList;
+import net.minecraft.client.gui.navigation.FocusNavigationEvent;
+import net.minecraft.client.gui.navigation.ScreenAxis;
 import net.minecraft.util.Mth;
 
 /** A scrolling list of the compass screen: a dark background, a flat scrollbar, and rows that only show the keyboard focus. */
@@ -37,6 +40,19 @@ abstract class TransparentList<E extends ObjectSelectionList.Entry<E>> extends O
 	@Override
 	protected void extractSelection(GuiGraphicsExtractor guiGraphics, E entry, int backgroundColor) {
 		RenderUtils.drawKeyboardFocus(guiGraphics, hasFocus(entry), entry);
+	}
+
+	/**
+	 * Left and Right have no row to go to. The vanilla list drops its focused row
+	 * on them; here it keeps it, and the screen moves the focus to a widget on
+	 * that side, if there is one.
+	 */
+	@Override
+	public ComponentPath nextFocusPath(FocusNavigationEvent event) {
+		if (isFocused() && event instanceof FocusNavigationEvent.ArrowNavigation arrow && arrow.direction().getAxis() == ScreenAxis.HORIZONTAL) {
+			return null;
+		}
+		return super.nextFocusPath(event);
 	}
 
 	/** The row that has the focus, or null when the focus is outside the list. */
