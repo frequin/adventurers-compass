@@ -27,7 +27,7 @@
 - The whole screen works without a mouse: Space, Enter or Delete on a Visited or Skipped row act as its ✕, the count of Unsearchable elements takes the focus, and tooltips show on focus as on hover
 
 #### Breaking changes
-- The config file is not compatible with Explorer's Compass and is not migrated: delete `config/adventurerscompass.json` to get the new defaults. Unknown old keys are ignored and missing keys take their default
+- The config file is not compatible with Explorer's Compass and is not migrated: delete `config/adventurerscompass.json` to get the new defaults. Unknown old keys are ignored and missing keys, or a missing `common` or `client` block, take their default
 - Compasses from Explorer's Compass or earlier builds are not migrated: their search data is dropped
 - New nomadic defaults: `maxRadius` 2500 (was 10000), about half a day's walk, `allowTeleport` false (was true; when on, only ops and creative players can teleport, never across dimensions), `compassDurability` 3 (was 0), `defaultXpLevel` 5 (was 0, and the 3-level cap is gone), `defaultDimensionXpMultiplier` 2 with `dimensionXpMultipliers` `{"minecraft:overworld": 1}`
 - `structureBlacklist` is renamed `hiddenStructures` and also accepts `#tag` entries
