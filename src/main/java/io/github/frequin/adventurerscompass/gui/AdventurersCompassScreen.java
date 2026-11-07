@@ -320,8 +320,7 @@ public class AdventurersCompassScreen extends Screen {
 
 	/**
 	 * Asks before clearing the whole list, filter or not. Both answers come back to
-	 * this screen, on this tab, with the focus back on the button when the player
-	 * answered from the keyboard.
+	 * this screen, on this tab, with the focus back on the button.
 	 */
 	private void confirmClearAll() {
 		ListTab list = listTab();
@@ -333,9 +332,7 @@ public class AdventurersCompassScreen extends Screen {
 				list.removeAll.run();
 			}
 			minecraft.gui.setScreen(this);
-			if (minecraft.getLastInputType().isKeyboard()) {
-				setFocused(clearAllButton);
-			}
+			setFocused(clearAllButton);
 		}, question, warning, action, CommonComponents.GUI_CANCEL));
 	}
 
