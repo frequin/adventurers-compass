@@ -21,6 +21,7 @@ public class TabButton extends TransparentButton {
 		if (open) {
 			guiGraphics.fill(getX(), getBottom() - 1, getRight(), getBottom(), 0xffffffff);
 		}
+		RenderUtils.drawKeyboardFocus(guiGraphics, isFocused(), getX(), getY(), getWidth(), getHeight());
 		extractLabel(guiGraphics, mouseX, mouseY, open ? 0xffffffff : 0xffaaaaaa);
 	}
 

@@ -7,7 +7,7 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.ObjectSelectionList;
 import net.minecraft.util.Mth;
 
-/** A scrolling list of the compass screen: a dark background, a flat scrollbar, and rows that cannot be selected. */
+/** A scrolling list of the compass screen: a dark background, a flat scrollbar, and rows that only show the keyboard focus. */
 abstract class TransparentList<E extends ObjectSelectionList.Entry<E>> extends ObjectSelectionList<E> {
 
 	TransparentList(Minecraft mc, int x, int y, int width, int height, int rowHeight) {
@@ -36,7 +36,7 @@ abstract class TransparentList<E extends ObjectSelectionList.Entry<E>> extends O
 
 	@Override
 	protected void extractSelection(GuiGraphicsExtractor guiGraphics, E entry, int backgroundColor) {
-		// Rows are not selectable
+		RenderUtils.drawKeyboardFocus(guiGraphics, isFocused(), entry.getX(), entry.getY(), entry.getWidth(), entry.getHeight());
 	}
 
 	@Override
