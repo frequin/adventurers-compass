@@ -78,7 +78,8 @@ public class InstanceList extends TransparentList<InstanceList.Row> {
 			return;
 		}
 		InstanceRow focused = focusedEntry() != null ? focusedEntry().row : null;
-		int focusedIndex = rows.indexOf(focused);
+		// An immutable list throws on indexOf(null)
+		int focusedIndex = focused != null ? rows.indexOf(focused) : -1;
 		rows = next;
 		double scroll = scrollAmount();
 		clearEntries();
