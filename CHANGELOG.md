@@ -21,6 +21,7 @@
 - New translations: complete English and French. The other languages keep the strings that still exist and gain the Group names; everything else shows in English
 - Group names come from the language files (`group.<namespace>.<path>`), in all 12 languages. A mod's Group with no translation shows its id in readable form ("Small Village Plains"), and the filter searches the name shown
 - Every button label of the screen fits on the narrowest screen of the automatic GUI scale, in every language: "Search (≤ 10 levels)", "Chercher (≤ 10 niv.)", "Annuler", and "Teleport" has its own row. A label still too long for its button ends in "…" and shows in full in a tooltip
+- "Select all" ("Tout cocher" in French) and "Clear" sit side by side under the tree, with the count of Unsearchable elements on its own line below
 - A white frame shows the keyboard focus on the buttons, tabs and list rows of the screen
 - In the tree, Space and Enter tick the focused row, and the Right and Left arrows expand and collapse the focused Group
 - The whole screen works without a mouse: Space, Enter or Delete on a Visited or Skipped row act as its ✕, the count of Unsearchable elements takes the focus, and tooltips show on focus as on hover
