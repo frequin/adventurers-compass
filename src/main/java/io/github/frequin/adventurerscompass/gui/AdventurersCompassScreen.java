@@ -399,6 +399,10 @@ public class AdventurersCompassScreen extends Screen {
 		}
 		shownUnsearchable = unsearchable;
 		unsearchableText.visible = !unsearchable.isEmpty();
+		if (!unsearchableText.visible && getFocused() == unsearchableText) {
+			// A hidden count cannot take the focus again; it must not keep it either
+			clearFocus();
+		}
 		String text = Component.translatable("string.adventurerscompass.unsearchableHere", unsearchable.size()).getString();
 		unsearchableText.setText(font.plainSubstrByWidth(text, ScreenLayout.leftColumnWidth(width)));
 		unsearchableText.setTooltip(unsearchable.isEmpty() ? null : Tooltip.create(unsearchableTooltip(unsearchable)));
