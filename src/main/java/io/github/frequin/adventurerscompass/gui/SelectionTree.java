@@ -193,7 +193,15 @@ public class SelectionTree extends TransparentList<SelectionTree.Row> {
 			if (super.keyPressed(event)) {
 				return true;
 			}
-			boolean changed = filter.isNone() && (event.isRight() ? expandedGroups.add(group.groupId()) : event.isLeft() && expandedGroups.remove(group.groupId()));
+			if (!filter.isNone()) {
+				return false;
+			}
+			boolean changed = false;
+			if (event.isRight()) {
+				changed = expandedGroups.add(group.groupId());
+			} else if (event.isLeft()) {
+				changed = expandedGroups.remove(group.groupId());
+			}
 			if (changed) {
 				refresh(screen.catalogue(), screen.dimension());
 			}
