@@ -231,14 +231,15 @@ public class AdventurersCompassScreen extends Screen {
 	private void initSearchTab(String filterText) {
 		laidOutForTeleport = AdventurersCompass.canTeleport;
 		int split = leftColumnRight();
+		int leftWidth = ScreenLayout.leftColumnWidth(width);
 		int rightX = split + MARGIN;
 		int rightWidth = ScreenLayout.rightColumnWidth(width);
 
-		filterBox = addRenderableWidget(new TransparentEditBox(font, MARGIN, TREE_TOP, split - MARGIN, FILTER_HEIGHT, Component.translatable("string.adventurerscompass.filterHint").withColor(0xff808080)));
+		filterBox = addRenderableWidget(new TransparentEditBox(font, MARGIN, TREE_TOP, leftWidth, FILTER_HEIGHT, Component.translatable("string.adventurerscompass.filterHint").withColor(0xff808080)));
 		filterBox.setValue(filterText);
 		int treeTop = TREE_TOP + FILTER_HEIGHT + 4;
 		int treeBottom = height - MARGIN - FOOTER_HEIGHT;
-		tree = addRenderableWidget(new SelectionTree(this, minecraft, MARGIN, treeTop, split - MARGIN, treeBottom - treeTop, expandedGroups));
+		tree = addRenderableWidget(new SelectionTree(this, minecraft, MARGIN, treeTop, leftWidth, treeBottom - treeTop, expandedGroups));
 		tree.setFilter(TreeFilter.of(filterText), catalogue, dimension);
 		filterBox.setResponder(text -> tree.setFilter(TreeFilter.of(text), catalogue, dimension));
 		setInitialFocus(filterBox);
@@ -375,7 +376,7 @@ public class AdventurersCompassScreen extends Screen {
 		int outside = catalogue.countOutside(dimension);
 		if (outside > 0) {
 			String text = Component.translatable("string.adventurerscompass.otherDimensionsHidden", outside).getString();
-			guiGraphics.text(font, font.plainSubstrByWidth(text, leftColumnRight() - MARGIN), MARGIN, height - MARGIN - 8, 0xff808080);
+			guiGraphics.text(font, font.plainSubstrByWidth(text, ScreenLayout.leftColumnWidth(width)), MARGIN, height - MARGIN - 8, 0xff808080);
 		}
 	}
 
