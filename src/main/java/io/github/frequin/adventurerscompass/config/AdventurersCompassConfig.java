@@ -43,12 +43,30 @@ public class AdventurersCompassConfig {
 	public static OverlaySide overlaySide = OverlaySide.LEFT;
 	
 	public static void load() {
+		load(getFilePath());
+	}
+
+	/**
+	 * Reads the file at {@code path}, if any, then writes it back with every option.
+	 * An empty file, or one without its {@code common} or {@code client} block,
+	 * takes the defaults of what is missing.
+	 */
+	static void load(Path path) {
 		Reader reader;
-		if(getFilePath().toFile().exists()) {
+		if(path.toFile().exists()) {
 			try {
-				reader = Files.newBufferedReader(getFilePath());
+				reader = Files.newBufferedReader(path);
 				
 				Data data = gson.fromJson(reader, Data.class);
+				if (data == null) {
+					data = new Data(new Data.Common(), new Data.Client());
+				}
+				if (data.common == null) {
+					data.common = new Data.Common();
+				}
+				if (data.client == null) {
+					data.client = new Data.Client();
+				}
 				
 				allowTeleport = data.common.allowTeleport;
 				displayCoordinates = data.common.displayCoordinates;
@@ -74,12 +92,16 @@ public class AdventurersCompassConfig {
 				throw new RuntimeException(e);
 			}
 		}
-		save();
+		save(path);
 	}
 	
 	public static void save() {
+		save(getFilePath());
+	}
+
+	private static void save(Path path) {
 		try {
-			Writer writer = Files.newBufferedWriter(getFilePath());
+			Writer writer = Files.newBufferedWriter(path);
 			Data data = new Data(new Data.Common(allowTeleport, displayCoordinates, maxRadius, compassDurability, defaultXpLevel, perStructureXpLevels, defaultDimensionXpMultiplier, dimensionXpMultipliers, hiddenStructures, visitedMessage, disabledDimensions, targetVisitedSound), new Data.Client(hudEnabled, displayWithChatOpen, translateStructureNames, overlayLineOffset, overlaySide));
 			gson.toJson(data, writer);
 			writer.close();
