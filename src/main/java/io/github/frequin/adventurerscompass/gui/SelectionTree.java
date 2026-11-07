@@ -131,7 +131,7 @@ public class SelectionTree extends TransparentList<SelectionTree.Row> {
 
 	public abstract static class Row extends ObjectSelectionList.Entry<Row> {
 
-		/** Finds the same row again once the tree is rebuilt. */
+		/** Finds the same row again once the tree is rebuilt. A Group and a Structure may share an id, so the kind is part of it. */
 		abstract String key();
 
 		abstract void toggleTick();
@@ -210,7 +210,7 @@ public class SelectionTree extends TransparentList<SelectionTree.Row> {
 
 		@Override
 		String key() {
-			return group.groupId();
+			return "group:" + group.groupId();
 		}
 
 		@Override
@@ -260,7 +260,7 @@ public class SelectionTree extends TransparentList<SelectionTree.Row> {
 
 		@Override
 		String key() {
-			return structureId;
+			return "structure:" + structureId;
 		}
 
 		@Override
