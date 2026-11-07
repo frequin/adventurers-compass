@@ -70,7 +70,7 @@ public class SelectionTree extends TransparentList<SelectionTree.Row> {
 	/** Rebuilds the rows from the catalogue and the Selection, keeping the scroll position and the focused row. */
 	public void refresh(Catalogue catalogue, String dimension) {
 		double scroll = scrollAmount();
-		String focused = isFocused() && getFocused() != null ? getFocused().key() : null;
+		String focused = focusedEntry() != null ? focusedEntry().key() : null;
 		clearEntries();
 		List<TreeEntry> tree = new ArrayList<TreeEntry>(listed(catalogue, dimension));
 		tree.sort(Comparator.comparing(SelectionTree::displayName, String.CASE_INSENSITIVE_ORDER));

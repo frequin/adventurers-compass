@@ -77,7 +77,7 @@ public class InstanceList extends TransparentList<InstanceList.Row> {
 		if (next.equals(rows)) {
 			return;
 		}
-		InstanceRow focused = isFocused() && getFocused() != null ? getFocused().row : null;
+		InstanceRow focused = focusedEntry() != null ? focusedEntry().row : null;
 		int focusedIndex = rows.indexOf(focused);
 		rows = next;
 		double scroll = scrollAmount();
@@ -122,7 +122,7 @@ public class InstanceList extends TransparentList<InstanceList.Row> {
 			guiGraphics.text(font, CROSS, crossX, textY, 0xffff5555);
 			if (isHovering && isOverCross(font, mouseX)) {
 				guiGraphics.setTooltipForNextFrame(font, crossTooltip, mouseX, mouseY);
-			} else if (RenderUtils.hasKeyboardFocus(InstanceList.this.isFocused() && getFocused() == this)) {
+			} else if (RenderUtils.hasKeyboardFocus(hasFocus(this))) {
 				guiGraphics.setTooltipForNextFrame(font, crossTooltip, crossX, getBottom());
 			}
 		}
